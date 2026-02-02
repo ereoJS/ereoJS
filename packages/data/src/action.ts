@@ -289,7 +289,7 @@ export function formDataToObject<T = Record<string, unknown>>(
 
   for (const [key, value] of formData.entries()) {
     // Skip File objects for now (handle separately if needed)
-    if (value instanceof File) {
+    if (typeof value === 'object' && value !== null && 'name' in value && 'size' in value) {
       setNestedValue(result, key, value);
       continue;
     }

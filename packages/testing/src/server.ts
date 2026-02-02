@@ -207,7 +207,7 @@ async function getAvailablePort(): Promise<number> {
     },
   });
 
-  const port = server.port;
+  const port = server.port ?? 0;
   server.stop();
 
   return port;

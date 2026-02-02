@@ -5,6 +5,11 @@
  * Includes islands architecture, navigation, and prefetching.
  */
 
+// Import functions used internally
+import { initializeIslands as _initializeIslands } from './islands';
+import { setupScrollRestoration as _setupScrollRestoration } from './navigation';
+import { setupAutoPrefetch as _setupAutoPrefetch } from './prefetch';
+
 // Hydration
 export {
   parseHydrationDirective,
@@ -67,11 +72,11 @@ export type { PrefetchOptions, LinkPrefetchProps } from './prefetch';
  */
 export function initClient(): void {
   // Initialize islands
-  initializeIslands();
+  _initializeIslands();
 
   // Setup scroll restoration
-  setupScrollRestoration();
+  _setupScrollRestoration();
 
   // Setup auto prefetch
-  setupAutoPrefetch({ strategy: 'hover' });
+  _setupAutoPrefetch({ strategy: 'hover' });
 }

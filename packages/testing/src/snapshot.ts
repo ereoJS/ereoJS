@@ -172,17 +172,13 @@ export const commonReplacers = {
  */
 export function applyReplacements(
   data: unknown,
-  replacements: Record<string | RegExp, string>
+  replacements: Record<string, string>
 ): unknown {
   const json = JSON.stringify(data);
 
   let result = json;
   for (const [pattern, replacement] of Object.entries(replacements)) {
-    if (typeof pattern === 'string') {
-      result = result.split(pattern).join(replacement);
-    } else {
-      result = result.replace(pattern, replacement);
-    }
+    result = result.split(pattern).join(replacement);
   }
 
   return JSON.parse(result);

@@ -19,9 +19,9 @@ function createMockReadableStream(content: string): ReadableStream<Uint8Array> {
   });
 }
 
-// Mock renderToReadableStream for testing - stored for test manipulation
-let mockRenderToReadableStreamFn: ((element: any, options?: any) => Promise<ReadableStream<Uint8Array>>) | null = null;
+// Mock callbacks for testing
 let capturedOnError: ((error: unknown) => void) | null = null;
+let mockPipeableContent = '<div>mock content</div>';
 
 // Mock the react-dom/server module
 mock.module('react-dom/server', () => ({
@@ -35,21 +35,53 @@ mock.module('react-dom/server', () => ({
     }
     return '<div>mock content</div>';
   },
-  renderToReadableStream: async (element: any, options?: any) => {
-    // Capture the onError callback so we can test it
+  renderToPipeableStream: (element: any, options?: any) => {
+    // Capture callbacks
     if (options?.onError) {
       capturedOnError = options.onError;
     }
 
-    // If a custom mock is provided, use it
-    if (mockRenderToReadableStreamFn) {
-      return mockRenderToReadableStreamFn(element, options);
+    const result = {
+      pipe: (writable: any) => {
+        writable.write(mockPipeableContent);
+        writable.end();
+      },
+      abort: () => {},
+    };
+
+    // Trigger onShellReady in next tick so the Promise setup completes first
+    if (options?.onShellReady) {
+      setImmediate(() => options.onShellReady());
     }
 
-    // Default: return a simple stream with mock content
-    return createMockReadableStream('<div>mock content</div>');
+    return result;
   },
 }));
+
+// Mock the stream module for PassThrough
+mock.module('stream', () => {
+  const { EventEmitter } = require('events');
+
+  class MockPassThrough extends EventEmitter {
+    chunks: Buffer[] = [];
+
+    write(chunk: string | Buffer) {
+      const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+      this.chunks.push(buf);
+      this.emit('data', buf);
+      return true;
+    }
+
+    end() {
+      // Use setImmediate to allow the pipe to complete before emitting end
+      setImmediate(() => this.emit('end'));
+    }
+  }
+
+  return {
+    PassThrough: MockPassThrough,
+  };
+});
 
 describe('@areo/server - Streaming', () => {
   describe('createShell', () => {
@@ -304,11 +336,11 @@ describe('@areo/server - Streaming', () => {
 
     beforeEach(() => {
       // Reset mocks before each test
-      mockRenderToReadableStreamFn = null;
       capturedOnError = null;
+      mockPipeableContent = '<div>mock content</div>';
     });
 
-    test('renderToStream returns correct structure with ReadableStream body', async () => {
+    test('renderToStream returns correct structure with HTML body', async () => {
       const React = await import('react');
       const element = React.createElement('div', null, 'Test');
 
@@ -324,8 +356,9 @@ describe('@areo/server - Streaming', () => {
 
       expect(result.status).toBe(200);
       expect(result.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
-      expect(result.headers.get('Transfer-Encoding')).toBe('chunked');
-      expect(result.body).toBeInstanceOf(ReadableStream);
+      expect(result.headers.get('Content-Length')).toBeDefined();
+      expect(typeof result.body).toBe('string');
+      expect(result.body).toContain('<!DOCTYPE html>');
     });
 
     test('renderToStream executes loader when available (lines 133-137)', async () => {
@@ -362,7 +395,7 @@ describe('@areo/server - Streaming', () => {
 
       // Verify result structure
       expect(result.status).toBe(200);
-      expect(result.body).toBeInstanceOf(ReadableStream);
+      expect(typeof result.body).toBe('string');
     });
 
     test('renderToStream onError callback is called on render errors (line 144)', async () => {
@@ -393,7 +426,7 @@ describe('@areo/server - Streaming', () => {
       consoleSpy.mockRestore();
     });
 
-    test('renderToStream TransformStream wraps content with head and tail (lines 157-158, 161)', async () => {
+    test('renderToStream wraps content with head and tail', async () => {
       const React = await import('react');
       const element = React.createElement('div', null, 'Streamed Content');
 
@@ -409,26 +442,17 @@ describe('@areo/server - Streaming', () => {
         styles: ['/style.css'],
       });
 
-      // Read the entire stream
-      const reader = (result.body as ReadableStream<Uint8Array>).getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
+      const fullContent = result.body as string;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullContent += decoder.decode(value, { stream: true });
-      }
-
-      // Verify head was prepended (from TransformStream start)
+      // Verify head was prepended
       expect(fullContent).toContain('<!DOCTYPE html>');
       expect(fullContent).toContain('<title>Transform Test</title>');
       expect(fullContent).toContain('<div id="root">');
 
-      // Verify content was passed through (from TransformStream transform)
+      // Verify content was included
       expect(fullContent).toContain('mock content');
 
-      // Verify tail was appended (from TransformStream flush)
+      // Verify tail was appended
       expect(fullContent).toContain('</div>');
       expect(fullContent).toContain('</body>');
       expect(fullContent).toContain('</html>');
@@ -456,16 +480,7 @@ describe('@areo/server - Streaming', () => {
         context: createMockContext() as any,
       });
 
-      // Read the stream
-      const reader = (result.body as ReadableStream<Uint8Array>).getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullContent += decoder.decode(value, { stream: true });
-      }
+      const fullContent = result.body as string;
 
       // Verify loader data is included
       expect(fullContent).toContain('window.__AREO_DATA__');
@@ -490,17 +505,7 @@ describe('@areo/server - Streaming', () => {
       });
 
       expect(result.status).toBe(200);
-
-      // Read and verify no loader data script
-      const reader = (result.body as ReadableStream<Uint8Array>).getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullContent += decoder.decode(value, { stream: true });
-      }
+      const fullContent = result.body as string;
 
       // Should not contain loader data script when no loader
       expect(fullContent).not.toContain('window.__AREO_DATA__');
@@ -530,27 +535,12 @@ describe('@areo/server - Streaming', () => {
       expect(result.status).toBe(200);
     });
 
-    test('renderToStream with multiple stream chunks', async () => {
+    test('renderToStream with custom pipeableContent', async () => {
       const React = await import('react');
       const element = React.createElement('div', null, 'Multi-chunk');
 
-      // Mock a stream that sends multiple chunks
-      mockRenderToReadableStreamFn = async () => {
-        const encoder = new TextEncoder();
-        let chunkIndex = 0;
-        const chunks = ['<div>', 'chunk1', '</div>', '<div>', 'chunk2', '</div>'];
-
-        return new ReadableStream({
-          pull(controller) {
-            if (chunkIndex < chunks.length) {
-              controller.enqueue(encoder.encode(chunks[chunkIndex]));
-              chunkIndex++;
-            } else {
-              controller.close();
-            }
-          }
-        });
-      };
+      // Set custom content for the pipeable mock
+      mockPipeableContent = '<div>chunk1</div><div>chunk2</div>';
 
       const result = await renderToStream(element, {
         match: {
@@ -561,18 +551,9 @@ describe('@areo/server - Streaming', () => {
         context: createMockContext() as any,
       });
 
-      // Read all chunks
-      const reader = (result.body as ReadableStream<Uint8Array>).getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
+      const fullContent = result.body as string;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullContent += decoder.decode(value, { stream: true });
-      }
-
-      // Verify all chunks were passed through transform
+      // Verify content was included
       expect(fullContent).toContain('chunk1');
       expect(fullContent).toContain('chunk2');
       expect(fullContent).toContain('<!DOCTYPE html>');

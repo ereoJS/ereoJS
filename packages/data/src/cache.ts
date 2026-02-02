@@ -267,7 +267,7 @@ export function Cached(options: CacheOptions) {
   ): TypedPropertyDescriptor<T> {
     const originalMethod = descriptor.value!;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (this: unknown, ...args: any[]) {
       const key = cacheKey(propertyKey, JSON.stringify(args));
       return cached(key, () => originalMethod.apply(this, args), options);
     } as T;

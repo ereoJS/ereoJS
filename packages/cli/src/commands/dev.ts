@@ -10,6 +10,8 @@ import {
   type FrameworkConfig,
   setupEnv,
   type EnvConfig,
+  type AppContext,
+  type NextFunction,
 } from '@areo/core';
 import { initFileRouter } from '@areo/router';
 import { createServer, type ServerOptions } from '@areo/server';
@@ -123,7 +125,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   server.setRouter(router);
 
   // Add HMR middleware
-  server.use(async (request, context, next) => {
+  server.use(async (request: Request, context: AppContext, next: NextFunction) => {
     const url = new URL(request.url);
 
     // Inject HMR client

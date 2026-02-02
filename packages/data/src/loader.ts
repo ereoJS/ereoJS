@@ -51,14 +51,15 @@ export function createLoader<T, P extends RouteParams = RouteParams>(
 
     try {
       // Load data
-      let data = await options.load(args);
+      const rawData = await options.load(args);
 
       // Transform if needed
       if (options.transform) {
-        data = await options.transform(data as Awaited<T>, args) as T;
+        const transformed = await options.transform(rawData as Awaited<T>, args);
+        return transformed as T;
       }
 
-      return data;
+      return rawData;
     } catch (error) {
       if (options.onError && error instanceof Error) {
         const result = await options.onError(error, args);

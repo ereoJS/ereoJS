@@ -1,6 +1,7 @@
 import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
 import { BunServer, createServer, serve } from './bun-server';
 import { AreoApp } from '@areo/core';
+import { createElement } from 'react';
 
 describe('@areo/server - BunServer', () => {
   let server: BunServer;
@@ -415,9 +416,13 @@ describe('@areo/server - BunServer', () => {
       });
 
       expect(response.status).toBe(200);
-      // Currently returns JSON until React rendering is set up
-      const json = await response.json();
-      expect(json.data).toEqual({ title: 'My Page' });
+      expect(response.headers.get('Content-Type')).toContain('text/html');
+
+      // Should return HTML (minimal page since no component)
+      const html = await response.text();
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('<div id="root">');
+      expect(html).toContain('window.__AREO_DATA__');
     });
 
     test('handles route with no loader', async () => {
@@ -445,8 +450,9 @@ describe('@areo/server - BunServer', () => {
       const response = await fetch('http://localhost:4582/no-loader');
 
       expect(response.status).toBe(200);
-      const json = await response.json();
-      expect(json.data).toBeNull();
+      // Should return HTML (minimal page since no component)
+      const html = await response.text();
+      expect(html).toContain('<!DOCTYPE html>');
     });
   });
 
@@ -584,6 +590,298 @@ describe('@areo/server - BunServer', () => {
       });
 
       expect(server).toBeInstanceOf(BunServer);
+    });
+  });
+
+  describe('HTML Page Rendering', () => {
+    test('renders React component to HTML with streaming', async () => {
+      server = createServer({
+        port: 4592,
+        logging: false,
+        renderMode: 'streaming',
+      });
+
+      // Simple React component
+      const TestComponent = ({ loaderData }: { loaderData: { message: string } }) => {
+        return createElement('div', { className: 'test' }, loaderData.message);
+      };
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/component',
+            path: '/component',
+            file: '/component.tsx',
+            module: {
+              default: TestComponent,
+              loader: async () => ({ message: 'Hello from SSR!' }),
+            },
+          },
+          params: {},
+          pathname: '/component',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4592/component', {
+        headers: { Accept: 'text/html' },
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toContain('text/html');
+
+      const html = await response.text();
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('<div id="root">');
+      expect(html).toContain('Hello from SSR!');
+      expect(html).toContain('class="test"');
+      expect(html).toContain('window.__AREO_DATA__');
+      expect(html).toContain('/_areo/client.js');
+    });
+
+    test('renders React component to HTML with string mode', async () => {
+      server = createServer({
+        port: 4593,
+        logging: false,
+        renderMode: 'string',
+      });
+
+      const TestComponent = ({ loaderData }: { loaderData: { title: string } }) => {
+        return createElement('h1', null, loaderData.title);
+      };
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/string-render',
+            path: '/string-render',
+            file: '/string-render.tsx',
+            module: {
+              default: TestComponent,
+              loader: async () => ({ title: 'String SSR Title' }),
+            },
+          },
+          params: {},
+          pathname: '/string-render',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4593/string-render', {
+        headers: { Accept: 'text/html' },
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toContain('text/html');
+      expect(response.headers.get('Content-Length')).toBeDefined();
+
+      const html = await response.text();
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('<h1>String SSR Title</h1>');
+      expect(html).toContain('window.__AREO_DATA__');
+    });
+
+    test('renders page with meta function for title', async () => {
+      server = createServer({
+        port: 4594,
+        logging: false,
+        renderMode: 'string',
+      });
+
+      const TestComponent = ({ loaderData }: any) => {
+        return createElement('main', null, loaderData.content);
+      };
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/with-meta',
+            path: '/with-meta',
+            file: '/with-meta.tsx',
+            module: {
+              default: TestComponent,
+              loader: async () => ({ content: 'Page content here' }),
+              meta: ({ data }: any) => [
+                { title: 'Custom Page Title' },
+                { name: 'description', content: 'Page description' },
+              ],
+            },
+          },
+          params: {},
+          pathname: '/with-meta',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4594/with-meta');
+
+      const html = await response.text();
+      expect(html).toContain('<title>Custom Page Title</title>');
+      expect(html).toContain('name="description"');
+      expect(html).toContain('content="Page description"');
+    });
+
+    test('uses custom client entry path', async () => {
+      server = createServer({
+        port: 4595,
+        logging: false,
+        renderMode: 'string',
+        clientEntry: '/custom/entry.js',
+      });
+
+      const TestComponent = () => createElement('div', null, 'Test');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/custom-entry',
+            path: '/custom-entry',
+            file: '/custom-entry.tsx',
+            module: {
+              default: TestComponent,
+            },
+          },
+          params: {},
+          pathname: '/custom-entry',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4595/custom-entry');
+
+      const html = await response.text();
+      expect(html).toContain('src="/custom/entry.js"');
+    });
+
+    test('uses custom shell template', async () => {
+      server = createServer({
+        port: 4596,
+        logging: false,
+        renderMode: 'string',
+        shell: {
+          title: 'Default Shell Title',
+          htmlAttrs: { lang: 'fr' },
+          head: '<link rel="icon" href="/favicon.ico">',
+        },
+      });
+
+      const TestComponent = () => createElement('div', null, 'Content');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/custom-shell',
+            path: '/custom-shell',
+            file: '/custom-shell.tsx',
+            module: {
+              default: TestComponent,
+            },
+          },
+          params: {},
+          pathname: '/custom-shell',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4596/custom-shell');
+
+      const html = await response.text();
+      expect(html).toContain('<title>Default Shell Title</title>');
+      expect(html).toContain('lang="fr"');
+      expect(html).toContain('<link rel="icon" href="/favicon.ico">');
+    });
+
+    test('serializes loader data safely for hydration', async () => {
+      server = createServer({
+        port: 4597,
+        logging: false,
+        renderMode: 'string',
+      });
+
+      const TestComponent = () => createElement('div', null, 'Test');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/xss-test',
+            path: '/xss-test',
+            file: '/xss-test.tsx',
+            module: {
+              default: TestComponent,
+              loader: async () => ({
+                // This data contains characters that could break script tags
+                unsafe: '</script><script>alert("xss")</script>',
+              }),
+            },
+          },
+          params: {},
+          pathname: '/xss-test',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4597/xss-test');
+
+      const html = await response.text();
+      // The < and > characters should be escaped
+      expect(html).not.toContain('</script><script>');
+      expect(html).toContain('\\u003c'); // Escaped <
+      expect(html).toContain('\\u003e'); // Escaped >
+    });
+
+    test('renders minimal page when no default component', async () => {
+      server = createServer({
+        port: 4598,
+        logging: false,
+        renderMode: 'string',
+      });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/no-component',
+            path: '/no-component',
+            file: '/no-component.tsx',
+            module: {
+              // No default export
+              loader: async () => ({ data: 'some data' }),
+            },
+          },
+          params: { id: '123' },
+          pathname: '/no-component',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4598/no-component');
+
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('<title>Areo App</title>');
+      expect(html).toContain('<div id="root"></div>');
+      expect(html).toContain('window.__AREO_DATA__');
     });
   });
 });

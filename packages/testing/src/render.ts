@@ -186,13 +186,13 @@ export async function renderRouteMatrix<T = unknown, P = RouteParams>(
 ): Promise<RenderResult<T>[]> {
   return Promise.all(
     options.params.map((params) =>
-      renderRoute(module, {
+      renderRoute<T, P>(module, {
         params,
         request: options.request,
         context: options.context,
       })
     )
-  );
+  ) as Promise<RenderResult<T>[]>;
 }
 
 /**

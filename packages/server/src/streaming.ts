@@ -116,14 +116,14 @@ export function createShell(options: {
 
 /**
  * Render a route to a streaming response.
- * This is a placeholder that will be implemented with actual React rendering.
+ * Uses renderToPipeableStream for Node.js/Bun environments.
  */
 export async function renderToStream(
   element: ReactElement,
   options: RenderOptions
 ): Promise<RenderResult> {
   // Dynamic import to avoid issues when React DOM isn't installed
-  const { renderToReadableStream } = await import('react-dom/server');
+  const { renderToPipeableStream } = await import('react-dom/server');
 
   const { shell, scripts = [], styles = [] } = options;
 
@@ -139,43 +139,55 @@ export async function renderToStream(
 
   const { head, tail } = createShell({ shell, scripts, styles, loaderData });
 
-  const stream = await renderToReadableStream(element, {
-    bootstrapScripts: scripts,
-    onError(error) {
-      console.error('Render error:', error);
-    },
+  return new Promise((resolve, reject) => {
+    const { PassThrough } = require('stream');
+
+    const { pipe, abort } = renderToPipeableStream(element, {
+      bootstrapScripts: scripts,
+      onShellReady() {
+        const passThrough = new PassThrough();
+        const chunks: Buffer[] = [];
+        chunks.push(Buffer.from(head));
+
+        passThrough.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+
+        passThrough.on('end', () => {
+          chunks.push(Buffer.from(tail));
+          const fullHtml = Buffer.concat(chunks).toString('utf-8');
+
+          resolve({
+            body: fullHtml,
+            headers: new Headers({
+              'Content-Type': 'text/html; charset=utf-8',
+              'Content-Length': Buffer.byteLength(fullHtml).toString(),
+            }),
+            status: 200,
+          });
+        });
+
+        passThrough.on('error', (error: Error) => {
+          console.error('Stream error:', error);
+          reject(error);
+        });
+
+        pipe(passThrough);
+      },
+      onShellError(error: unknown) {
+        console.error('Shell render error:', error);
+        reject(error);
+      },
+      onError(error: unknown) {
+        console.error('Render error:', error);
+      },
+    });
+
+    // Set a timeout to abort if rendering takes too long
+    setTimeout(() => {
+      abort();
+    }, 10000);
   });
-
-  // Create a TransformStream to wrap content in shell
-  const encoder = new TextEncoder();
-  const headBytes = encoder.encode(head);
-  const tailBytes = encoder.encode(tail);
-
-  let headSent = false;
-
-  const transformStream = new TransformStream<Uint8Array, Uint8Array>({
-    start(controller) {
-      controller.enqueue(headBytes);
-      headSent = true;
-    },
-    transform(chunk, controller) {
-      controller.enqueue(chunk);
-    },
-    flush(controller) {
-      controller.enqueue(tailBytes);
-    },
-  });
-
-  const body = stream.pipeThrough(transformStream);
-
-  return {
-    body,
-    headers: new Headers({
-      'Content-Type': 'text/html; charset=utf-8',
-      'Transfer-Encoding': 'chunked',
-    }),
-    status: 200,
-  };
 }
 
 /**

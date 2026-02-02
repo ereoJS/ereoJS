@@ -231,7 +231,7 @@ export function assertCookies(
       continue;
     }
 
-    if (expectations.exists !== false && !cookieHeader) {
+    if (expectations.exists !== false as boolean && !cookieHeader) {
       throw new Error(
         options.message ||
           `Expected cookie "${name}" to be set but it was not`

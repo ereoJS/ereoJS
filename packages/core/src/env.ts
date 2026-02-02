@@ -46,7 +46,7 @@ export interface EnvSchemaBuilder<T> {
 
 /** Parsed environment configuration */
 export interface ParsedEnv {
-  [key: string]: string | number | boolean | unknown[] | Record<string, unknown>;
+  [key: string]: string | number | boolean | unknown[] | Record<string, unknown> | null;
 }
 
 /** Environment validation result */
@@ -354,7 +354,7 @@ export function validateEnv(
       }
 
       if (definition.default !== undefined) {
-        parsed[key] = definition.default;
+        parsed[key] = definition.default as ParsedEnv[string];
         continue;
       }
 

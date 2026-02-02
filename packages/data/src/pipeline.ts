@@ -140,8 +140,8 @@ export interface WaterfallInfo {
  * export const loader = pipeline.toLoader();
  */
 export function createPipeline<
-  TLoaders extends Record<string, DataSource<unknown, P>>,
-  P = RouteParams
+  TLoaders extends Record<string, DataSource>,
+  P extends RouteParams = RouteParams
 >(config: PipelineConfig<TLoaders, P>) {
   const { loaders, dependencies = {}, onError, metrics: enableMetrics = false } = config;
 

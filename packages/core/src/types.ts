@@ -82,6 +82,11 @@ export interface DevServer {
   restart: () => Promise<void>;
   /** Add middleware to the dev server */
   middlewares: MiddlewareHandler[];
+  /** File watcher for development (optional) */
+  watcher?: {
+    add: (path: string) => void;
+    on: (event: string, callback: (file: string) => void) => void;
+  };
 }
 
 // ============================================================================

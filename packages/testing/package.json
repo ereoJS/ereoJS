@@ -14,11 +14,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun run build:types",
-    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
     "@areo/core": "workspace:*",

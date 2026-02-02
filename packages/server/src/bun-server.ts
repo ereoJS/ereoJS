@@ -6,7 +6,7 @@
  */
 
 import type { Server } from 'bun';
-import type { FrameworkConfig, RouteMatch, Route } from '@areo/core';
+import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler } from '@areo/core';
 import { createContext, RequestContext, AreoApp } from '@areo/core';
 import { FileRouter, createFileRouter } from '@areo/router';
 import {
@@ -18,6 +18,13 @@ import {
 } from './middleware';
 import { serveStatic, type StaticOptions } from './static';
 import { createShell, createResponse, renderToString, type ShellTemplate } from './streaming';
+import { serializeLoaderData } from '@areo/data';
+import { createElement, type ReactElement, type ComponentType } from 'react';
+
+/**
+ * Render mode options.
+ */
+export type RenderMode = 'streaming' | 'string';
 
 /**
  * Server options.
@@ -46,13 +53,21 @@ export interface ServerOptions {
     cert: string;
     key: string;
   };
+  /** Render mode: 'streaming' for React 18 streaming SSR, 'string' for traditional SSR */
+  renderMode?: RenderMode;
+  /** Base path for client assets */
+  assetsPath?: string;
+  /** Client entry script path */
+  clientEntry?: string;
+  /** Default shell template */
+  shell?: ShellTemplate;
 }
 
 /**
  * Bun server instance.
  */
 export class BunServer {
-  private server: Server | null = null;
+  private server: Server<unknown> | null = null;
   private app: AreoApp | null = null;
   private router: FileRouter | null = null;
   private middleware: MiddlewareChain;
@@ -65,6 +80,9 @@ export class BunServer {
       hostname: 'localhost',
       development: process.env.NODE_ENV !== 'production',
       logging: true,
+      renderMode: 'streaming',
+      assetsPath: '/_areo',
+      clientEntry: '/_areo/client.js',
       ...options,
     };
 
@@ -118,8 +136,14 @@ export class BunServer {
   /**
    * Add middleware.
    */
-  use(handler: Parameters<MiddlewareChain['use']>[0]): void {
-    this.middleware.use(handler as any);
+  use(handler: MiddlewareHandler): void;
+  use(path: string, handler: MiddlewareHandler): void;
+  use(pathOrHandler: string | MiddlewareHandler, maybeHandler?: MiddlewareHandler): void {
+    if (typeof pathOrHandler === 'function') {
+      this.middleware.use(pathOrHandler);
+    } else if (maybeHandler) {
+      this.middleware.use(pathOrHandler, maybeHandler);
+    }
   }
 
   /**
@@ -225,11 +249,292 @@ export class BunServer {
       });
     }
 
-    // Full page render
-    // For now, return JSON until React rendering is fully set up
-    return new Response(JSON.stringify({ data: loaderData, params: match.params }), {
-      headers: { 'Content-Type': 'application/json' },
+    // Full page render - render React component to HTML
+    return this.renderPage(request, match, context, loaderData);
+  }
+
+  /**
+   * Render a full HTML page with the route component.
+   */
+  private async renderPage(
+    request: Request,
+    match: RouteMatch,
+    context: RequestContext,
+    loaderData: unknown
+  ): Promise<Response> {
+    const module = match.route.module;
+    if (!module?.default) {
+      // No component to render, return a minimal HTML page with just the data
+      return this.renderMinimalPage(match, loaderData);
+    }
+
+    const Component = module.default;
+    const url = new URL(request.url);
+
+    // Build meta descriptors from route's meta function
+    const metaDescriptors = this.buildMeta(module, loaderData, match.params, url);
+
+    // Build the shell template
+    const shell: ShellTemplate = {
+      ...this.options.shell,
+      title: this.extractTitle(metaDescriptors) || this.options.shell?.title,
+      meta: this.extractMetaTags(metaDescriptors),
+    };
+
+    // Create the React element for the page component
+    const element = createElement(Component, {
+      loaderData,
+      params: match.params,
     });
+
+    // Choose between streaming and string rendering
+    if (this.options.renderMode === 'streaming') {
+      return this.renderStreamingPage(element, shell, loaderData);
+    } else {
+      return this.renderStringPage(element, shell, loaderData);
+    }
+  }
+
+  /**
+   * Render page using React 18 streaming SSR.
+   * Uses renderToPipeableStream for Node.js/Bun environments and converts to a web ReadableStream.
+   */
+  private async renderStreamingPage(
+    element: ReactElement,
+    shell: ShellTemplate,
+    loaderData: unknown
+  ): Promise<Response> {
+    try {
+      const { renderToPipeableStream } = await import('react-dom/server');
+
+      const scripts = [this.options.clientEntry!];
+      const { head, tail } = createShell({ shell, scripts, loaderData });
+
+      return new Promise((resolve, reject) => {
+        const { pipe, abort } = renderToPipeableStream(element, {
+          onShellReady() {
+            // Create a PassThrough stream to pipe React's output
+            const { Readable, PassThrough } = require('stream');
+
+            const passThrough = new PassThrough();
+
+            // Collect all chunks and convert to a web ReadableStream
+            const chunks: Buffer[] = [];
+            chunks.push(Buffer.from(head));
+
+            passThrough.on('data', (chunk: Buffer) => {
+              chunks.push(chunk);
+            });
+
+            passThrough.on('end', () => {
+              chunks.push(Buffer.from(tail));
+              const fullHtml = Buffer.concat(chunks).toString('utf-8');
+
+              resolve(
+                new Response(fullHtml, {
+                  status: 200,
+                  headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Content-Length': Buffer.byteLength(fullHtml).toString(),
+                  },
+                })
+              );
+            });
+
+            passThrough.on('error', (error: Error) => {
+              console.error('Stream error:', error);
+              reject(error);
+            });
+
+            // Pipe React's output to our PassThrough stream
+            pipe(passThrough);
+          },
+          onShellError(error: unknown) {
+            console.error('Shell render error:', error);
+            reject(error);
+          },
+          onError(error: unknown) {
+            console.error('Streaming render error:', error);
+          },
+        });
+
+        // Set a timeout to abort if rendering takes too long
+        setTimeout(() => {
+          abort();
+        }, 10000);
+      });
+    } catch (error) {
+      console.error('Streaming render failed:', error);
+      // Fallback to string rendering on error
+      return this.renderStringPage(element, shell, loaderData);
+    }
+  }
+
+  /**
+   * Render page using traditional string-based SSR.
+   */
+  private async renderStringPage(
+    element: ReactElement,
+    shell: ShellTemplate,
+    loaderData: unknown
+  ): Promise<Response> {
+    try {
+      const { renderToString: reactRenderToString } = await import('react-dom/server');
+
+      const scripts = [this.options.clientEntry!];
+      const { head, tail } = createShell({ shell, scripts, loaderData });
+
+      const content = reactRenderToString(element);
+      const html = head + content + tail;
+
+      return new Response(html, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': Buffer.byteLength(html).toString(),
+        },
+      });
+    } catch (error) {
+      console.error('String render failed:', error);
+      // Return error page
+      return this.renderErrorPage(error);
+    }
+  }
+
+  /**
+   * Render a minimal HTML page when no component is available.
+   */
+  private renderMinimalPage(match: RouteMatch, loaderData: unknown): Response {
+    const serializedData = serializeLoaderData({
+      loaderData,
+      params: match.params,
+    });
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Areo App</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script>window.__AREO_DATA__=${serializedData}</script>
+  <script type="module" src="${this.options.clientEntry}"></script>
+</body>
+</html>`;
+
+    return new Response(html, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Length': Buffer.byteLength(html).toString(),
+      },
+    });
+  }
+
+  /**
+   * Render an error page.
+   */
+  private renderErrorPage(error: unknown): Response {
+    const message = error instanceof Error ? error.message : 'An error occurred';
+    const stack = this.options.development && error instanceof Error ? error.stack : undefined;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Error - Areo</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
+    h1 { color: #dc2626; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; overflow-x: auto; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Render Error</h1>
+  <p>${this.escapeHtml(message)}</p>
+  ${stack ? `<pre>${this.escapeHtml(stack)}</pre>` : ''}
+</body>
+</html>`;
+
+    return new Response(html, {
+      status: 500,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+      },
+    });
+  }
+
+  /**
+   * Build meta descriptors from route's meta function.
+   */
+  private buildMeta(
+    module: RouteModule,
+    loaderData: unknown,
+    params: Record<string, string | string[] | undefined>,
+    url: URL
+  ): MetaDescriptor[] {
+    if (!module.meta) {
+      return [];
+    }
+
+    try {
+      return module.meta({
+        data: loaderData,
+        params,
+        location: {
+          pathname: url.pathname,
+          search: url.search,
+          hash: url.hash,
+        },
+      });
+    } catch (error) {
+      console.error('Error building meta:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Extract title from meta descriptors.
+   */
+  private extractTitle(meta: MetaDescriptor[]): string | undefined {
+    for (const descriptor of meta) {
+      if (descriptor.title) {
+        return descriptor.title;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Extract meta tags from meta descriptors (excluding title).
+   */
+  private extractMetaTags(meta: MetaDescriptor[]): Array<{ name?: string; property?: string; content: string }> {
+    const tags: Array<{ name?: string; property?: string; content: string }> = [];
+
+    for (const descriptor of meta) {
+      if (descriptor.name && descriptor.content) {
+        tags.push({ name: descriptor.name, content: descriptor.content });
+      } else if (descriptor.property && descriptor.content) {
+        tags.push({ property: descriptor.property, content: descriptor.content });
+      }
+    }
+
+    return tags;
+  }
+
+  /**
+   * Escape HTML special characters.
+   */
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   /**
@@ -260,7 +565,7 @@ export class BunServer {
   /**
    * Start the server.
    */
-  async start(): Promise<Server> {
+  async start(): Promise<Server<unknown>> {
     const { port, hostname, tls, websocket } = this.options;
 
     const serverOptions: Parameters<typeof Bun.serve>[0] = {
@@ -275,7 +580,7 @@ export class BunServer {
     }
 
     if (websocket) {
-      serverOptions.websocket = websocket;
+      (serverOptions as any).websocket = websocket;
     }
 
     this.server = Bun.serve(serverOptions);
@@ -302,7 +607,7 @@ export class BunServer {
   async reload(): Promise<void> {
     if (this.server) {
       this.server.reload({
-        fetch: (request) => this.handleRequest(request),
+        fetch: (request: Request) => this.handleRequest(request),
       });
     }
   }
@@ -310,7 +615,7 @@ export class BunServer {
   /**
    * Get the server instance.
    */
-  getServer(): Server | null {
+  getServer(): Server<unknown> | null {
     return this.server;
   }
 

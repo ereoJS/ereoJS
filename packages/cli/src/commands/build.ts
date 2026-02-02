@@ -15,6 +15,7 @@ export interface BuildCommandOptions {
   outDir?: string;
   minify?: boolean;
   sourcemap?: boolean;
+  production?: boolean;
 }
 
 /**
@@ -38,13 +39,17 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
     console.warn('Could not load config:', error);
   }
 
+  // Map config target to bundler target
+  const configTarget = config.build?.target || 'bun';
+  const bundlerTarget = (['bun', 'node', 'browser'].includes(configTarget) ? configTarget : 'bun') as 'bun' | 'node' | 'browser';
+
   // Merge options
   const buildOptions: BuildOptions = {
     root,
     outDir: options.outDir || config.build?.outDir || '.areo',
     minify: options.minify ?? config.build?.minify ?? true,
     sourcemap: options.sourcemap ?? config.build?.sourcemap ?? true,
-    target: config.build?.target || 'bun',
+    target: bundlerTarget,
   };
 
   console.log(`  Target: ${buildOptions.target}`);

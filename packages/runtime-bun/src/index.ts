@@ -26,7 +26,7 @@ export interface BunRuntimeOptions {
 export class BunRuntime {
   private app: AreoApp;
   private server: ReturnType<typeof createServer> | null = null;
-  private bunServer: Server | null = null;
+  private bunServer: Server<unknown> | null = null;
   private options: BunRuntimeOptions;
 
   constructor(options: BunRuntimeOptions = {}) {
@@ -52,12 +52,13 @@ export class BunRuntime {
   /**
    * Start the server.
    */
-  async start(): Promise<Server> {
+  async start(): Promise<Server<unknown>> {
     this.server = createServer(this.options.server);
     this.server.setApp(this.app);
 
-    this.bunServer = await this.server.start();
-    return this.bunServer;
+    const server = await this.server.start();
+    this.bunServer = server;
+    return server;
   }
 
   /**

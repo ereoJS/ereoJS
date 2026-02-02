@@ -33,9 +33,10 @@ export {
   build,
   formatSize,
   printBuildReport,
+  analyzeBuild,
 } from './prod/build';
 
-export type { BuildOptions, BuildResult } from './prod/build';
+export type { BuildOptions, BuildResult, BuildOutput } from './prod/build';
 
 // Plugins - Types
 export {
@@ -69,6 +70,8 @@ export {
   generateCSSEntry,
   hasTailwindConfig,
   tailwindMiddleware,
+  extractTailwindClasses,
+  generateSafelist,
 } from './plugins/tailwind';
 
 export type { TailwindPluginOptions } from './plugins/tailwind';

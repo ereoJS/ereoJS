@@ -11,7 +11,7 @@ export {
   serve,
 } from './bun-server';
 
-export type { ServerOptions } from './bun-server';
+export type { ServerOptions, RenderMode } from './bun-server';
 
 // Middleware
 export {
