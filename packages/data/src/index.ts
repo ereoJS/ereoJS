@@ -25,6 +25,11 @@ export type { LoaderOptions, DeferredData } from './loader';
 export {
   createAction,
   action,
+  typedAction,
+  jsonAction,
+  parseRequestBody,
+  formDataToObject,
+  coerceValue,
   redirect,
   json,
   error,
@@ -35,6 +40,9 @@ export {
 
 export type {
   ActionOptions,
+  TypedActionOptions,
+  TypedActionArgs,
+  ActionBody,
   ValidationResult,
   ActionResult,
 } from './action';
