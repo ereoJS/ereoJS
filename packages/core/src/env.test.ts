@@ -1,5 +1,5 @@
 /**
- * @oreo/core - Environment Variable Tests
+ * @areo/core - Environment Variable Tests
  */
 
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
@@ -187,17 +187,17 @@ describe('validateEnv', () => {
     expect(result.errors[0].message).toBe('Invalid URL');
   });
 
-  test('warns about unknown OREO_ prefixed variables', () => {
+  test('warns about unknown AREO_ prefixed variables', () => {
     const schema: EnvConfig = {
       KNOWN_VAR: env.string(),
     };
 
     const result = validateEnv(schema, {
       KNOWN_VAR: 'value',
-      OREO_UNKNOWN: 'something',
+      AREO_UNKNOWN: 'something',
     });
 
-    expect(result.warnings).toContain('Unknown environment variable with OREO_ prefix: OREO_UNKNOWN');
+    expect(result.warnings).toContain('Unknown environment variable with AREO_ prefix: AREO_UNKNOWN');
   });
 });
 
@@ -238,7 +238,7 @@ describe('generateEnvTypes', () => {
 
     const types = generateEnvTypes(schema);
 
-    expect(types).toContain("declare module '@oreo/core'");
+    expect(types).toContain("declare module '@areo/core'");
     expect(types).toContain('interface EnvTypes');
     expect(types).toContain('DATABASE_URL: string;');
     expect(types).toContain('PORT: number;');

@@ -1,5 +1,5 @@
 # Build output
-.oreo/
+.areo/
 dist/
 
 # Dependencies (handled by root)

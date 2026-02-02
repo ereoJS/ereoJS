@@ -1,11 +1,11 @@
 /**
- * @oreo/data - Explicit Caching
+ * @areo/data - Explicit Caching
  *
  * A transparent caching system with tags for invalidation.
  * No hidden magic - you see exactly what's being cached.
  */
 
-import type { CacheOptions } from '@oreo/core';
+import type { CacheOptions } from '@areo/core';
 
 /**
  * Cache entry with metadata.

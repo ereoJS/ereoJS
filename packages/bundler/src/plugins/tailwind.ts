@@ -1,11 +1,11 @@
 /**
- * @oreo/bundler - Tailwind CSS Plugin
+ * @areo/bundler - Tailwind CSS Plugin
  *
  * Zero-config Tailwind CSS integration.
  */
 
 import { join, resolve } from 'node:path';
-import type { Plugin } from '@oreo/core';
+import type { Plugin } from '@areo/core';
 
 /**
  * Tailwind plugin options.
@@ -37,7 +37,7 @@ export function createTailwindPlugin(options: TailwindPluginOptions = {}): Plugi
   let cssCache = new Map<string, string>();
 
   return {
-    name: 'oreo:tailwind',
+    name: 'areo:tailwind',
 
     async setup(context) {
       const root = context.root;

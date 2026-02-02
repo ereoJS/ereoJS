@@ -16,17 +16,17 @@
     "noEmit": true,
     "types": ["bun-types"],
     "paths": {
-      "@oreo/core": ["./packages/core/src/index.ts"],
-      "@oreo/router": ["./packages/router/src/index.ts"],
-      "@oreo/data": ["./packages/data/src/index.ts"],
-      "@oreo/server": ["./packages/server/src/index.ts"],
-      "@oreo/client": ["./packages/client/src/index.ts"],
-      "@oreo/bundler": ["./packages/bundler/src/index.ts"],
-      "@oreo/cli": ["./packages/cli/src/index.ts"],
-      "@oreo/plugin-tailwind": ["./packages/plugin-tailwind/src/index.ts"],
-      "@oreo/runtime-bun": ["./packages/runtime-bun/src/index.ts"],
-      "@oreo/testing": ["./packages/testing/src/index.ts"],
-      "@oreo/dev-inspector": ["./packages/dev-inspector/src/index.ts"]
+      "@areo/core": ["./packages/core/src/index.ts"],
+      "@areo/router": ["./packages/router/src/index.ts"],
+      "@areo/data": ["./packages/data/src/index.ts"],
+      "@areo/server": ["./packages/server/src/index.ts"],
+      "@areo/client": ["./packages/client/src/index.ts"],
+      "@areo/bundler": ["./packages/bundler/src/index.ts"],
+      "@areo/cli": ["./packages/cli/src/index.ts"],
+      "@areo/plugin-tailwind": ["./packages/plugin-tailwind/src/index.ts"],
+      "@areo/runtime-bun": ["./packages/runtime-bun/src/index.ts"],
+      "@areo/testing": ["./packages/testing/src/index.ts"],
+      "@areo/dev-inspector": ["./packages/dev-inspector/src/index.ts"]
     }
   },
   "references": [
@@ -39,7 +39,7 @@
     { "path": "./packages/cli" },
     { "path": "./packages/plugin-tailwind" },
     { "path": "./packages/runtime-bun" },
-    { "path": "./packages/create-oreo" },
+    { "path": "./packages/create-areo" },
     { "path": "./packages/testing" },
     { "path": "./packages/dev-inspector" }
   ],

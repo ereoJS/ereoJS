@@ -1,11 +1,11 @@
 {
-  "name": "@oreo/cli",
+  "name": "@areo/cli",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "oreo": "./dist/index.js"
+    "areo": "./dist/index.js"
   },
   "exports": {
     ".": {
@@ -24,10 +24,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*",
-    "@oreo/server": "workspace:*",
-    "@oreo/bundler": "workspace:*"
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*",
+    "@areo/server": "workspace:*",
+    "@areo/bundler": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

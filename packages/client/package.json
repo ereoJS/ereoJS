@@ -1,5 +1,5 @@
 {
-  "name": "@oreo/client",
+  "name": "@areo/client",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*"
+    "@areo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

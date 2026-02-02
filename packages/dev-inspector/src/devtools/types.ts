@@ -1,8 +1,8 @@
 /**
- * @oreo/dev-inspector - DevTools Types
+ * @areo/dev-inspector - DevTools Types
  */
 
-import type { PipelineMetrics, WaterfallInfo } from '@oreo/data';
+import type { PipelineMetrics, WaterfallInfo } from '@areo/data';
 
 /**
  * DevTools configuration.

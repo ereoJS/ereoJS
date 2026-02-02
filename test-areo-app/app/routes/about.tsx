@@ -5,7 +5,7 @@ export default function AboutPage() {
         About
       </h1>
       <p className="text-gray-600 dark:text-gray-400">
-        Built with Oreo Framework
+        Built with Areo Framework
       </p>
     </main>
   );

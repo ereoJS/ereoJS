@@ -6,7 +6,7 @@ import {
   type HydrationStrategy,
 } from './hydration';
 
-describe('@oreo/client - Hydration (Additional Coverage)', () => {
+describe('@areo/client - Hydration (Additional Coverage)', () => {
   describe('parseHydrationDirective', () => {
     test('parses client:load directive', () => {
       const props = { 'client:load': true };

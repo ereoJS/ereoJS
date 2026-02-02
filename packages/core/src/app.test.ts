@@ -1,13 +1,13 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import { createApp, defineConfig, OreoApp, isOreoApp } from './app';
+import { createApp, defineConfig, AreoApp, isAreoApp } from './app';
 import type { FrameworkConfig, Plugin, RouteMatch, RequestContext } from './types';
 
-describe('@oreo/core - App', () => {
+describe('@areo/core - App', () => {
   describe('createApp', () => {
     test('creates an app with default config', () => {
       const app = createApp();
 
-      expect(app).toBeInstanceOf(OreoApp);
+      expect(app).toBeInstanceOf(AreoApp);
       expect(app.config.server?.port).toBe(3000);
       expect(app.config.server?.hostname).toBe('localhost');
     });
@@ -45,8 +45,8 @@ describe('@oreo/core - App', () => {
     });
   });
 
-  describe('OreoApp', () => {
-    let app: OreoApp;
+  describe('AreoApp', () => {
+    let app: AreoApp;
 
     beforeEach(() => {
       app = createApp();
@@ -343,18 +343,18 @@ describe('@oreo/core - App', () => {
     });
   });
 
-  describe('isOreoApp', () => {
-    test('returns true for OreoApp instance', () => {
+  describe('isAreoApp', () => {
+    test('returns true for AreoApp instance', () => {
       const app = createApp();
-      expect(isOreoApp(app)).toBe(true);
+      expect(isAreoApp(app)).toBe(true);
     });
 
-    test('returns false for non-OreoApp values', () => {
-      expect(isOreoApp(null)).toBe(false);
-      expect(isOreoApp(undefined)).toBe(false);
-      expect(isOreoApp({})).toBe(false);
-      expect(isOreoApp('string')).toBe(false);
-      expect(isOreoApp(123)).toBe(false);
+    test('returns false for non-AreoApp values', () => {
+      expect(isAreoApp(null)).toBe(false);
+      expect(isAreoApp(undefined)).toBe(false);
+      expect(isAreoApp({})).toBe(false);
+      expect(isAreoApp('string')).toBe(false);
+      expect(isAreoApp(123)).toBe(false);
     });
   });
 
@@ -386,7 +386,7 @@ describe('@oreo/core - App', () => {
   describe('build() method', () => {
     test('initializes plugins and runs build hooks', async () => {
       const app = createApp({
-        config: { build: { target: 'bun', outDir: '.oreo' } },
+        config: { build: { target: 'bun', outDir: '.areo' } },
       });
 
       // Should not throw

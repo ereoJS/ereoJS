@@ -8,7 +8,7 @@ import {
   HMR_CLIENT_CODE,
 } from './hmr';
 
-describe('@oreo/bundler - HMR', () => {
+describe('@areo/bundler - HMR', () => {
   describe('HMR_CLIENT_CODE', () => {
     test('contains WebSocket connection code', () => {
       expect(HMR_CLIENT_CODE).toContain('WebSocket');

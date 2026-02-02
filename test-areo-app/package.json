@@ -1,5 +1,5 @@
 {
-  "name": "oreo-app",
+  "name": "areo-app",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -9,14 +9,14 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*",
-    "@oreo/server": "workspace:*",
-    "@oreo/client": "workspace:*",
-    "@oreo/data": "workspace:*",
-    "@oreo/cli": "workspace:*",
-    "@oreo/testing": "workspace:*",
-    "@oreo/dev-inspector": "workspace:*",
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*",
+    "@areo/server": "workspace:*",
+    "@areo/client": "workspace:*",
+    "@areo/data": "workspace:*",
+    "@areo/cli": "workspace:*",
+    "@areo/testing": "workspace:*",
+    "@areo/dev-inspector": "workspace:*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

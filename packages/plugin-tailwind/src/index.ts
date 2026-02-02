@@ -1,12 +1,12 @@
 /**
- * @oreo/plugin-tailwind
+ * @areo/plugin-tailwind
  *
- * Zero-config Tailwind CSS integration for Oreo.
+ * Zero-config Tailwind CSS integration for Areo.
  */
 
 import { join } from 'node:path';
-import type { Plugin } from '@oreo/core';
-import { oreoPreset, getOreoTailwindConfig } from './preset';
+import type { Plugin } from '@areo/core';
+import { areoPreset, getAreoTailwindConfig } from './preset';
 
 /**
  * Tailwind plugin options.
@@ -18,7 +18,7 @@ export interface TailwindPluginOptions {
   config?: string;
   /** Enable dark mode */
   darkMode?: 'class' | 'media' | false;
-  /** Use Oreo preset */
+  /** Use Areo preset */
   usePreset?: boolean;
 }
 
@@ -36,8 +36,8 @@ const defaults: Required<TailwindPluginOptions> = {
  * Create Tailwind CSS plugin.
  *
  * @example
- * import { defineConfig } from '@oreo/core';
- * import tailwind from '@oreo/plugin-tailwind';
+ * import { defineConfig } from '@areo/core';
+ * import tailwind from '@areo/plugin-tailwind';
  *
  * export default defineConfig({
  *   plugins: [
@@ -51,7 +51,7 @@ export default function tailwind(options: TailwindPluginOptions = {}): Plugin {
   let configLoaded = false;
 
   return {
-    name: 'oreo:tailwind',
+    name: 'areo:tailwind',
 
     async setup(context) {
       const root = context.root;
@@ -67,7 +67,7 @@ export default function tailwind(options: TailwindPluginOptions = {}): Plugin {
         } else {
           // Generate default config if using preset
           if (opts.usePreset) {
-            console.log('  Using Oreo Tailwind preset');
+            console.log('  Using Areo Tailwind preset');
           }
         }
       } catch (error) {
@@ -143,7 +143,7 @@ export default function tailwind(options: TailwindPluginOptions = {}): Plugin {
 }
 
 // Export utilities
-export { oreoPreset, getOreoTailwindConfig } from './preset';
+export { areoPreset, getAreoTailwindConfig } from './preset';
 
 /**
  * Generate Tailwind config file content.
@@ -153,9 +153,9 @@ export function generateConfig(options: TailwindPluginOptions = {}): string {
 
   if (opts.usePreset) {
     return `
-import { getOreoTailwindConfig } from '@oreo/plugin-tailwind';
+import { getAreoTailwindConfig } from '@areo/plugin-tailwind';
 
-export default getOreoTailwindConfig({
+export default getAreoTailwindConfig({
   // Add your customizations here
 });
     `.trim();

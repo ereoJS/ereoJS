@@ -8,7 +8,7 @@ import {
   Cached,
 } from './cache';
 
-describe('@oreo/data - Cache (Additional Coverage)', () => {
+describe('@areo/data - Cache (Additional Coverage)', () => {
   describe('MemoryCache additional operations', () => {
     let cache: MemoryCache;
 

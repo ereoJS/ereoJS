@@ -1,5 +1,5 @@
 /**
- * @oreo/dev-inspector - Main exports
+ * @areo/dev-inspector - Main exports
  */
 
 export {

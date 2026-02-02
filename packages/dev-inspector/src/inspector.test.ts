@@ -1,5 +1,5 @@
 /**
- * @oreo/dev-inspector - Tests
+ * @areo/dev-inspector - Tests
  */
 
 import { describe, it, expect } from 'bun:test';
@@ -9,19 +9,19 @@ import {
   createRouteInfo,
   formatRouteTree,
 } from './inspector';
-import type { Route } from '@oreo/core';
+import type { Route } from '@areo/core';
 
 describe('createDevInspector', () => {
   it('should create inspector plugin', () => {
     const plugin = createDevInspector();
 
-    expect(plugin.name).toBe('@oreo/dev-inspector');
+    expect(plugin.name).toBe('@areo/dev-inspector');
     expect(typeof plugin.configureServer).toBe('function');
   });
 
   it('should accept custom mount path', () => {
     const plugin = createDevInspector({ mountPath: '/custom-inspector' });
-    expect(plugin.name).toBe('@oreo/dev-inspector');
+    expect(plugin.name).toBe('@areo/dev-inspector');
   });
 });
 

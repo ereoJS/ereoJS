@@ -1,11 +1,11 @@
 /**
- * @oreo/auth - Auth tests
+ * @areo/auth - Auth tests
  */
 
 import { describe, it, expect } from 'bun:test';
 import { createAuthPlugin, requireAuth, optionalAuth, useAuth } from './auth';
 import { credentials, mock } from './providers/index';
-import type { AppContext } from '@oreo/core';
+import type { AppContext } from '@areo/core';
 
 describe('createAuthPlugin', () => {
   it('should create auth plugin', () => {
@@ -14,7 +14,7 @@ describe('createAuthPlugin', () => {
       providers: [],
     });
 
-    expect(plugin.name).toBe('@oreo/auth');
+    expect(plugin.name).toBe('@areo/auth');
     expect(typeof plugin.setup).toBe('function');
   });
 
@@ -31,7 +31,7 @@ describe('createAuthPlugin', () => {
       ],
     });
 
-    expect(plugin.name).toBe('@oreo/auth');
+    expect(plugin.name).toBe('@areo/auth');
   });
 
   it('should accept custom session duration', () => {
@@ -40,7 +40,7 @@ describe('createAuthPlugin', () => {
       sessionDuration: 3600,
     });
 
-    expect(plugin.name).toBe('@oreo/auth');
+    expect(plugin.name).toBe('@areo/auth');
   });
 });
 

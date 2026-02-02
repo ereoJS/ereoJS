@@ -1,7 +1,7 @@
 /**
- * @oreo/server
+ * @areo/server
  *
- * High-performance Bun HTTP server for the Oreo framework.
+ * High-performance Bun HTTP server for the Areo framework.
  */
 
 // Server

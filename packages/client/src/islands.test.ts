@@ -18,7 +18,7 @@ class MockElement {
   }
 }
 
-describe('@oreo/client - Islands', () => {
+describe('@areo/client - Islands', () => {
   beforeEach(() => {
     // Clean up registry between tests
     cleanupIslands();

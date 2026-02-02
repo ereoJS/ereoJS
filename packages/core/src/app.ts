@@ -1,5 +1,5 @@
 /**
- * @oreo/core - Application Container
+ * @areo/core - Application Container
  *
  * The main application class that ties together routing, plugins,
  * and request handling.
@@ -28,7 +28,7 @@ const defaultConfig: FrameworkConfig = {
   },
   build: {
     target: 'bun',
-    outDir: '.oreo',
+    outDir: '.areo',
     minify: true,
     sourcemap: true,
   },
@@ -38,10 +38,10 @@ const defaultConfig: FrameworkConfig = {
 };
 
 /**
- * Create a new Oreo application.
+ * Create a new Areo application.
  */
-export function createApp(options: ApplicationOptions = {}): OreoApp {
-  return new OreoApp(options);
+export function createApp(options: ApplicationOptions = {}): AreoApp {
+  return new AreoApp(options);
 }
 
 /**
@@ -52,9 +52,9 @@ export function defineConfig(config: FrameworkConfig): FrameworkConfig {
 }
 
 /**
- * The main Oreo application class.
+ * The main Areo application class.
  */
-export class OreoApp implements Application {
+export class AreoApp implements Application {
   readonly config: FrameworkConfig;
   routes: Route[] = [];
   plugins: Plugin[] = [];
@@ -111,7 +111,7 @@ export class OreoApp implements Application {
 
   /**
    * Set the route matcher function.
-   * This is typically provided by @oreo/router.
+   * This is typically provided by @areo/router.
    */
   setRouteMatcher(matcher: (pathname: string) => RouteMatch | null): void {
     this.routeMatcher = matcher;
@@ -254,7 +254,7 @@ export class OreoApp implements Application {
     }
 
     // For full page requests, we need the renderer
-    // This will be handled by @oreo/server with React rendering
+    // This will be handled by @areo/server with React rendering
     return new Response(JSON.stringify({ loaderData, params: match.params }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -288,14 +288,14 @@ export class OreoApp implements Application {
 
   /**
    * Start development server.
-   * This is typically called by @oreo/cli.
+   * This is typically called by @areo/cli.
    */
   async dev(): Promise<void> {
     await this.initializePlugins();
 
     console.log(`Starting dev server on http://${this.config.server?.hostname}:${this.config.server?.port}`);
 
-    // The actual server is started by @oreo/server
+    // The actual server is started by @areo/server
     // This is a placeholder that signals dev mode is ready
   }
 
@@ -310,8 +310,8 @@ export class OreoApp implements Application {
     console.log(`Target: ${this.config.build?.target}`);
     console.log(`Output: ${this.config.build?.outDir}`);
 
-    // The actual build is handled by @oreo/bundler
-    // This is called by @oreo/cli
+    // The actual build is handled by @areo/bundler
+    // This is called by @areo/cli
 
     await this.pluginRegistry.buildEnd();
   }
@@ -324,7 +324,7 @@ export class OreoApp implements Application {
 
     console.log(`Starting production server on http://${this.config.server?.hostname}:${this.config.server?.port}`);
 
-    // The actual server is started by @oreo/server
+    // The actual server is started by @areo/server
     // This is a placeholder that signals production mode is ready
   }
 
@@ -337,8 +337,8 @@ export class OreoApp implements Application {
 }
 
 /**
- * Type guard to check if a value is an OreoApp.
+ * Type guard to check if a value is an AreoApp.
  */
-export function isOreoApp(value: unknown): value is OreoApp {
-  return value instanceof OreoApp;
+export function isAreoApp(value: unknown): value is AreoApp {
+  return value instanceof AreoApp;
 }

@@ -1,5 +1,5 @@
 /**
- * @oreo/dev-inspector - DevTools Panel
+ * @areo/dev-inspector - DevTools Panel
  *
  * Main DevTools panel combining all tabs.
  */
@@ -39,7 +39,7 @@ export function generateDevToolsPanelHTML(data: DevToolsPanelData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Oreo DevTools</title>
+  <title>Areo DevTools</title>
   <style>
     ${DEVTOOLS_BASE_STYLES}
     ${DATA_PIPELINE_STYLES}
@@ -53,7 +53,7 @@ export function generateDevToolsPanelHTML(data: DevToolsPanelData): string {
     <header class="devtools-header">
       <div class="logo">
         <span class="logo-icon">⬡</span>
-        <span class="logo-text">Oreo DevTools</span>
+        <span class="logo-text">Areo DevTools</span>
       </div>
       <nav class="devtools-nav">
         <button class="nav-btn active" data-tab="data">Data Pipeline</button>
@@ -63,13 +63,13 @@ export function generateDevToolsPanelHTML(data: DevToolsPanelData): string {
         <button class="nav-btn" data-tab="hmr">HMR</button>
       </nav>
       <div class="devtools-actions">
-        <button class="action-icon" onclick="window.__OREO_DEVTOOLS__.refresh()" title="Refresh">
+        <button class="action-icon" onclick="window.__AREO_DEVTOOLS__.refresh()" title="Refresh">
           🔄
         </button>
-        <button class="action-icon" onclick="window.__OREO_DEVTOOLS__.togglePosition()" title="Toggle Position">
+        <button class="action-icon" onclick="window.__AREO_DEVTOOLS__.togglePosition()" title="Toggle Position">
           📐
         </button>
-        <button class="action-icon" onclick="window.__OREO_DEVTOOLS__.close()" title="Close">
+        <button class="action-icon" onclick="window.__AREO_DEVTOOLS__.close()" title="Close">
           ✕
         </button>
       </div>
@@ -476,49 +476,49 @@ const DEVTOOLS_CLIENT_SCRIPT = `
     });
 
     // DevTools API
-    window.__OREO_DEVTOOLS__ = {
+    window.__AREO_DEVTOOLS__ = {
       refresh() {
         location.reload();
       },
       togglePosition() {
         // Send message to parent to toggle position
-        window.parent?.postMessage({ type: 'oreo-devtools-toggle-position' }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-toggle-position' }, '*');
       },
       close() {
-        window.parent?.postMessage({ type: 'oreo-devtools-close' }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-close' }, '*');
       },
       highlightIslands() {
-        window.parent?.postMessage({ type: 'oreo-devtools-highlight-islands' }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-highlight-islands' }, '*');
       },
       hydrateAll() {
-        window.parent?.postMessage({ type: 'oreo-devtools-hydrate-all' }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-hydrate-all' }, '*');
       },
       scrollToIsland(id) {
-        window.parent?.postMessage({ type: 'oreo-devtools-scroll-to-island', id }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-scroll-to-island', id }, '*');
       },
       inspectIsland(id) {
-        window.parent?.postMessage({ type: 'oreo-devtools-inspect-island', id }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-inspect-island', id }, '*');
       },
       inspectEntry(key) {
-        window.parent?.postMessage({ type: 'oreo-devtools-inspect-entry', key }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-inspect-entry', key }, '*');
       },
       clearCache() {
-        window.parent?.postMessage({ type: 'oreo-devtools-clear-cache' }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-clear-cache' }, '*');
       },
       refreshCache() {
-        window.parent?.postMessage({ type: 'oreo-devtools-refresh-cache' }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-refresh-cache' }, '*');
       },
       invalidateKey(key) {
-        window.parent?.postMessage({ type: 'oreo-devtools-invalidate-key', key }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-invalidate-key', key }, '*');
       },
       invalidateTag(tag) {
-        window.parent?.postMessage({ type: 'oreo-devtools-invalidate-tag', tag }, '*');
+        window.parent?.postMessage({ type: 'areo-devtools-invalidate-tag', tag }, '*');
       },
     };
 
     // Listen for updates from parent
     window.addEventListener('message', (event) => {
-      if (event.data.type === 'oreo-devtools-update') {
+      if (event.data.type === 'areo-devtools-update') {
         // Handle live updates
         console.log('[DevTools] Received update:', event.data);
       }

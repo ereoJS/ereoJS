@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * create-oreo
+ * create-areo
  *
- * Scaffold a new Oreo project.
- * Usage: bunx create-oreo my-app
+ * Scaffold a new Areo project.
+ * Usage: bunx create-areo my-app
  */
 
 import { join, resolve } from 'node:path';
@@ -39,7 +39,7 @@ const defaultOptions: CreateOptions = {
  */
 function printBanner(): void {
   console.log(`
-  \x1b[36m⬡\x1b[0m \x1b[1mCreate Oreo App\x1b[0m
+  \x1b[36m⬡\x1b[0m \x1b[1mCreate Areo App\x1b[0m
 
   A React fullstack framework built on Bun.
 `);
@@ -51,7 +51,7 @@ function printBanner(): void {
 function printHelp(): void {
   console.log(`
   \x1b[1mUsage:\x1b[0m
-    bunx create-oreo <project-name> [options]
+    bunx create-areo <project-name> [options]
 
   \x1b[1mOptions:\x1b[0m
     -t, --template <name>   Template to use (minimal, default, tailwind)
@@ -60,9 +60,9 @@ function printHelp(): void {
     --no-install            Skip package installation
 
   \x1b[1mExamples:\x1b[0m
-    bunx create-oreo my-app
-    bunx create-oreo my-app --template minimal
-    bunx create-oreo my-app --no-typescript
+    bunx create-areo my-app
+    bunx create-areo my-app --template minimal
+    bunx create-areo my-app --no-typescript
 `);
 }
 
@@ -122,18 +122,18 @@ async function generateProject(
     version: '0.1.0',
     type: 'module',
     scripts: {
-      dev: 'oreo dev',
-      build: 'oreo build',
-      start: 'oreo start',
+      dev: 'areo dev',
+      build: 'areo build',
+      start: 'areo start',
     },
     dependencies: {
-      '@oreo/core': '^0.1.0',
-      '@oreo/router': '^0.1.0',
-      '@oreo/server': '^0.1.0',
-      '@oreo/client': '^0.1.0',
-      '@oreo/data': '^0.1.0',
-      '@oreo/cli': '^0.1.0',
-      ...(template === 'tailwind' ? { '@oreo/plugin-tailwind': '^0.1.0' } : {}),
+      '@areo/core': '^0.1.0',
+      '@areo/router': '^0.1.0',
+      '@areo/server': '^0.1.0',
+      '@areo/client': '^0.1.0',
+      '@areo/data': '^0.1.0',
+      '@areo/cli': '^0.1.0',
+      ...(template === 'tailwind' ? { '@areo/plugin-tailwind': '^0.1.0' } : {}),
       react: '^18.2.0',
       'react-dom': '^18.2.0',
     },
@@ -177,10 +177,10 @@ async function generateProject(
     );
   }
 
-  // Oreo config
-  const oreoConfig = `
-import { defineConfig } from '@oreo/core';
-${template === 'tailwind' ? "import tailwind from '@oreo/plugin-tailwind';" : ''}
+  // Areo config
+  const areoConfig = `
+import { defineConfig } from '@areo/core';
+${template === 'tailwind' ? "import tailwind from '@areo/plugin-tailwind';" : ''}
 
 export default defineConfig({
   server: {
@@ -192,7 +192,7 @@ export default defineConfig({
 });
 `.trim();
 
-  await Bun.write(join(projectDir, `oreo.config.${typescript ? 'ts' : 'js'}`), oreoConfig);
+  await Bun.write(join(projectDir, `areo.config.${typescript ? 'ts' : 'js'}`), areoConfig);
 
   // Root layout
   const layout = `
@@ -219,7 +219,7 @@ export default function RootLayout({ children }${typescript ? ': { children: Rea
   const indexPage = `
 export async function loader() {
   return {
-    message: 'Welcome to Oreo!',
+    message: 'Welcome to Areo!',
     time: new Date().toLocaleTimeString(),
   };
 }
@@ -242,7 +242,7 @@ export default function HomePage({ loaderData }${typescript ? ': { loaderData: {
             Learn More
           </a>
           <a
-            href="https://github.com/oreo-js/oreo"
+            href="https://github.com/areo-js/areo"
             target="_blank"
             ${template === 'tailwind' ? 'className="px-6 py-3 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"' : ''}
           >
@@ -264,7 +264,7 @@ export default function AboutPage() {
     <main${template === 'tailwind' ? ' className="min-h-screen flex flex-col items-center justify-center p-8"' : ''}>
       <h1${template === 'tailwind' ? ' className="text-4xl font-bold mb-4"' : ''}>About</h1>
       <p${template === 'tailwind' ? ' className="text-gray-600 dark:text-gray-400 max-w-md text-center"' : ''}>
-        Built with Oreo - a React fullstack framework powered by Bun.
+        Built with Areo - a React fullstack framework powered by Bun.
       </p>
       <a
         href="/"
@@ -307,7 +307,7 @@ export default {
   // .gitignore
   const gitignore = `
 node_modules
-.oreo
+.areo
 dist
 *.log
 .DS_Store
@@ -321,7 +321,7 @@ dist
   const readme = `
 # ${projectName}
 
-A [Oreo](https://github.com/oreo-js/oreo) project.
+A [Areo](https://github.com/areo-js/areo) project.
 
 ## Development
 
@@ -339,7 +339,7 @@ bun run start
 
 ## Learn More
 
-- [Oreo Documentation](https://oreo.dev/docs)
+- [Areo Documentation](https://areo.dev/docs)
 - [Bun Documentation](https://bun.sh/docs)
 `.trim();
 

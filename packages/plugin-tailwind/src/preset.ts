@@ -1,13 +1,13 @@
 /**
- * @oreo/plugin-tailwind - Framework Preset
+ * @areo/plugin-tailwind - Framework Preset
  *
- * Tailwind CSS preset with sensible defaults for Oreo apps.
+ * Tailwind CSS preset with sensible defaults for Areo apps.
  */
 
 /**
- * Oreo Tailwind preset.
+ * Areo Tailwind preset.
  */
-export const oreoPreset = {
+export const areoPreset = {
   theme: {
     extend: {
       // Animation utilities for transitions
@@ -67,7 +67,7 @@ export const oreoPreset = {
 
       // Colors
       colors: {
-        oreo: {
+        areo: {
           50: '#f5f7ff',
           100: '#ebf0fe',
           200: '#d6e0fd',
@@ -107,11 +107,11 @@ export const oreoPreset = {
 };
 
 /**
- * Get Tailwind config with Oreo preset.
+ * Get Tailwind config with Areo preset.
  */
-export function getOreoTailwindConfig(overrides: Record<string, any> = {}) {
+export function getAreoTailwindConfig(overrides: Record<string, any> = {}) {
   return {
-    presets: [oreoPreset],
+    presets: [areoPreset],
     content: [
       './app/**/*.{js,ts,jsx,tsx}',
       './components/**/*.{js,ts,jsx,tsx}',
@@ -120,11 +120,11 @@ export function getOreoTailwindConfig(overrides: Record<string, any> = {}) {
     ...overrides,
     theme: {
       extend: {
-        ...oreoPreset.theme.extend,
+        ...areoPreset.theme.extend,
         ...overrides.theme?.extend,
       },
     },
   };
 }
 
-export default oreoPreset;
+export default areoPreset;

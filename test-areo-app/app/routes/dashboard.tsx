@@ -2,8 +2,8 @@
  * Dashboard Route - Tests the new data pipeline feature
  */
 
-import { createPipeline, dataSource, cachedSource, optionalSource, formatMetrics } from '@oreo/data';
-import type { LoaderArgs } from '@oreo/core';
+import { createPipeline, dataSource, cachedSource, optionalSource, formatMetrics } from '@areo/data';
+import type { LoaderArgs } from '@areo/core';
 
 // Simulated data fetchers
 const fetchUser = async () => {
@@ -14,7 +14,7 @@ const fetchUser = async () => {
 const fetchPosts = async () => {
   await sleep(80); // Simulate API call
   return [
-    { id: 1, title: 'Getting Started with Oreo', views: 120 },
+    { id: 1, title: 'Getting Started with Areo', views: 120 },
     { id: 2, title: 'Data Pipeline Tutorial', views: 85 },
   ];
 };
@@ -90,7 +90,7 @@ export default function DashboardPage({ loaderData }: { loaderData: Awaited<Retu
             Dashboard
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Testing the Oreo Data Pipeline
+            Testing the Areo Data Pipeline
           </p>
         </div>
 

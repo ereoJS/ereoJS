@@ -268,7 +268,7 @@ bun run start                     # Start production server
 **End-to-end type safety:**
 ```typescript
 // Auto-generated types
-declare module 'oreo/routes' {
+declare module 'areo/routes' {
   export interface Routes {
     '/blog/[slug]': {
       params: { slug: string };
@@ -323,9 +323,9 @@ export default defineConfig({
 
 1. **Unit Tests**: Each package has tests via Bun's test runner
    ```bash
-   bun test packages/oreo
-   bun test packages/oreo-cli
-   bun test packages/oreo-bundler
+   bun test packages/areo
+   bun test packages/areo-cli
+   bun test packages/areo-bundler
    ```
 
 2. **Integration Test**: Create example app and verify:

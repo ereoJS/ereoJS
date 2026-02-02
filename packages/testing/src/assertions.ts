@@ -1,5 +1,5 @@
 /**
- * @oreo/testing - Assertions
+ * @areo/testing - Assertions
  *
  * Common assertions for testing responses.
  */

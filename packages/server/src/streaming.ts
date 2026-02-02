@@ -1,12 +1,12 @@
 /**
- * @oreo/server - React Streaming Support
+ * @areo/server - React Streaming Support
  *
  * Server-side rendering with streaming support for React 18+.
  */
 
 import type { ReactElement } from 'react';
-import type { Route, RouteMatch, AppContext, LoaderFunction } from '@oreo/core';
-import { serializeLoaderData } from '@oreo/data';
+import type { Route, RouteMatch, AppContext, LoaderFunction } from '@areo/core';
+import { serializeLoaderData } from '@areo/data';
 
 /**
  * Render options.
@@ -89,7 +89,7 @@ export function createShell(options: {
     .join('\n    ');
 
   const loaderScript = loaderData
-    ? `<script>window.__OREO_DATA__=${serializeLoaderData(loaderData)}</script>`
+    ? `<script>window.__AREO_DATA__=${serializeLoaderData(loaderData)}</script>`
     : '';
 
   const head = `<!DOCTYPE html>

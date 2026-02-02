@@ -1,5 +1,5 @@
 /**
- * @oreo/rsc - Main exports
+ * @areo/rsc - Main exports
  */
 
 export {

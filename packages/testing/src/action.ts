@@ -1,10 +1,10 @@
 /**
- * @oreo/testing - Action Testing
+ * @areo/testing - Action Testing
  *
  * Utilities for testing route actions.
  */
 
-import type { ActionFunction, RouteParams } from '@oreo/core';
+import type { ActionFunction, RouteParams } from '@areo/core';
 import { createTestContext, type TestContextOptions, type TestContext } from './context';
 import { createMockRequest, type MockRequestOptions, parseJsonResponse } from './request';
 
@@ -48,7 +48,7 @@ export interface ActionTestResult<T = unknown> {
  * Test an action function directly.
  *
  * @example
- * import { testAction } from '@oreo/testing';
+ * import { testAction } from '@areo/testing';
  * import { action } from './routes/blog/[slug]';
  *
  * test('creates a comment', async () => {

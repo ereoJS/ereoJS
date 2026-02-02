@@ -1,5 +1,5 @@
-import { defineConfig } from '@oreo/core';
-import tailwind from '@oreo/plugin-tailwind';
+import { defineConfig } from '@areo/core';
+import tailwind from '@areo/plugin-tailwind';
 
 export default defineConfig({
   server: {

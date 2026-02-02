@@ -14,9 +14,9 @@ import {
   validateRequired,
   combineValidators,
 } from './action';
-import { createContext } from '@oreo/core';
+import { createContext } from '@areo/core';
 
-describe('@oreo/data - Action', () => {
+describe('@areo/data - Action', () => {
   const createMockArgs = (formData: FormData) => {
     const request = new Request('http://localhost:3000/', {
       method: 'POST',

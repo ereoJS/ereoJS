@@ -5,7 +5,7 @@ import { FileRouter, createFileRouter, initFileRouter } from './file-router';
 
 const TEST_ROUTES_DIR = join(import.meta.dir, '__test_routes__');
 
-describe('@oreo/router - FileRouter', () => {
+describe('@areo/router - FileRouter', () => {
   beforeEach(async () => {
     await mkdir(TEST_ROUTES_DIR, { recursive: true });
     await mkdir(join(TEST_ROUTES_DIR, 'users'), { recursive: true });

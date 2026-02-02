@@ -1,8 +1,8 @@
-import type { LoaderArgs } from '@oreo/core';
+import type { LoaderArgs } from '@areo/core';
 
 export async function loader({ request }: LoaderArgs) {
   return {
-    message: 'Hello from Oreo!',
+    message: 'Hello from Areo!',
   };
 }
 

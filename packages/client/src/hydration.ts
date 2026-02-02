@@ -1,12 +1,12 @@
 /**
- * @oreo/client - Hydration Directives
+ * @areo/client - Hydration Directives
  *
  * Selective hydration strategies inspired by Astro.
  * Only hydrate what needs interactivity.
  */
 
 import type { ComponentType, ReactElement } from 'react';
-import type { HydrationStrategy } from '@oreo/core';
+import type { HydrationStrategy } from '@areo/core';
 
 /**
  * Hydration directive props.

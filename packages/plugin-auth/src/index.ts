@@ -1,5 +1,5 @@
 /**
- * @oreo/auth - Main exports
+ * @areo/auth - Main exports
  */
 
 export {

@@ -1,4 +1,4 @@
-import type { LoaderArgs } from '@oreo/core';
+import type { LoaderArgs } from '@areo/core';
 
 interface Post {
   slug: string;
@@ -9,9 +9,9 @@ interface Post {
 
 const posts: Post[] = [
   {
-    slug: 'getting-started-with-oreo',
-    title: 'Getting Started with Oreo',
-    excerpt: 'Learn how to build modern web apps with the Oreo framework.',
+    slug: 'getting-started-with-areo',
+    title: 'Getting Started with Areo',
+    excerpt: 'Learn how to build modern web apps with the Areo framework.',
     date: '2024-01-15',
   },
   {
@@ -22,7 +22,7 @@ const posts: Post[] = [
   },
   {
     slug: 'bun-performance',
-    title: 'Why Bun Makes Oreo Fast',
+    title: 'Why Bun Makes Areo Fast',
     excerpt: 'Explore the performance benefits of building on Bun.',
     date: '2024-01-05',
   },

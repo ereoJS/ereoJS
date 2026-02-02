@@ -1,4 +1,4 @@
-import type { RouteComponentProps } from '@oreo/core';
+import type { RouteComponentProps } from '@areo/core';
 
 export default function RootLayout({ children }: RouteComponentProps) {
   return (
@@ -6,7 +6,7 @@ export default function RootLayout({ children }: RouteComponentProps) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Oreo Blog</title>
+        <title>Areo Blog</title>
         <link rel="stylesheet" href="/__tailwind.css" />
       </head>
       <body className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -14,7 +14,7 @@ export default function RootLayout({ children }: RouteComponentProps) {
           <nav className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center">
               <a href="/" className="text-xl font-bold text-gray-900 dark:text-white">
-                Oreo Blog
+                Areo Blog
               </a>
               <div className="flex gap-4">
                 <a href="/" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: RouteComponentProps) {
           {children}
         </main>
         <footer className="max-w-4xl mx-auto px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-          Built with Oreo Framework
+          Built with Areo Framework
         </footer>
       </body>
     </html>

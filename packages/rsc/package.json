@@ -1,13 +1,13 @@
 {
-  "name": "@oreo/rsc",
+  "name": "@areo/rsc",
   "version": "0.1.0",
-  "description": "React Server Components support for Oreo framework",
+  "description": "React Server Components support for Areo framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
+    "@areo/core": "workspace:*",
     "react": "^18.0.0"
   },
   "devDependencies": {

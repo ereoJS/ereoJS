@@ -1,10 +1,10 @@
 /**
- * @oreo/db - Database integration plugin
+ * @areo/db - Database integration plugin
  *
  * Provides database connectivity with caching integration.
  */
 
-import type { Plugin, AppContext } from '@oreo/core';
+import type { Plugin, AppContext } from '@areo/core';
 
 /** Database configuration */
 export interface DatabaseConfig {
@@ -41,7 +41,7 @@ export interface DBClient {
 /** Create database plugin */
 export function createDatabasePlugin(config: DatabaseConfig): Plugin {
   return {
-    name: '@oreo/db',
+    name: '@areo/db',
 
     async setup(context) {
       console.log(`[db] Initializing ${config.orm} connection...`);

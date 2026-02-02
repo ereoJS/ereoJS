@@ -1,13 +1,13 @@
 /**
- * @oreo/bundler - Production Build
+ * @areo/bundler - Production Build
  *
  * Optimized production builds using Bun's bundler.
  */
 
 import { join, relative } from 'node:path';
 import { mkdir, rm, readdir, stat } from 'node:fs/promises';
-import type { BuildConfig, FrameworkConfig } from '@oreo/core';
-import { FileRouter, initFileRouter } from '@oreo/router';
+import type { BuildConfig, FrameworkConfig } from '@areo/core';
+import { FileRouter, initFileRouter } from '@areo/router';
 
 /**
  * Build options.
@@ -49,7 +49,7 @@ export interface BuildResult {
 export async function build(options: BuildOptions = {}): Promise<BuildResult> {
   const startTime = performance.now();
   const root = options.root || process.cwd();
-  const outDir = options.outDir || join(root, '.oreo');
+  const outDir = options.outDir || join(root, '.areo');
 
   console.log('Building for production...');
 
@@ -205,7 +205,7 @@ async function buildClient(options: {
     await Bun.write(
       defaultEntry,
       `
-import { initClient } from '@oreo/client';
+import { initClient } from '@areo/client';
 
 // Initialize client runtime
 initClient();

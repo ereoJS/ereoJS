@@ -6,7 +6,7 @@ import {
   renderToString,
 } from './streaming';
 
-describe('@oreo/server - Streaming', () => {
+describe('@areo/server - Streaming', () => {
   describe('createShell', () => {
     test('creates basic HTML shell', () => {
       const { head, tail } = createShell({});
@@ -66,7 +66,7 @@ describe('@oreo/server - Streaming', () => {
         loaderData: { user: 'test', count: 42 },
       });
 
-      expect(tail).toContain('window.__OREO_DATA__=');
+      expect(tail).toContain('window.__AREO_DATA__=');
       expect(tail).toContain('user');
     });
 
@@ -243,7 +243,7 @@ describe('@oreo/server - Streaming', () => {
         context: mockContext as any,
       });
 
-      expect(result.body).toContain('window.__OREO_DATA__');
+      expect(result.body).toContain('window.__AREO_DATA__');
     });
   });
 });

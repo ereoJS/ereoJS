@@ -1,5 +1,5 @@
 /**
- * @oreo/auth/providers - Built-in authentication providers
+ * @areo/auth/providers - Built-in authentication providers
  */
 
 import type { AuthProvider, Session } from '../auth';
@@ -51,7 +51,7 @@ export function github(config: {
       const userResponse = await fetch('https://api.github.com/user', {
         headers: {
           'Authorization': `token ${tokenData.access_token}`,
-          'User-Agent': 'Oreo-Auth',
+          'User-Agent': 'Areo-Auth',
         },
       });
 

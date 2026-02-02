@@ -10,7 +10,7 @@ import {
 } from './revalidate';
 import { MemoryCache, setCache, getCache } from './cache';
 
-describe('@oreo/data - Revalidate', () => {
+describe('@areo/data - Revalidate', () => {
   beforeEach(() => {
     setCache(new MemoryCache());
   });

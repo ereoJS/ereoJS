@@ -1,13 +1,13 @@
 {
-  "name": "@oreo/db",
+  "name": "@areo/db",
   "version": "0.1.0",
-  "description": "Database integration plugin for Oreo framework",
+  "description": "Database integration plugin for Areo framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*"
+    "@areo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

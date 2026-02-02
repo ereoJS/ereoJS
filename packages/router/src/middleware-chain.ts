@@ -1,5 +1,5 @@
 /**
- * @oreo/router - Middleware Chain Executor
+ * @areo/router - Middleware Chain Executor
  *
  * Executes route-level middleware chains with support for named middleware,
  * inline middleware functions, and type-safe context passing.
@@ -11,7 +11,7 @@ import type {
   AppContext,
   NextFunction,
   RouteConfig,
-} from '@oreo/core';
+} from '@areo/core';
 
 // ============================================================================
 // Type-Safe Middleware Creation

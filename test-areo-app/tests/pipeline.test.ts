@@ -1,5 +1,5 @@
 /**
- * Test: @oreo/data Pipeline
+ * Test: @areo/data Pipeline
  *
  * Validates the data pipeline features:
  * - Auto-parallelization
@@ -15,7 +15,7 @@ import {
   cachedSource,
   optionalSource,
   formatMetrics,
-} from '@oreo/data';
+} from '@areo/data';
 
 // Mock context for testing
 const createMockContext = () => ({

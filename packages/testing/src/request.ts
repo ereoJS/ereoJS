@@ -1,5 +1,5 @@
 /**
- * @oreo/testing - Request Utilities
+ * @areo/testing - Request Utilities
  *
  * Create mock requests for testing.
  */

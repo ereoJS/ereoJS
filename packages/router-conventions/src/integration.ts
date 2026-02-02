@@ -1,10 +1,10 @@
 /**
- * @oreo/router-conventions - Integration with file router
+ * @areo/router-conventions - Integration with file router
  *
  * Integrates convention-based routing with the file router system.
  */
 
-import type { Route } from '@oreo/core';
+import type { Route } from '@areo/core';
 import { parseConvention, applyConventionConfig } from './conventions';
 
 /**

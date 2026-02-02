@@ -1,5 +1,5 @@
 /**
- * @oreo/router-conventions - File naming convention parser
+ * @areo/router-conventions - File naming convention parser
  *
  * Parses file names to determine route configuration:
  * - [slug].ssg.tsx -> SSG mode
@@ -9,7 +9,7 @@
  * - _islands/*.tsx -> Auto-extracted islands
  */
 
-import type { RenderMode, RouteConfig } from '@oreo/core';
+import type { RenderMode, RouteConfig } from '@areo/core';
 
 /** Convention suffixes and their render modes */
 export const CONVENTION_SUFFIXES: Record<string, RenderMode | 'api'> = {

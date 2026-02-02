@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import tailwind, { generateConfig, generateCSSEntry } from './index';
 
-describe('@oreo/plugin-tailwind', () => {
+describe('@areo/plugin-tailwind', () => {
   describe('tailwind plugin factory', () => {
     test('creates a plugin with default options', () => {
       const plugin = tailwind();
 
-      expect(plugin.name).toBe('oreo:tailwind');
+      expect(plugin.name).toBe('areo:tailwind');
       expect(typeof plugin.setup).toBe('function');
       expect(typeof plugin.resolveId).toBe('function');
       expect(typeof plugin.load).toBe('function');
@@ -21,7 +21,7 @@ describe('@oreo/plugin-tailwind', () => {
         usePreset: false,
       });
 
-      expect(plugin.name).toBe('oreo:tailwind');
+      expect(plugin.name).toBe('areo:tailwind');
     });
   });
 
@@ -166,14 +166,14 @@ describe('@oreo/plugin-tailwind', () => {
     test('generates config with Oreo preset by default', () => {
       const config = generateConfig();
 
-      expect(config).toContain('getOreoTailwindConfig');
-      expect(config).toContain('@oreo/plugin-tailwind');
+      expect(config).toContain('getAreoTailwindConfig');
+      expect(config).toContain('@areo/plugin-tailwind');
     });
 
     test('generates config without preset when disabled', () => {
       const config = generateConfig({ usePreset: false });
 
-      expect(config).not.toContain('getOreoTailwindConfig');
+      expect(config).not.toContain('getAreoTailwindConfig');
       expect(config).toContain('content:');
       expect(config).toContain('darkMode:');
     });

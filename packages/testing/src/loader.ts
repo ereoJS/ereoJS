@@ -1,10 +1,10 @@
 /**
- * @oreo/testing - Loader Testing
+ * @areo/testing - Loader Testing
  *
  * Utilities for testing route loaders.
  */
 
-import type { LoaderFunction, RouteParams } from '@oreo/core';
+import type { LoaderFunction, RouteParams } from '@areo/core';
 import { createTestContext, type TestContextOptions, type TestContext } from './context';
 import { createMockRequest, type MockRequestOptions } from './request';
 
@@ -38,7 +38,7 @@ export interface LoaderTestResult<T = unknown> {
  * Test a loader function directly.
  *
  * @example
- * import { testLoader } from '@oreo/testing';
+ * import { testLoader } from '@areo/testing';
  * import { loader } from './routes/blog/[slug]';
  *
  * test('loads blog post', async () => {

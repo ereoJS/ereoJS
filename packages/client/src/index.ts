@@ -1,7 +1,7 @@
 /**
- * @oreo/client
+ * @areo/client
  *
- * Client-side runtime for the Oreo framework.
+ * Client-side runtime for the Areo framework.
  * Includes islands architecture, navigation, and prefetching.
  */
 

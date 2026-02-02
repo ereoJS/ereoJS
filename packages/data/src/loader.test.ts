@@ -12,7 +12,7 @@ import {
   clientLoader,
 } from './loader';
 
-describe('@oreo/data - Loader', () => {
+describe('@areo/data - Loader', () => {
   describe('createLoader', () => {
     test('creates a loader function', () => {
       const loader = createLoader({

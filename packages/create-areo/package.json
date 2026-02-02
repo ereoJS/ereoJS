@@ -1,10 +1,10 @@
 {
-  "name": "create-oreo",
+  "name": "create-areo",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "create-oreo": "./dist/index.js"
+    "create-areo": "./dist/index.js"
   },
   "files": [
     "dist",

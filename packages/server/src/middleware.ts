@@ -1,12 +1,12 @@
 /**
- * @oreo/server - Middleware Chain
+ * @areo/server - Middleware Chain
  *
  * Hono-inspired middleware system for request processing.
  * Uses Web Standards throughout.
  */
 
-import type { MiddlewareHandler, NextFunction, AppContext } from '@oreo/core';
-import { createContext, RequestContext } from '@oreo/core';
+import type { MiddlewareHandler, NextFunction, AppContext } from '@areo/core';
+import { createContext, RequestContext } from '@areo/core';
 
 /**
  * Middleware definition with optional path matching.

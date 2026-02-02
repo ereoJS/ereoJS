@@ -1,14 +1,14 @@
 {
-  "name": "@oreo/dev-inspector",
+  "name": "@areo/dev-inspector",
   "version": "0.1.0",
-  "description": "Visual route inspector for Oreo framework development",
+  "description": "Visual route inspector for Areo framework development",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*"
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

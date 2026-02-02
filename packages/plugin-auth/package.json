@@ -1,15 +1,15 @@
 {
-  "name": "@oreo/auth",
+  "name": "@areo/auth",
   "version": "0.1.0",
-  "description": "Authentication plugin for Oreo framework",
+  "description": "Authentication plugin for Areo framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./providers": "./src/providers/index.ts"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*"
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

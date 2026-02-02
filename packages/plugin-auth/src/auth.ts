@@ -1,10 +1,10 @@
 /**
- * @oreo/auth - Authentication plugin for Oreo framework
+ * @areo/auth - Authentication plugin for Areo framework
  *
  * Provides authentication and authorization with multiple providers.
  */
 
-import type { Plugin, RouteConfig, AppContext } from '@oreo/core';
+import type { Plugin, RouteConfig, AppContext } from '@areo/core';
 
 /** User session data */
 export interface Session {
@@ -78,10 +78,10 @@ export interface AuthContext {
 /** Create the auth plugin */
 export function createAuthPlugin(config: AuthConfig): Plugin {
   const sessionDuration = config.sessionDuration || 7 * 24 * 60 * 60; // 7 days
-  const cookieName = config.cookie?.name || 'oreo.session';
+  const cookieName = config.cookie?.name || 'areo.session';
 
   return {
-    name: '@oreo/auth',
+    name: '@areo/auth',
 
     async setup(context) {
       // Initialize auth providers
@@ -149,7 +149,7 @@ async function extractSession(
   // Try cookie first
   const cookie = request.headers.get('cookie');
   if (cookie) {
-    const sessionCookie = parseCookie(cookie, config.cookie?.name || 'oreo.session');
+    const sessionCookie = parseCookie(cookie, config.cookie?.name || 'areo.session');
     if (sessionCookie) {
       try {
         const session = JSON.parse(atob(sessionCookie)) as Session;

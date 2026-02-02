@@ -1,11 +1,11 @@
 /**
- * @oreo/testing - Component/Route Rendering
+ * @areo/testing - Component/Route Rendering
  *
  * Utilities for testing route components with their loaders.
  */
 
 import type { ComponentType, ReactElement } from 'react';
-import type { RouteParams, RouteComponentProps, LoaderFunction, RouteModule } from '@oreo/core';
+import type { RouteParams, RouteComponentProps, LoaderFunction, RouteModule } from '@areo/core';
 import { createTestContext, type TestContextOptions, type TestContext } from './context';
 import { createMockRequest, type MockRequestOptions } from './request';
 
@@ -45,7 +45,7 @@ export interface RenderResult<T = unknown> {
  * Render a route component with its loader data.
  *
  * @example
- * import { renderRoute } from '@oreo/testing';
+ * import { renderRoute } from '@areo/testing';
  * import { default as BlogPost, loader } from './routes/blog/[slug]';
  *
  * test('renders blog post', async () => {

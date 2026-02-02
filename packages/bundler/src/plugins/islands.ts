@@ -1,11 +1,11 @@
 /**
- * @oreo/bundler - Island Extraction Plugin
+ * @areo/bundler - Island Extraction Plugin
  *
  * Extracts and processes island components for selective hydration.
  */
 
 import { join, basename, dirname } from 'node:path';
-import type { Plugin } from '@oreo/core';
+import type { Plugin } from '@areo/core';
 
 /**
  * Island metadata.
@@ -133,7 +133,7 @@ export function generateIslandEntry(islands: IslandMeta[]): string {
   }
 
   return `
-import { registerIslandComponent, initializeIslands } from '@oreo/client';
+import { registerIslandComponent, initializeIslands } from '@areo/client';
 
 // Import all islands
 ${imports.join('\n')}
@@ -153,7 +153,7 @@ export function createIslandsPlugin(): Plugin {
   const islands: IslandMeta[] = [];
 
   return {
-    name: 'oreo:islands',
+    name: 'areo:islands',
 
     transform(code: string, id: string) {
       if (!id.endsWith('.tsx') && !id.endsWith('.jsx')) {
@@ -181,11 +181,11 @@ export function createIslandsPlugin(): Plugin {
 
       // Write manifest
       const manifest = generateIslandManifest(islands);
-      await Bun.write('.oreo/islands.json', manifest);
+      await Bun.write('.areo/islands.json', manifest);
 
       // Write entry
       const entry = generateIslandEntry(islands);
-      await Bun.write('.oreo/islands.entry.ts', entry);
+      await Bun.write('.areo/islands.entry.ts', entry);
     },
   };
 }

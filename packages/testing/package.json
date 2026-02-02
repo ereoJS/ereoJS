@@ -1,5 +1,5 @@
 {
-  "name": "@oreo/testing",
+  "name": "@areo/testing",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,9 +21,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*",
-    "@oreo/data": "workspace:*"
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*",
+    "@areo/data": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

@@ -1,5 +1,5 @@
 /**
- * @oreo/dev-inspector - Data Pipeline Tab
+ * @areo/dev-inspector - Data Pipeline Tab
  *
  * FLAGSHIP FEATURE: Visual representation of data loading with
  * waterfall detection and optimization suggestions.

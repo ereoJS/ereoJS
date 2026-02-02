@@ -1,10 +1,10 @@
 /**
- * @oreo/testing - Middleware Testing
+ * @areo/testing - Middleware Testing
  *
  * Utilities for testing middleware functions.
  */
 
-import type { MiddlewareHandler, NextFunction, AppContext } from '@oreo/core';
+import type { MiddlewareHandler, NextFunction, AppContext } from '@areo/core';
 import { createTestContext, type TestContextOptions, type TestContext } from './context';
 import { createMockRequest, type MockRequestOptions } from './request';
 
@@ -44,7 +44,7 @@ export interface MiddlewareTestResult {
  * Test a middleware function directly.
  *
  * @example
- * import { testMiddleware } from '@oreo/testing';
+ * import { testMiddleware } from '@areo/testing';
  * import { authMiddleware } from './middleware/auth';
  *
  * test('blocks unauthenticated requests', async () => {

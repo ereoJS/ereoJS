@@ -1,11 +1,11 @@
 /**
- * @oreo/data - Data Pipeline
+ * @areo/data - Data Pipeline
  *
  * Unified data loading with automatic parallelization and dependency management.
  * Prevents waterfalls by analyzing dependencies and running independent loaders in parallel.
  */
 
-import type { LoaderArgs, RouteParams, AppContext } from '@oreo/core';
+import type { LoaderArgs, RouteParams, AppContext } from '@areo/core';
 
 // ============================================================================
 // Types

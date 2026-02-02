@@ -1,5 +1,5 @@
 /**
- * @oreo/dev-inspector - Routes Tab
+ * @areo/dev-inspector - Routes Tab
  *
  * Visualize all routes with render modes, middleware, and configuration.
  */

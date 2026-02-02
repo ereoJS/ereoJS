@@ -1,5 +1,5 @@
 /**
- * @oreo/router - Route Configuration Parser
+ * @areo/router - Route Configuration Parser
  *
  * Parses and validates route-level configuration exports.
  */
@@ -17,7 +17,7 @@ import type {
   HydrationStrategy,
   RouteParams,
   AppContext,
-} from '@oreo/core';
+} from '@areo/core';
 
 /** Default render configuration */
 const defaultRenderConfig: RenderConfig = {

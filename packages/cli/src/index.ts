@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
- * @oreo/cli
+ * @areo/cli
  *
- * Command-line interface for the Oreo framework.
+ * Command-line interface for the Areo framework.
  */
 
 import { dev, type DevOptions } from './commands/dev';
@@ -21,10 +21,10 @@ const VERSION = '0.1.0';
  */
 function printHelp(): void {
   console.log(`
-  \x1b[36m⬡\x1b[0m \x1b[1mOreo\x1b[0m - React Fullstack Framework
+  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m - React Fullstack Framework
 
   \x1b[1mUsage:\x1b[0m
-    oreo <command> [options]
+    areo <command> [options]
 
   \x1b[1mCommands:\x1b[0m
     dev         Start development server
@@ -39,7 +39,7 @@ function printHelp(): void {
     --open, -o  Open browser
 
   \x1b[1mBuild Options:\x1b[0m
-    --outDir    Output directory (default: .oreo)
+    --outDir    Output directory (default: .areo)
     --minify    Enable minification (default: true)
     --sourcemap Generate sourcemaps (default: true)
 
@@ -57,11 +57,11 @@ function printHelp(): void {
     --name      Project name
 
   \x1b[1mExamples:\x1b[0m
-    oreo dev --port 8080
-    oreo build --minify
-    oreo start --port 3001
-    oreo create my-app --template tailwind
-    oreo deploy vercel --prod
+    areo dev --port 8080
+    areo build --minify
+    areo start --port 3001
+    areo create my-app --template tailwind
+    areo deploy vercel --prod
 
   Version: ${VERSION}
 `);
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
         const projectName = positional[0];
         if (!projectName) {
           console.error('\n  \x1b[31m✗\x1b[0m Please provide a project name\n');
-          console.log('  Usage: oreo create <project-name> [options]\n');
+          console.log('  Usage: areo create <project-name> [options]\n');
           process.exit(1);
         }
 

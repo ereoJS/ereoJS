@@ -7,7 +7,7 @@ import {
   ERROR_OVERLAY_SCRIPT,
 } from './error-overlay';
 
-describe('@oreo/bundler - Error Overlay', () => {
+describe('@areo/bundler - Error Overlay', () => {
   describe('parseError', () => {
     test('parses string error', () => {
       const info = parseError('Test error message');
@@ -230,7 +230,7 @@ describe('@oreo/bundler - Error Overlay', () => {
     });
 
     test('creates overlay element', () => {
-      expect(ERROR_OVERLAY_SCRIPT).toContain('oreo-error-overlay');
+      expect(ERROR_OVERLAY_SCRIPT).toContain('areo-error-overlay');
     });
 
     test('has close button', () => {

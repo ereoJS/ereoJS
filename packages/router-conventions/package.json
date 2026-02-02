@@ -1,14 +1,14 @@
 {
-  "name": "@oreo/router-conventions",
+  "name": "@areo/router-conventions",
   "version": "0.1.0",
-  "description": "File-based routing conventions for Oreo framework",
+  "description": "File-based routing conventions for Areo framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*"
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

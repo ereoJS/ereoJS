@@ -1,7 +1,7 @@
 /**
- * @oreo/cli - Create Command
+ * @areo/cli - Create Command
  *
- * Create a new Oreo project.
+ * Create a new Areo project.
  */
 
 import { join } from 'node:path';
@@ -25,7 +25,7 @@ export async function create(
   const template = options.template || 'tailwind';
   const typescript = options.typescript !== false;
 
-  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mOreo\x1b[0m Create Project\n');
+  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m Create Project\n');
   console.log(`  Creating ${projectName} with ${template} template...\n`);
 
   const projectDir = join(process.cwd(), projectName);
@@ -65,21 +65,21 @@ function generateTemplateFiles(
   // package.json
   files['package.json'] = JSON.stringify(
     {
-      name: 'oreo-app',
+      name: 'areo-app',
       version: '0.1.0',
       type: 'module',
       scripts: {
-        dev: 'oreo dev',
-        build: 'oreo build',
-        start: 'oreo start',
+        dev: 'areo dev',
+        build: 'areo build',
+        start: 'areo start',
       },
       dependencies: {
-        '@oreo/core': 'workspace:*',
-        '@oreo/router': 'workspace:*',
-        '@oreo/server': 'workspace:*',
-        '@oreo/client': 'workspace:*',
-        '@oreo/data': 'workspace:*',
-        '@oreo/cli': 'workspace:*',
+        '@areo/core': 'workspace:*',
+        '@areo/router': 'workspace:*',
+        '@areo/server': 'workspace:*',
+        '@areo/client': 'workspace:*',
+        '@areo/data': 'workspace:*',
+        '@areo/cli': 'workspace:*',
         react: '^18.2.0',
         'react-dom': '^18.2.0',
       },
@@ -110,17 +110,17 @@ function generateTemplateFiles(
           forceConsistentCasingInFileNames: true,
           types: ['bun-types'],
         },
-        include: ['app/**/*', 'oreo.config.ts'],
+        include: ['app/**/*', 'areo.config.ts'],
       },
       null,
       2
     );
   }
 
-  // Oreo config
-  files[`oreo.config.${typescript ? 'ts' : 'js'}`] = `
-import { defineConfig } from '@oreo/core';
-${template === 'tailwind' ? "import tailwind from '@oreo/plugin-tailwind';" : ''}
+  // Areo config
+  files[`areo.config.${typescript ? 'ts' : 'js'}`] = `
+import { defineConfig } from '@areo/core';
+${template === 'tailwind' ? "import tailwind from '@areo/plugin-tailwind';" : ''}
 
 export default defineConfig({
   server: {
@@ -137,7 +137,7 @@ export default defineConfig({
 
   // Root layout
   files[`app/routes/_layout.${ext}`] = `
-${typescript ? "import type { RouteComponentProps } from '@oreo/core';" : ''}
+${typescript ? "import type { RouteComponentProps } from '@areo/core';" : ''}
 
 export default function RootLayout({ children }${typescript ? ': RouteComponentProps' : ''}) {
   return (
@@ -145,7 +145,7 @@ export default function RootLayout({ children }${typescript ? ': RouteComponentP
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Oreo App</title>
+        <title>Areo App</title>
         ${template === 'tailwind' ? '<link rel="stylesheet" href="/__tailwind.css" />' : ''}
       </head>
       <body${template === 'tailwind' ? ' className="min-h-screen bg-white dark:bg-gray-900"' : ''}>
@@ -158,11 +158,11 @@ export default function RootLayout({ children }${typescript ? ': RouteComponentP
 
   // Index page
   files[`app/routes/index.${ext}`] = `
-${typescript ? "import type { LoaderArgs } from '@oreo/core';" : ''}
+${typescript ? "import type { LoaderArgs } from '@areo/core';" : ''}
 
 export async function loader({ request }${typescript ? ': LoaderArgs' : ''}) {
   return {
-    message: 'Welcome to Oreo!',
+    message: 'Welcome to Areo!',
     timestamp: new Date().toISOString(),
   };
 }
@@ -190,7 +190,7 @@ export default function AboutPage() {
         About
       </h1>
       <p${template === 'tailwind' ? ' className="text-gray-600 dark:text-gray-400"' : ''}>
-        Built with Oreo Framework
+        Built with Areo Framework
       </p>
     </main>
   );
@@ -221,7 +221,7 @@ export default {
   // .gitignore
   files['.gitignore'] = `
 node_modules
-.oreo
+.areo
 dist
 *.log
 .DS_Store

@@ -1,5 +1,5 @@
 /**
- * @oreo/router - Route Configuration Tests
+ * @areo/router - Route Configuration Tests
  */
 
 import { describe, it, expect } from 'bun:test';
@@ -9,7 +9,7 @@ import type {
   HydrationStrategy,
   RouteParams,
   AppContext,
-} from '@oreo/core';
+} from '@areo/core';
 import {
   parseMiddleware,
   parseRenderConfig,

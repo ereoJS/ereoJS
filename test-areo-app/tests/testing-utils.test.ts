@@ -1,5 +1,5 @@
 /**
- * Test: @oreo/testing Utilities
+ * Test: @areo/testing Utilities
  *
  * Validates the testing package features:
  * - createTestContext
@@ -16,7 +16,7 @@ import {
   createFormRequest,
   testLoader,
   testAction,
-} from '@oreo/testing';
+} from '@areo/testing';
 
 describe('createTestContext', () => {
   test('creates context with default values', () => {

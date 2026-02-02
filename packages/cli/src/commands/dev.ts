@@ -1,5 +1,5 @@
 /**
- * @oreo/cli - Dev Command
+ * @areo/cli - Dev Command
  *
  * Start the development server with HMR.
  */
@@ -10,16 +10,16 @@ import {
   type FrameworkConfig,
   setupEnv,
   type EnvConfig,
-} from '@oreo/core';
-import { initFileRouter } from '@oreo/router';
-import { createServer, type ServerOptions } from '@oreo/server';
+} from '@areo/core';
+import { initFileRouter } from '@areo/router';
+import { createServer, type ServerOptions } from '@areo/server';
 import {
   createHMRServer,
   createHMRWatcher,
   createHMRWebSocket,
   HMR_CLIENT_CODE,
   ERROR_OVERLAY_SCRIPT,
-} from '@oreo/bundler';
+} from '@areo/bundler';
 
 /**
  * Dev command options.
@@ -31,7 +31,7 @@ export interface DevOptions {
 }
 
 /** Extended config with env schema */
-interface OreoConfig extends FrameworkConfig {
+interface AreoConfig extends FrameworkConfig {
   env?: EnvConfig;
 }
 
@@ -43,11 +43,11 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   const hostname = options.host || 'localhost';
   const root = process.cwd();
 
-  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mOreo\x1b[0m Dev Server\n');
+  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m Dev Server\n');
 
   // Load config if exists
-  let config: OreoConfig = {};
-  const configPath = join(root, 'oreo.config.ts');
+  let config: AreoConfig = {};
+  const configPath = join(root, 'areo.config.ts');
 
   try {
     if (await Bun.file(configPath).exists()) {
@@ -207,7 +207,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
         case 'c':
           console.clear();
-          console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mOreo\x1b[0m Dev Server\n');
+          console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m Dev Server\n');
           console.log(`  \x1b[32m➜\x1b[0m  Local:   \x1b[36mhttp://${hostname}:${port}/\x1b[0m\n`);
           break;
 

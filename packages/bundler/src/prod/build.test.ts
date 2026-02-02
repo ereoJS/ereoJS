@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { formatSize, printBuildReport, type BuildResult } from './build';
 
-describe('@oreo/bundler - Build', () => {
+describe('@areo/bundler - Build', () => {
   describe('formatSize', () => {
     test('formats bytes', () => {
       expect(formatSize(0)).toBe('0 B');
@@ -99,7 +99,7 @@ describe('@oreo/bundler - Build', () => {
     test('default values', () => {
       const defaults: Required<Omit<BuildOptions, 'entrypoints' | 'external'>> = {
         root: process.cwd(),
-        outDir: '.oreo',
+        outDir: '.areo',
         minify: true,
         sourcemap: true,
         target: 'bun',

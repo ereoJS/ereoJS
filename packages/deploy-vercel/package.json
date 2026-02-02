@@ -1,13 +1,13 @@
 {
-  "name": "@oreo/deploy-vercel",
+  "name": "@areo/deploy-vercel",
   "version": "0.1.0",
-  "description": "Vercel deployment adapter for Oreo framework",
+  "description": "Vercel deployment adapter for Areo framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*"
+    "@areo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

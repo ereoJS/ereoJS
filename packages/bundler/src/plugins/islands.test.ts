@@ -9,7 +9,7 @@ import {
   type IslandMeta,
 } from './islands';
 
-describe('@oreo/bundler - Islands Plugin', () => {
+describe('@areo/bundler - Islands Plugin', () => {
   describe('extractIslands', () => {
     test('extracts islands from use client files at line start', () => {
       // The regex expects 'use client' at the start of a line
@@ -229,14 +229,14 @@ export function Component() {}`;
       expect(entry).toContain("registerIslandComponent('Counter', Island_counter)");
     });
 
-    test('imports from @oreo/client', () => {
+    test('imports from @areo/client', () => {
       const islands: IslandMeta[] = [
         { id: 'test', name: 'Test', file: '/test.tsx', strategy: 'load', exports: ['Test'] },
       ];
 
       const entry = generateIslandEntry(islands);
 
-      expect(entry).toContain("from '@oreo/client'");
+      expect(entry).toContain("from '@areo/client'");
       expect(entry).toContain('registerIslandComponent');
       expect(entry).toContain('initializeIslands');
     });

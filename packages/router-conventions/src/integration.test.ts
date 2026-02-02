@@ -1,5 +1,5 @@
 /**
- * @oreo/router-conventions - Integration tests
+ * @areo/router-conventions - Integration tests
  */
 
 import { describe, it, expect } from 'bun:test';
@@ -10,7 +10,7 @@ import {
   isIslandComponent,
   getEffectiveRenderMode,
 } from './integration';
-import type { Route } from '@oreo/core';
+import type { Route } from '@areo/core';
 
 describe('integrateConventions', () => {
   it('should apply SSG config to routes', () => {

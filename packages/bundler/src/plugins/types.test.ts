@@ -6,9 +6,9 @@ import {
   generateHookTypes,
   createTypesPlugin,
 } from './types';
-import type { Route } from '@oreo/core';
+import type { Route } from '@areo/core';
 
-describe('@oreo/bundler - Types Plugin', () => {
+describe('@areo/bundler - Types Plugin', () => {
   describe('extractParams', () => {
     test('extracts no params from static path', () => {
       const params = extractParams('/about');
@@ -47,7 +47,7 @@ describe('@oreo/bundler - Types Plugin', () => {
 
       const types = generateRouteTypes(routes);
 
-      expect(types).toContain("declare module '@oreo/core'");
+      expect(types).toContain("declare module '@areo/core'");
       expect(types).toContain("export interface RouteTypes");
       expect(types).toContain("'/':");
       expect(types).toContain("'/about':");
@@ -99,7 +99,7 @@ describe('@oreo/bundler - Types Plugin', () => {
     test('handles empty routes array', () => {
       const types = generateRouteTypes([]);
 
-      expect(types).toContain("declare module '@oreo/core'");
+      expect(types).toContain("declare module '@areo/core'");
       expect(types).toContain('export {};');
     });
   });
@@ -183,7 +183,7 @@ describe('@oreo/bundler - Types Plugin', () => {
       const plugin = createTypesPlugin();
 
       expect(plugin).toBeDefined();
-      expect(plugin.name).toBe('oreo:types');
+      expect(plugin.name).toBe('areo:types');
     });
 
     test('has buildEnd hook', () => {

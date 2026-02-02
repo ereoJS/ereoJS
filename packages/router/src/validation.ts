@@ -1,10 +1,10 @@
 /**
- * @oreo/router - Parameter Validation
+ * @areo/router - Parameter Validation
  *
  * Validates route params and search params against schemas.
  */
 
-import type { ParamValidationSchema, SearchParamValidationSchema, RouteParams } from '@oreo/core';
+import type { ParamValidationSchema, SearchParamValidationSchema, RouteParams } from '@areo/core';
 
 /** Validation error for parameters */
 export class ParamValidationError extends Error {

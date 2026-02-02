@@ -9,7 +9,7 @@ import {
   parseCacheControl,
 } from './cache';
 
-describe('@oreo/data - Cache', () => {
+describe('@areo/data - Cache', () => {
   describe('MemoryCache', () => {
     let cache: MemoryCache;
 

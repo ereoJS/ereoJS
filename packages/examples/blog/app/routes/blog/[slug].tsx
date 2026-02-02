@@ -1,4 +1,4 @@
-import type { LoaderArgs } from '@oreo/core';
+import type { LoaderArgs } from '@areo/core';
 
 interface Post {
   slug: string;
@@ -9,17 +9,17 @@ interface Post {
 }
 
 const postsData: Record<string, Post> = {
-  'getting-started-with-oreo': {
-    slug: 'getting-started-with-oreo',
-    title: 'Getting Started with Oreo',
+  'getting-started-with-areo': {
+    slug: 'getting-started-with-areo',
+    title: 'Getting Started with Areo',
     content: `
-Oreo is a React fullstack framework built on Bun that prioritizes simplicity,
+Areo is a React fullstack framework built on Bun that prioritizes simplicity,
 performance, and developer experience.
 
 ## Installation
 
 \`\`\`bash
-bunx create-oreo my-app
+bunx create-areo my-app
 cd my-app
 bun run dev
 \`\`\`
@@ -34,7 +34,7 @@ bun run dev
 Get started today!
     `.trim(),
     date: '2024-01-15',
-    author: 'Oreo Team',
+    author: 'Areo Team',
   },
   'islands-architecture': {
     slug: 'islands-architecture',
@@ -59,11 +59,11 @@ By default, components render as static HTML. Add hydration directives to make t
 - **SEO friendly** - Static HTML for search engines
     `.trim(),
     date: '2024-01-10',
-    author: 'Oreo Team',
+    author: 'Areo Team',
   },
   'bun-performance': {
     slug: 'bun-performance',
-    title: 'Why Bun Makes Oreo Fast',
+    title: 'Why Bun Makes Areo Fast',
     content: `
 Bun is a new JavaScript runtime that's significantly faster than Node.js.
 
@@ -76,7 +76,7 @@ Bun is a new JavaScript runtime that's significantly faster than Node.js.
 
 ## Real-World Impact
 
-With Oreo on Bun, you get:
+With Areo on Bun, you get:
 
 - Sub-100ms HMR updates
 - Fast production builds
@@ -84,7 +84,7 @@ With Oreo on Bun, you get:
 - Better developer experience
     `.trim(),
     date: '2024-01-05',
-    author: 'Oreo Team',
+    author: 'Areo Team',
   },
 };
 

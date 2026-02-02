@@ -1,14 +1,14 @@
 /**
  * Test: Environment Variable Management
  *
- * Validates the @oreo/core env module features:
+ * Validates the @areo/core env module features:
  * - Schema builders (string, number, boolean, etc.)
  * - .env file parsing
  * - Validation and transforms
  */
 
 import { describe, expect, test } from 'bun:test';
-import { env, parseEnvFile, validateEnv, type EnvConfig } from '@oreo/core';
+import { env, parseEnvFile, validateEnv, type EnvConfig } from '@areo/core';
 
 describe('Environment Variable Schema Builders', () => {
   test('env.string() creates string schema with required/default', () => {

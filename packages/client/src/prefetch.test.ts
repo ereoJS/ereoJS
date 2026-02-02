@@ -10,7 +10,7 @@ import {
   setupAutoPrefetch,
 } from './prefetch';
 
-describe('@oreo/client - Prefetch', () => {
+describe('@areo/client - Prefetch', () => {
   beforeEach(() => {
     clearPrefetchCache();
   });

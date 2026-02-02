@@ -1,66 +1,66 @@
 import { describe, expect, test } from 'bun:test';
-import { oreoPreset, getOreoTailwindConfig } from './preset';
+import { areoPreset, getAreoTailwindConfig } from './preset';
 
-describe('@oreo/plugin-tailwind - Preset', () => {
-  describe('oreoPreset', () => {
+describe('@areo/plugin-tailwind - Preset', () => {
+  describe('areoPreset', () => {
     test('is an object with theme configuration', () => {
-      expect(oreoPreset).toBeDefined();
-      expect(typeof oreoPreset).toBe('object');
+      expect(areoPreset).toBeDefined();
+      expect(typeof areoPreset).toBe('object');
     });
 
     test('has theme extend configuration', () => {
-      expect(oreoPreset.theme).toBeDefined();
-      expect(oreoPreset.theme?.extend).toBeDefined();
+      expect(areoPreset.theme).toBeDefined();
+      expect(areoPreset.theme?.extend).toBeDefined();
     });
 
     test('includes color definitions', () => {
-      expect(oreoPreset.theme?.extend?.colors).toBeDefined();
+      expect(areoPreset.theme?.extend?.colors).toBeDefined();
     });
 
     test('has color definitions if present', () => {
-      const colors = oreoPreset.theme?.extend?.colors as Record<string, any>;
+      const colors = areoPreset.theme?.extend?.colors as Record<string, any>;
       // Colors may or may not include 'primary' depending on preset config
       expect(colors === undefined || typeof colors === 'object').toBe(true);
     });
 
     test('includes font family definitions', () => {
-      expect(oreoPreset.theme?.extend?.fontFamily).toBeDefined();
+      expect(areoPreset.theme?.extend?.fontFamily).toBeDefined();
     });
 
     test('includes animation definitions', () => {
-      expect(oreoPreset.theme?.extend?.animation).toBeDefined();
+      expect(areoPreset.theme?.extend?.animation).toBeDefined();
     });
 
     test('includes keyframes definitions', () => {
-      expect(oreoPreset.theme?.extend?.keyframes).toBeDefined();
+      expect(areoPreset.theme?.extend?.keyframes).toBeDefined();
     });
   });
 
-  describe('getOreoTailwindConfig', () => {
+  describe('getAreoTailwindConfig', () => {
     test('returns a valid tailwind config', () => {
-      const config = getOreoTailwindConfig();
+      const config = getAreoTailwindConfig();
 
       expect(config).toBeDefined();
       expect(typeof config).toBe('object');
     });
 
     test('includes default content paths', () => {
-      const config = getOreoTailwindConfig();
+      const config = getAreoTailwindConfig();
 
       expect(config.content).toBeDefined();
       expect(Array.isArray(config.content)).toBe(true);
       expect((config.content as string[]).length).toBeGreaterThan(0);
     });
 
-    test('includes Oreo preset in presets', () => {
-      const config = getOreoTailwindConfig();
+    test('includes Areo preset in presets', () => {
+      const config = getAreoTailwindConfig();
 
       expect(config.presets).toBeDefined();
       expect(Array.isArray(config.presets)).toBe(true);
     });
 
     test('accepts custom content paths', () => {
-      const config = getOreoTailwindConfig({
+      const config = getAreoTailwindConfig({
         content: ['./custom/**/*.tsx'],
       });
 
@@ -68,7 +68,7 @@ describe('@oreo/plugin-tailwind - Preset', () => {
     });
 
     test('accepts custom theme extensions', () => {
-      const config = getOreoTailwindConfig({
+      const config = getAreoTailwindConfig({
         theme: {
           extend: {
             colors: {
@@ -83,7 +83,7 @@ describe('@oreo/plugin-tailwind - Preset', () => {
 
     test('merges plugins', () => {
       const mockPlugin = { handler: () => {} };
-      const config = getOreoTailwindConfig({
+      const config = getAreoTailwindConfig({
         plugins: [mockPlugin as any],
       });
 
@@ -92,13 +92,13 @@ describe('@oreo/plugin-tailwind - Preset', () => {
     });
 
     test('includes default dark mode setting', () => {
-      const config = getOreoTailwindConfig();
+      const config = getAreoTailwindConfig();
 
       expect(config.darkMode).toBeDefined();
     });
 
     test('allows overriding dark mode', () => {
-      const config = getOreoTailwindConfig({
+      const config = getAreoTailwindConfig({
         darkMode: 'media',
       });
 

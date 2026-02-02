@@ -1,5 +1,5 @@
 {
-  "name": "@oreo/bundler",
+  "name": "@areo/bundler",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,8 +21,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*"
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

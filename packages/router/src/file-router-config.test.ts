@@ -1,9 +1,9 @@
 /**
- * @oreo/router - File Router Config Integration Tests
+ * @areo/router - File Router Config Integration Tests
  */
 
 import { describe, it, expect, beforeEach } from 'bun:test';
-import type { Route, RouteConfig } from '@oreo/core';
+import type { Route, RouteConfig } from '@areo/core';
 import { FileRouter } from './file-router';
 import { parseRouteConfig, mergeRouteConfigs } from './route-config';
 

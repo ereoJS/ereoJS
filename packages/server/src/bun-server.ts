@@ -1,14 +1,14 @@
 /**
- * @oreo/server - Bun HTTP Server
+ * @areo/server - Bun HTTP Server
  *
  * High-performance HTTP server using Bun.serve().
  * Designed for 5-6x faster performance than Node.js.
  */
 
 import type { Server } from 'bun';
-import type { FrameworkConfig, RouteMatch, Route } from '@oreo/core';
-import { createContext, RequestContext, OreoApp } from '@oreo/core';
-import { FileRouter, createFileRouter } from '@oreo/router';
+import type { FrameworkConfig, RouteMatch, Route } from '@areo/core';
+import { createContext, RequestContext, AreoApp } from '@areo/core';
+import { FileRouter, createFileRouter } from '@areo/router';
 import {
   MiddlewareChain,
   createMiddlewareChain,
@@ -53,7 +53,7 @@ export interface ServerOptions {
  */
 export class BunServer {
   private server: Server | null = null;
-  private app: OreoApp | null = null;
+  private app: AreoApp | null = null;
   private router: FileRouter | null = null;
   private middleware: MiddlewareChain;
   private staticHandler: ((request: Request) => Promise<Response | null>) | null = null;
@@ -101,7 +101,7 @@ export class BunServer {
   /**
    * Set the Oreo app instance.
    */
-  setApp(app: OreoApp): void {
+  setApp(app: AreoApp): void {
     this.app = app;
   }
 

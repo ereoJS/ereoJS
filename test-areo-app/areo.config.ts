@@ -1,4 +1,4 @@
-import { defineConfig, env } from '@oreo/core';
+import { defineConfig, env } from '@areo/core';
 
 export default defineConfig({
   server: {

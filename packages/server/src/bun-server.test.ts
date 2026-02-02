@@ -1,7 +1,7 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { BunServer, createServer, serve } from './bun-server';
 
-describe('@oreo/server - BunServer', () => {
+describe('@areo/server - BunServer', () => {
   let server: BunServer;
 
   afterEach(() => {

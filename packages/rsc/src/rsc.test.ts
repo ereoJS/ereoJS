@@ -1,5 +1,5 @@
 /**
- * @oreo/rsc - Tests for React Server Components
+ * @areo/rsc - Tests for React Server Components
  */
 
 import { describe, it, expect } from 'bun:test';

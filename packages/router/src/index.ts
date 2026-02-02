@@ -1,7 +1,7 @@
 /**
- * @oreo/router
+ * @areo/router
  *
- * File-based routing for the Oreo framework.
+ * File-based routing for the Areo framework.
  * Supports dynamic routes, catch-all routes, layouts, and route groups.
  */
 

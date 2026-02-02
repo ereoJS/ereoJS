@@ -1,21 +1,21 @@
 {
-  "name": "@oreo/example-blog",
+  "name": "@areo/example-blog",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "oreo dev",
-    "build": "oreo build",
-    "start": "oreo start"
+    "dev": "areo dev",
+    "build": "areo build",
+    "start": "areo start"
   },
   "dependencies": {
-    "@oreo/core": "workspace:*",
-    "@oreo/router": "workspace:*",
-    "@oreo/server": "workspace:*",
-    "@oreo/client": "workspace:*",
-    "@oreo/data": "workspace:*",
-    "@oreo/cli": "workspace:*",
-    "@oreo/plugin-tailwind": "workspace:*",
+    "@areo/core": "workspace:*",
+    "@areo/router": "workspace:*",
+    "@areo/server": "workspace:*",
+    "@areo/client": "workspace:*",
+    "@areo/data": "workspace:*",
+    "@areo/cli": "workspace:*",
+    "@areo/plugin-tailwind": "workspace:*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
