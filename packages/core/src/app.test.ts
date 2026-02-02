@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import { createApp, defineConfig, OreoApp } from './app';
-import type { FrameworkConfig, Plugin } from './types';
+import { createApp, defineConfig, OreoApp, isOreoApp } from './app';
+import type { FrameworkConfig, Plugin, RouteMatch, RequestContext } from './types';
 
 describe('@oreo/core - App', () => {
   describe('createApp', () => {
@@ -78,6 +78,283 @@ describe('@oreo/core - App', () => {
       const response = await app.handle(request);
 
       expect(response.status).toBe(404);
+    });
+
+    test('middleware() registers middleware handler', async () => {
+      let middlewareCalled = false;
+
+      app.middleware((req, ctx, next) => {
+        middlewareCalled = true;
+        return next();
+      });
+
+      app.setRouteMatcher(() => null);
+
+      const request = new Request('http://localhost:3000/');
+      await app.handle(request);
+
+      expect(middlewareCalled).toBe(true);
+    });
+
+    test('middleware chain runs in order', async () => {
+      const order: number[] = [];
+
+      app.middleware((_req, _ctx, next) => {
+        order.push(1);
+        return next();
+      });
+
+      app.middleware((_req, _ctx, next) => {
+        order.push(2);
+        return next();
+      });
+
+      app.setRouteMatcher(() => null);
+
+      const request = new Request('http://localhost:3000/');
+      await app.handle(request);
+
+      expect(order).toEqual([1, 2]);
+    });
+
+    test('middleware can short-circuit the chain', async () => {
+      app.middleware((_req, _ctx, _next) => {
+        return new Response('Intercepted', { status: 200 });
+      });
+
+      app.middleware((_req, _ctx, next) => {
+        // This should not be reached
+        return next();
+      });
+
+      app.setRouteMatcher(() => null);
+
+      const request = new Request('http://localhost:3000/');
+      const response = await app.handle(request);
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe('Intercepted');
+    });
+
+    test('setRoutes updates routes', () => {
+      const routes = [
+        { id: 'home', path: '/', file: '/index.tsx' },
+        { id: 'about', path: '/about', file: '/about.tsx' },
+      ];
+
+      app.setRoutes(routes);
+
+      expect(app.routes).toHaveLength(2);
+    });
+
+    test('handles route with loader returning data', async () => {
+      const mockModule = {
+        loader: async () => ({ message: 'Hello' }),
+      };
+
+      app.setRouteMatcher((pathname): RouteMatch | null => {
+        if (pathname === '/') {
+          return {
+            route: { id: 'home', path: '/', file: '/index.tsx', module: mockModule },
+            params: {},
+            pathname,
+          };
+        }
+        return null;
+      });
+
+      const request = new Request('http://localhost:3000/', {
+        headers: { Accept: 'application/json' },
+      });
+      const response = await app.handle(request);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toEqual({ message: 'Hello' });
+    });
+
+    test('handles POST request with action', async () => {
+      const mockModule = {
+        action: async () => ({ success: true }),
+      };
+
+      app.setRouteMatcher((pathname): RouteMatch | null => {
+        if (pathname === '/submit') {
+          return {
+            route: { id: 'submit', path: '/submit', file: '/submit.tsx', module: mockModule },
+            params: {},
+            pathname,
+          };
+        }
+        return null;
+      });
+
+      const request = new Request('http://localhost:3000/submit', {
+        method: 'POST',
+      });
+      const response = await app.handle(request);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data).toEqual({ success: true });
+    });
+
+    test('returns 405 for POST without action', async () => {
+      const mockModule = {};
+
+      app.setRouteMatcher((pathname): RouteMatch | null => {
+        if (pathname === '/noaction') {
+          return {
+            route: { id: 'noaction', path: '/noaction', file: '/noaction.tsx', module: mockModule },
+            params: {},
+            pathname,
+          };
+        }
+        return null;
+      });
+
+      const request = new Request('http://localhost:3000/noaction', {
+        method: 'POST',
+      });
+      const response = await app.handle(request);
+
+      expect(response.status).toBe(405);
+    });
+
+    test('returns 500 when route module not loaded', async () => {
+      app.setRouteMatcher((pathname): RouteMatch | null => {
+        if (pathname === '/') {
+          return {
+            route: { id: 'home', path: '/', file: '/index.tsx' },
+            params: {},
+            pathname,
+          };
+        }
+        return null;
+      });
+
+      const request = new Request('http://localhost:3000/');
+      const response = await app.handle(request);
+
+      expect(response.status).toBe(500);
+    });
+
+    test('handles basePath in request URL', async () => {
+      const appWithBase = createApp({
+        config: { basePath: '/app' },
+      });
+
+      let matchedPath = '';
+      appWithBase.setRouteMatcher((pathname): RouteMatch | null => {
+        matchedPath = pathname;
+        return null;
+      });
+
+      const request = new Request('http://localhost:3000/app/dashboard');
+      await appWithBase.handle(request);
+
+      expect(matchedPath).toBe('/dashboard');
+    });
+
+    test('getPluginRegistry returns registry', () => {
+      const registry = app.getPluginRegistry();
+
+      expect(registry).toBeDefined();
+    });
+
+    test('loader can return Response directly', async () => {
+      const mockModule = {
+        loader: async () => new Response('Direct response', { status: 201 }),
+      };
+
+      app.setRouteMatcher((pathname): RouteMatch | null => {
+        if (pathname === '/') {
+          return {
+            route: { id: 'home', path: '/', file: '/index.tsx', module: mockModule },
+            params: {},
+            pathname,
+          };
+        }
+        return null;
+      });
+
+      const request = new Request('http://localhost:3000/');
+      const response = await app.handle(request);
+
+      expect(response.status).toBe(201);
+      expect(await response.text()).toBe('Direct response');
+    });
+
+    test('action can return Response directly', async () => {
+      const mockModule = {
+        action: async () => new Response('Action response', { status: 201 }),
+      };
+
+      app.setRouteMatcher((pathname): RouteMatch | null => {
+        if (pathname === '/') {
+          return {
+            route: { id: 'home', path: '/', file: '/index.tsx', module: mockModule },
+            params: {},
+            pathname,
+          };
+        }
+        return null;
+      });
+
+      const request = new Request('http://localhost:3000/', { method: 'POST' });
+      const response = await app.handle(request);
+
+      expect(response.status).toBe(201);
+      expect(await response.text()).toBe('Action response');
+    });
+
+    test('handles errors in dev mode with details', async () => {
+      const devApp = createApp({
+        config: { server: { development: true } },
+      });
+
+      devApp.setRouteMatcher((): RouteMatch | null => {
+        throw new Error('Test error');
+      });
+
+      const request = new Request('http://localhost:3000/');
+      const response = await devApp.handle(request);
+
+      expect(response.status).toBe(500);
+      const data = await response.json();
+      expect(data.error).toBe('Test error');
+      expect(data.stack).toBeDefined();
+    });
+
+    test('handles errors in prod mode without details', async () => {
+      const prodApp = createApp({
+        config: { server: { development: false } },
+      });
+
+      prodApp.setRouteMatcher((): RouteMatch | null => {
+        throw new Error('Test error');
+      });
+
+      const request = new Request('http://localhost:3000/');
+      const response = await prodApp.handle(request);
+
+      expect(response.status).toBe(500);
+      expect(await response.text()).toBe('Internal Server Error');
+    });
+  });
+
+  describe('isOreoApp', () => {
+    test('returns true for OreoApp instance', () => {
+      const app = createApp();
+      expect(isOreoApp(app)).toBe(true);
+    });
+
+    test('returns false for non-OreoApp values', () => {
+      expect(isOreoApp(null)).toBe(false);
+      expect(isOreoApp(undefined)).toBe(false);
+      expect(isOreoApp({})).toBe(false);
+      expect(isOreoApp('string')).toBe(false);
+      expect(isOreoApp(123)).toBe(false);
     });
   });
 });

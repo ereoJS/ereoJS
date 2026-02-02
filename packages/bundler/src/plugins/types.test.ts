@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { extractParams, generateRouteTypes } from './types';
+import {
+  extractParams,
+  generateRouteTypes,
+  generateLinkTypes,
+  generateHookTypes,
+  createTypesPlugin,
+} from './types';
 import type { Route } from '@oreo/core';
 
 describe('@oreo/bundler - Types Plugin', () => {
@@ -69,6 +75,129 @@ describe('@oreo/bundler - Types Plugin', () => {
       const types = generateRouteTypes(routes);
 
       expect(types).toContain('Record<string, never>');
+    });
+
+    test('handles nested children routes', () => {
+      const routes: Route[] = [
+        {
+          id: 'users',
+          path: '/users',
+          file: '/routes/users.tsx',
+          children: [
+            { id: 'user', path: '/users/[id]', file: '/routes/users/[id].tsx' },
+          ],
+        },
+      ];
+
+      const types = generateRouteTypes(routes);
+
+      expect(types).toContain("'/users':");
+      expect(types).toContain("'/users/[id]':");
+      expect(types).toContain('id: string');
+    });
+
+    test('handles empty routes array', () => {
+      const types = generateRouteTypes([]);
+
+      expect(types).toContain("declare module '@oreo/core'");
+      expect(types).toContain('export {};');
+    });
+  });
+
+  describe('generateLinkTypes', () => {
+    test('generates link types for routes', () => {
+      const routes: Route[] = [
+        { id: 'home', path: '/', file: '/index.tsx' },
+        { id: 'about', path: '/about', file: '/about.tsx' },
+      ];
+
+      const types = generateLinkTypes(routes);
+
+      expect(types).toContain('AppRoutes');
+      expect(types).toContain("'/'");
+      expect(types).toContain("'/about'");
+      expect(types).toContain('LinkProps');
+    });
+
+    test('excludes layout routes from link types', () => {
+      const routes: Route[] = [
+        { id: 'layout', path: '/', file: '/_layout.tsx', layout: true },
+        { id: 'home', path: '/', file: '/index.tsx' },
+      ];
+
+      const types = generateLinkTypes(routes);
+
+      expect(types).toContain('AppRoutes');
+    });
+
+    test('generates union type for multiple routes', () => {
+      const routes: Route[] = [
+        { id: 'home', path: '/', file: '/index.tsx' },
+        { id: 'about', path: '/about', file: '/about.tsx' },
+        { id: 'contact', path: '/contact', file: '/contact.tsx' },
+      ];
+
+      const types = generateLinkTypes(routes);
+
+      expect(types).toContain('|');
+    });
+
+    test('handles empty routes with string fallback', () => {
+      const types = generateLinkTypes([]);
+
+      expect(types).toContain('AppRoutes = string');
+    });
+
+    test('includes prefetch option in LinkProps', () => {
+      const routes: Route[] = [
+        { id: 'home', path: '/', file: '/index.tsx' },
+      ];
+
+      const types = generateLinkTypes(routes);
+
+      expect(types).toContain("prefetch?: 'hover' | 'viewport' | 'none'");
+    });
+  });
+
+  describe('generateHookTypes', () => {
+    test('generates hook type definitions', () => {
+      const types = generateHookTypes();
+
+      expect(types).toContain('useLoaderData');
+      expect(types).toContain('useParams');
+      expect(types).toContain('useActionData');
+    });
+
+    test('references RouteTypes for type inference', () => {
+      const types = generateHookTypes();
+
+      expect(types).toContain('keyof RouteTypes');
+      expect(types).toContain("RouteTypes[T]['loader']");
+      expect(types).toContain("RouteTypes[T]['params']");
+      expect(types).toContain("RouteTypes[T]['action']");
+    });
+  });
+
+  describe('createTypesPlugin', () => {
+    test('creates a plugin object', () => {
+      const plugin = createTypesPlugin();
+
+      expect(plugin).toBeDefined();
+      expect(plugin.name).toBe('oreo:types');
+    });
+
+    test('has buildEnd hook', () => {
+      const plugin = createTypesPlugin();
+
+      expect(plugin.buildEnd).toBeDefined();
+      expect(typeof plugin.buildEnd).toBe('function');
+    });
+
+    test('buildEnd can be called', async () => {
+      const plugin = createTypesPlugin();
+
+      await plugin.buildEnd();
+      // Should not throw
     });
   });
 });

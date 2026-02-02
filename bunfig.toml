@@ -5,4 +5,4 @@ exact = true
 [test]
 # Test configuration
 preload = ["./test-setup.ts"]
-coverage = false
+coverage = true

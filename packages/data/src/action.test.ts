@@ -61,6 +61,84 @@ describe('@oreo/data - Action', () => {
       expect(result.success).toBe(false);
       expect(result.errors?.title).toContain('Required');
     });
+
+    test('passes validation and executes handler', async () => {
+      const actionFn = createAction({
+        handler: async ({ formData }) => {
+          return { title: formData.get('title') };
+        },
+        validate: (formData) => {
+          if (!formData.get('title')) {
+            return { success: false, errors: { title: ['Required'] } };
+          }
+          return { success: true };
+        },
+      });
+
+      const formData = new FormData();
+      formData.set('title', 'Valid Title');
+
+      const result = await actionFn(createMockArgs(formData));
+
+      expect(result.success).toBe(true);
+      expect(result.data?.title).toBe('Valid Title');
+    });
+
+    test('calls onError handler when handler throws', async () => {
+      const actionFn = createAction({
+        handler: async () => {
+          throw new Error('Handler error');
+        },
+        onError: (error) => {
+          return { errorMessage: error.message };
+        },
+      });
+
+      const formData = new FormData();
+      const result = await actionFn(createMockArgs(formData));
+
+      expect(result.success).toBe(true);
+      expect(result.data?.errorMessage).toBe('Handler error');
+    });
+
+    test('onError can return Response which is thrown', async () => {
+      const actionFn = createAction({
+        handler: async () => {
+          throw new Error('Handler error');
+        },
+        onError: () => {
+          return new Response('Error redirect', { status: 302, headers: { Location: '/error' } });
+        },
+      });
+
+      const formData = new FormData();
+
+      try {
+        await actionFn(createMockArgs(formData));
+        expect(true).toBe(false); // Should not reach here
+      } catch (e) {
+        expect(e).toBeInstanceOf(Response);
+        expect((e as Response).status).toBe(302);
+      }
+    });
+
+    test('rethrows error when no onError handler', async () => {
+      const actionFn = createAction({
+        handler: async () => {
+          throw new Error('Unhandled error');
+        },
+      });
+
+      const formData = new FormData();
+
+      try {
+        await actionFn(createMockArgs(formData));
+        expect(true).toBe(false); // Should not reach here
+      } catch (e) {
+        expect(e).toBeInstanceOf(Error);
+        expect((e as Error).message).toBe('Unhandled error');
+      }
+    });
   });
 
   describe('action', () => {
@@ -135,6 +213,17 @@ describe('@oreo/data - Action', () => {
       const result = parseFormData<{ tags: string[] }>(formData);
 
       expect(result.tags).toEqual(['react', 'typescript']);
+    });
+
+    test('converts multiple values with same key to array', () => {
+      const formData = new FormData();
+      formData.append('colors', 'red');
+      formData.append('colors', 'blue');
+      formData.append('colors', 'green');
+
+      const result = parseFormData<{ colors: string[] }>(formData);
+
+      expect(result.colors).toEqual(['red', 'blue', 'green']);
     });
   });
 
