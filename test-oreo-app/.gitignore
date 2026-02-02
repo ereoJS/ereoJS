@@ -1,0 +1,5 @@
+node_modules
+.oreo
+dist
+*.log
+.DS_Store

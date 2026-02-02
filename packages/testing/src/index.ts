@@ -8,7 +8,9 @@
 // Test Context
 export {
   createTestContext,
+  createContextFactory,
   type TestContextOptions,
+  type TestContext,
 } from './context';
 
 // Loader Testing
@@ -38,6 +40,7 @@ export {
 // Request/Response Utilities
 export {
   createMockRequest,
+  createFormRequest,
   createMockFormData,
   createMockHeaders,
   parseJsonResponse,

@@ -45,7 +45,19 @@ export interface MockRequestOptions {
  *   formData: { email: 'test@example.com', password: 'secret' },
  * });
  */
-export function createMockRequest(options: MockRequestOptions = {}): Request {
+export function createMockRequest(url?: string | MockRequestOptions, options?: MockRequestOptions): Request {
+  // Support both (options) and (url, options) signatures
+  if (typeof url === 'string') {
+    options = { ...options, url };
+  } else if (url) {
+    options = url;
+  } else {
+    options = options || {};
+  }
+  return createMockRequestImpl(options);
+}
+
+function createMockRequestImpl(options: MockRequestOptions = {}): Request {
   const {
     method = 'GET',
     url = '/',
@@ -105,6 +117,34 @@ export function createMockRequest(options: MockRequestOptions = {}): Request {
     method,
     headers: requestHeaders,
     body: requestBody,
+  });
+}
+
+/**
+ * Create a POST request with form data (convenience function).
+ *
+ * @example
+ * const request = createFormRequest('/api/login', {
+ *   email: 'test@example.com',
+ *   password: 'secret',
+ * });
+ */
+export function createFormRequest(
+  url: string,
+  data: Record<string, string | Blob>
+): Request {
+  const formData = new URLSearchParams();
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') {
+      formData.append(key, value);
+    }
+  }
+  return new Request(url.startsWith('http') ? url : `http://localhost:3000${url}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: formData.toString(),
   });
 }
 
