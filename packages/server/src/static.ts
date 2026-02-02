@@ -67,6 +67,62 @@ export interface StaticOptions {
   listing?: boolean;
   /** Fallback file for SPA routing */
   fallback?: string;
+  /** Enable format negotiation for images based on Accept header */
+  negotiateImageFormat?: boolean;
+}
+
+/**
+ * Image extensions that support format negotiation.
+ */
+const NEGOTIABLE_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
+
+/**
+ * Check if browser supports a format based on Accept header.
+ */
+function supportsFormat(accept: string | null, format: string): boolean {
+  if (!accept) return false;
+  return accept.includes(`image/${format}`);
+}
+
+/**
+ * Try to find an optimized variant of an image file.
+ */
+async function findOptimizedVariant(
+  filepath: string,
+  accept: string | null
+): Promise<{ path: string; mime: string } | null> {
+  const ext = extname(filepath).toLowerCase();
+
+  // Only negotiate for specific image types
+  if (!NEGOTIABLE_IMAGE_EXTENSIONS.includes(ext)) {
+    return null;
+  }
+
+  const basePath = filepath.slice(0, -ext.length);
+
+  // Try AVIF first (best compression)
+  if (supportsFormat(accept, 'avif')) {
+    const avifPath = `${basePath}.avif`;
+    try {
+      await stat(avifPath);
+      return { path: avifPath, mime: 'image/avif' };
+    } catch {
+      // AVIF variant doesn't exist
+    }
+  }
+
+  // Try WebP
+  if (supportsFormat(accept, 'webp')) {
+    const webpPath = `${basePath}.webp`;
+    try {
+      await stat(webpPath);
+      return { path: webpPath, mime: 'image/webp' };
+    } catch {
+      // WebP variant doesn't exist
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -81,6 +137,7 @@ export function serveStatic(options: StaticOptions): (request: Request) => Promi
     index = 'index.html',
     listing = false,
     fallback,
+    negotiateImageFormat = true,
   } = options;
 
   return async (request: Request): Promise<Response | null> => {
@@ -112,6 +169,16 @@ export function serveStatic(options: StaticOptions): (request: Request) => Promi
 
     try {
       let stats = await stat(filepath);
+
+      // Try format negotiation for images
+      if (negotiateImageFormat && stats.isFile()) {
+        const accept = request.headers.get('Accept');
+        const optimized = await findOptimizedVariant(filepath, accept);
+        if (optimized) {
+          filepath = optimized.path;
+          stats = await stat(filepath);
+        }
+      }
 
       // Handle directory
       if (stats.isDirectory()) {
@@ -151,6 +218,12 @@ export function serveStatic(options: StaticOptions): (request: Request) => Promi
         headers.set('Cache-Control', `public, max-age=${maxAge}, immutable`);
       } else if (maxAge > 0) {
         headers.set('Cache-Control', `public, max-age=${maxAge}`);
+      }
+
+      // Add Vary header for images when format negotiation is enabled
+      const ext = extname(filepath).toLowerCase();
+      if (negotiateImageFormat && NEGOTIABLE_IMAGE_EXTENSIONS.includes(ext)) {
+        headers.set('Vary', 'Accept');
       }
 
       // Handle conditional requests

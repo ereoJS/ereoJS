@@ -24,6 +24,7 @@
       "@areo/bundler": ["./packages/bundler/src/index.ts"],
       "@areo/cli": ["./packages/cli/src/index.ts"],
       "@areo/plugin-tailwind": ["./packages/plugin-tailwind/src/index.ts"],
+      "@areo/plugin-images": ["./packages/plugin-images/src/index.ts"],
       "@areo/runtime-bun": ["./packages/runtime-bun/src/index.ts"],
       "@areo/testing": ["./packages/testing/src/index.ts"],
       "@areo/dev-inspector": ["./packages/dev-inspector/src/index.ts"]
@@ -38,6 +39,7 @@
     { "path": "./packages/bundler" },
     { "path": "./packages/cli" },
     { "path": "./packages/plugin-tailwind" },
+    { "path": "./packages/plugin-images" },
     { "path": "./packages/runtime-bun" },
     { "path": "./packages/create-areo" },
     { "path": "./packages/testing" },

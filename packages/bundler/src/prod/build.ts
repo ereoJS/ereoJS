@@ -1066,6 +1066,14 @@ interface AssetCopyResult {
 
 /**
  * Copy static assets.
+ *
+ * Note: The @areo/plugin-images package hooks into this process through
+ * the plugin buildStart/buildEnd lifecycle. When the image plugin is active:
+ * - buildStart: Scans and optimizes images in public/app/assets/assets dirs
+ * - buildEnd: Generates image manifest with variants and blur placeholders
+ *
+ * The image plugin generates optimized variants alongside the originals,
+ * which are then picked up by the static file server's format negotiation.
  */
 async function copyAssets(options: {
   root: string;
@@ -1076,6 +1084,7 @@ async function copyAssets(options: {
   const outputs: BuildOutput[] = [];
 
   // Directories to scan for assets
+  // Note: Image plugin also scans these directories
   const assetDirs = [
     join(root, 'public'),
     join(root, 'app/assets'),
