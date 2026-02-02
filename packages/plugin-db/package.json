@@ -1,0 +1,16 @@
+{
+  "name": "@oreo/db",
+  "version": "0.1.0",
+  "description": "Database integration plugin for Oreo framework",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oreo/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

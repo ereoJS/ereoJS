@@ -11,7 +11,7 @@ import type { ReactElement, ComponentType } from 'react';
 // Configuration Types
 // ============================================================================
 
-export type BuildTarget = 'bun' | 'cloudflare' | 'node' | 'deno';
+export type BuildTarget = 'bun' | 'cloudflare' | 'node' | 'deno' | 'edge';
 
 export interface ServerConfig {
   port?: number;
@@ -61,6 +61,15 @@ export interface Plugin {
   /** Build hooks */
   buildStart?: () => void | Promise<void>;
   buildEnd?: () => void | Promise<void>;
+  // Extended hooks for deep integration
+  /** Extend framework configuration */
+  extendConfig?: (config: FrameworkConfig) => FrameworkConfig;
+  /** Transform routes at build time */
+  transformRoutes?: (routes: Route[]) => Route[];
+  /** Add runtime middleware */
+  runtimeMiddleware?: MiddlewareHandler[];
+  /** Virtual modules map */
+  virtualModules?: Record<string, string>;
 }
 
 export interface DevServer {
@@ -85,7 +94,7 @@ export type MiddlewareReference =
   | MiddlewareHandler;  // Inline middleware function
 
 /** Render mode for a route */
-export type RenderMode = 'ssg' | 'ssr' | 'csr' | 'json' | 'xml';
+export type RenderMode = 'ssg' | 'ssr' | 'csr' | 'json' | 'xml' | 'rsc';
 
 /** Prerender/SSG configuration */
 export interface PrerenderConfig {
@@ -257,6 +266,32 @@ export interface DevConfig {
   errorRate?: number;
 }
 
+/** Error recovery and resilience configuration */
+export interface ErrorConfig {
+  /** Retry failed loaders automatically */
+  retry?: { count: number; delay: number };
+  /** Fallback UI while loading */
+  fallback?: ComponentType;
+  /** Error boundary strategy */
+  onError?: 'boundary' | 'toast' | 'redirect' | 'silent';
+  /** Maximum error boundary captures */
+  maxCaptures?: number;
+  /** Error reporting handler */
+  reportError?: (error: Error, context: { route: string; phase: string }) => void;
+}
+
+/** Runtime configuration for edge/Node environments */
+export interface RuntimeConfig {
+  /** Execution environment */
+  runtime?: 'node' | 'edge' | 'auto';
+  /** Region affinity */
+  regions?: string[];
+  /** Memory limit hint */
+  memory?: number;
+  /** Timeout in seconds */
+  timeout?: number;
+}
+
 /** Route variant (multiple URL patterns for same file) */
 export interface RouteVariant {
   /** URL path pattern */
@@ -285,6 +320,10 @@ export interface RouteConfig {
   auth?: AuthConfig;
   /** Development settings */
   dev?: DevConfig;
+  /** Error recovery */
+  error?: ErrorConfig;
+  /** Runtime configuration */
+  runtime?: RuntimeConfig;
   /** Route variants (multiple URL patterns) */
   variants?: RouteVariant[];
 }

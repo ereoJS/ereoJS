@@ -1,0 +1,17 @@
+{
+  "name": "@oreo/dev-inspector",
+  "version": "0.1.0",
+  "description": "Visual route inspector for Oreo framework development",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oreo/core": "workspace:*",
+    "@oreo/router": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

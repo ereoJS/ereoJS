@@ -1,0 +1,16 @@
+{
+  "name": "@oreo/state",
+  "version": "0.1.0",
+  "description": "Signals and reactivity system for Oreo framework",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@oreo/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}
