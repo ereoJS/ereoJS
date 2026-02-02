@@ -3,6 +3,12 @@
  *
  * Hono-inspired middleware system for request processing.
  * Uses Web Standards throughout.
+ *
+ * NOTE: This module uses `MiddlewareHandler` from `@areo/core` as the base type.
+ * The handler signature is: (request: Request, context: AppContext, next: NextFunction) => Response | Promise<Response>
+ *
+ * For typed middleware with context type safety, use `TypedMiddlewareHandler` from `@areo/router`.
+ * TypedMiddlewareHandler is fully compatible with MiddlewareHandler.
  */
 
 import type { MiddlewareHandler, NextFunction, AppContext } from '@areo/core';
@@ -10,9 +16,18 @@ import { createContext, RequestContext } from '@areo/core';
 
 /**
  * Middleware definition with optional path matching.
+ *
+ * This interface uses `MiddlewareHandler` from `@areo/core`, ensuring
+ * compatibility across all Areo packages. The handler signature is:
+ * `(request: Request, context: AppContext, next: NextFunction) => Response | Promise<Response>`
+ *
+ * Note: The `path` property here supports both single strings and arrays,
+ * similar to the `paths` property in `@areo/core`'s `Middleware` interface.
  */
 export interface MiddlewareDefinition {
+  /** Optional path patterns to match. Supports wildcards like '/api/*'. */
   path?: string | string[];
+  /** The middleware handler function. Uses the core MiddlewareHandler type. */
   handler: MiddlewareHandler;
 }
 
@@ -38,10 +53,15 @@ export class MiddlewareChain {
 
   /**
    * Execute middleware chain.
+   *
+   * @param request - The incoming Request object
+   * @param context - The application context (AppContext). Note: RequestContext implements AppContext.
+   * @param final - The final handler to call when the chain completes
+   * @returns The response from the middleware chain
    */
   async execute(
     request: Request,
-    context: RequestContext,
+    context: AppContext,
     final: () => Promise<Response>
   ): Promise<Response> {
     const url = new URL(request.url);

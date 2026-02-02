@@ -81,6 +81,16 @@ export type {
   MiddlewareChainOptions,
 } from './middleware-chain';
 
+// Re-export core middleware types for convenience
+// Users can import these from either @areo/core or @areo/router
+export type {
+  MiddlewareHandler,
+  NextFunction,
+  Middleware,
+  MiddlewareReference,
+  AppContext,
+} from '@areo/core';
+
 // Validation
 export {
   ParamValidationError,

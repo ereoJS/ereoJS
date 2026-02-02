@@ -490,18 +490,51 @@ export interface ErrorBoundaryProps {
 // Middleware Types
 // ============================================================================
 
+/**
+ * Function to continue the middleware chain.
+ * Called by middleware to pass control to the next middleware or final handler.
+ */
 export type NextFunction = () => Promise<Response>;
 
+/**
+ * Core middleware handler signature used throughout the Areo framework.
+ *
+ * This is the base type for all middleware. Both `@areo/router`'s `TypedMiddlewareHandler`
+ * and `@areo/server`'s middleware chain use this signature.
+ *
+ * @param request - The incoming Request object (Web Standards)
+ * @param context - The application context (AppContext) for sharing data
+ * @param next - Function to call the next middleware in the chain
+ * @returns A Response or Promise<Response>
+ *
+ * @example
+ * const loggingMiddleware: MiddlewareHandler = async (request, context, next) => {
+ *   const start = Date.now();
+ *   const response = await next();
+ *   console.log(`Request took ${Date.now() - start}ms`);
+ *   return response;
+ * };
+ *
+ * @see TypedMiddlewareHandler in @areo/router for type-safe context passing
+ */
 export type MiddlewareHandler = (
   request: Request,
   context: AppContext,
   next: NextFunction
 ) => Response | Promise<Response>;
 
+/**
+ * Named middleware definition with optional path matching.
+ *
+ * This interface is used for registering middleware with metadata.
+ * For server-side middleware chains, see `MiddlewareDefinition` in `@areo/server`.
+ */
 export interface Middleware {
+  /** Optional name for the middleware (used in logging and debugging) */
   name?: string;
+  /** The middleware handler function */
   handler: MiddlewareHandler;
-  /** Path patterns to match (default: all paths) */
+  /** Path patterns to match (default: all paths). Supports wildcards like '/api/*'. */
   paths?: string[];
 }
 

@@ -6,6 +6,7 @@
 
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname } from 'node:path';
+import type { AppContext, MiddlewareHandler } from '@areo/core';
 import type { ImagePluginConfig, ImageOptimizationParams } from '../components/types';
 import { createImageProcessor, type ImageProcessor } from '../processing/processor';
 import { TwoTierCache, generateCacheKey } from './cache';
@@ -166,7 +167,7 @@ export function createImageMiddleware(options: ImageMiddlewareOptions) {
 
   return async (
     request: Request,
-    context: any,
+    context: AppContext,
     next: () => Promise<Response>
   ): Promise<Response> => {
     const url = new URL(request.url);
@@ -280,12 +281,12 @@ function createImageResponse(
 /**
  * Create a dev server middleware handler.
  */
-export function imageMiddleware(options: ImageMiddlewareOptions) {
+export function imageMiddleware(options: ImageMiddlewareOptions): MiddlewareHandler {
   const handler = createImageMiddleware(options);
 
   return async (
     request: Request,
-    context: any,
+    context: AppContext,
     next: () => Promise<Response>
   ): Promise<Response> => {
     return handler(request, context, next);

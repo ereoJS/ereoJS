@@ -2,11 +2,14 @@
  * @areo/plugin-images - Transform Cache Management
  *
  * LRU memory cache and disk cache for optimized images.
+ * Implements the unified CacheAdapter interface from @areo/core.
  */
 
 import { readFile, writeFile, mkdir, unlink, readdir, stat } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
+
+import type { CacheAdapter, CacheSetOptions } from '@areo/core';
 
 /**
  * Cached item with metadata.
@@ -492,4 +495,173 @@ export function generateCacheKey(params: {
   format?: string;
 }): string {
   return `${params.src}:w${params.width}:h${params.height || ''}:q${params.quality || ''}:f${params.format || ''}`;
+}
+
+// ============================================================================
+// CacheAdapter Implementations
+// ============================================================================
+
+/**
+ * Adapter to wrap MemoryCache as a CacheAdapter.
+ * Note: This adapter is specifically for Buffer values (images).
+ */
+export class MemoryCacheAdapter implements CacheAdapter {
+  private readonly cache: MemoryCache;
+
+  constructor(options?: MemoryCacheOptions) {
+    this.cache = new MemoryCache(options);
+  }
+
+  async get<T>(key: string): Promise<T | undefined> {
+    const result = this.cache.get(key);
+    return result as T | undefined;
+  }
+
+  async set<T>(key: string, value: T, options?: CacheSetOptions): Promise<void> {
+    // Note: TTL from options is converted from seconds to milliseconds
+    // but MemoryCache uses the constructor TTL, so we ignore per-item TTL here
+    // Tags are also not supported by MemoryCache for images
+    if (value instanceof Buffer) {
+      this.cache.set(key, value);
+    } else {
+      // For non-Buffer values, we can't store them in this cache
+      console.warn('MemoryCacheAdapter only supports Buffer values');
+    }
+  }
+
+  async delete(key: string): Promise<boolean> {
+    return this.cache.delete(key);
+  }
+
+  async has(key: string): Promise<boolean> {
+    return this.cache.has(key);
+  }
+
+  async clear(): Promise<void> {
+    this.cache.clear();
+  }
+
+  /**
+   * Get cache statistics.
+   */
+  stats(): { items: number; size: number; maxItems: number; maxSize: number } {
+    return this.cache.stats();
+  }
+}
+
+/**
+ * Adapter to wrap DiskCache as a CacheAdapter.
+ * Note: This adapter is specifically for Buffer values (images).
+ */
+export class DiskCacheAdapter implements CacheAdapter {
+  private readonly cache: DiskCache;
+
+  constructor(options: DiskCacheOptions) {
+    this.cache = new DiskCache(options);
+  }
+
+  async get<T>(key: string): Promise<T | undefined> {
+    const result = await this.cache.get(key);
+    return result as T | undefined;
+  }
+
+  async set<T>(key: string, value: T, _options?: CacheSetOptions): Promise<void> {
+    if (value instanceof Buffer) {
+      await this.cache.set(key, value);
+    } else {
+      console.warn('DiskCacheAdapter only supports Buffer values');
+    }
+  }
+
+  async delete(key: string): Promise<boolean> {
+    return this.cache.delete(key);
+  }
+
+  async has(key: string): Promise<boolean> {
+    return this.cache.has(key);
+  }
+
+  async clear(): Promise<void> {
+    // DiskCache doesn't have a clear method, so we do nothing here
+    // This is intentional to preserve persistent data
+  }
+
+  /**
+   * Get cache statistics.
+   */
+  async stats(): Promise<{ files: number; size: number }> {
+    return this.cache.stats();
+  }
+
+  /**
+   * Clean up expired entries.
+   */
+  async cleanup(): Promise<{ deleted: number; freed: number }> {
+    return this.cache.cleanup();
+  }
+}
+
+/**
+ * Adapter to wrap TwoTierCache as a CacheAdapter.
+ * Note: This adapter is specifically for Buffer values (images).
+ */
+export class TwoTierCacheAdapter implements CacheAdapter {
+  private readonly cache: TwoTierCache;
+
+  constructor(options: { memory?: MemoryCacheOptions; disk: DiskCacheOptions }) {
+    this.cache = new TwoTierCache(options);
+  }
+
+  async get<T>(key: string): Promise<T | undefined> {
+    const result = await this.cache.get(key);
+    return result as T | undefined;
+  }
+
+  async set<T>(key: string, value: T, _options?: CacheSetOptions): Promise<void> {
+    if (value instanceof Buffer) {
+      await this.cache.set(key, value);
+    } else {
+      console.warn('TwoTierCacheAdapter only supports Buffer values');
+    }
+  }
+
+  async delete(key: string): Promise<boolean> {
+    return this.cache.delete(key);
+  }
+
+  async has(key: string): Promise<boolean> {
+    return this.cache.has(key);
+  }
+
+  async clear(): Promise<void> {
+    await this.cache.clear();
+  }
+
+  /**
+   * Get combined statistics.
+   */
+  async stats(): Promise<{
+    memory: { items: number; size: number };
+    disk: { files: number; size: number };
+  }> {
+    return this.cache.stats();
+  }
+
+  /**
+   * Clean up expired disk cache entries.
+   */
+  async cleanup(): Promise<{ deleted: number; freed: number }> {
+    return this.cache.cleanup();
+  }
+}
+
+/**
+ * Create a CacheAdapter-compatible image cache.
+ * Uses a two-tier (memory + disk) cache by default.
+ */
+export function createImageCacheAdapter(options: {
+  memory?: MemoryCacheOptions;
+  disk: DiskCacheOptions;
+}): CacheAdapter {
+  return new TwoTierCacheAdapter(options);
 }

@@ -11,7 +11,7 @@ export {
   serve,
 } from './bun-server';
 
-export type { ServerOptions, RenderMode } from './bun-server';
+export type { ServerOptions, ServerRenderMode } from './bun-server';
 
 // Middleware
 export {
@@ -30,6 +30,15 @@ export type {
   SecurityHeadersOptions,
   RateLimitOptions,
 } from './middleware';
+
+// Re-export core middleware types for convenience
+// Users can import these from either @areo/core or @areo/server
+export type {
+  MiddlewareHandler,
+  NextFunction,
+  Middleware,
+  AppContext,
+} from '@areo/core';
 
 // Static Files
 export {

@@ -124,6 +124,44 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   server.setApp(app);
   server.setRouter(router);
 
+  // Initialize plugins and configure server
+  const pluginRegistry = app.getPluginRegistry();
+  await pluginRegistry.registerAll(config.plugins || []);
+
+  // Create dev server interface for plugins
+  const devServer = {
+    ws: {
+      send: (data: unknown) => {
+        // Cast to HMR update type for compatibility
+        if (data && typeof data === 'object') {
+          hmr.send(data as any);
+        }
+      },
+      on: (event: string, callback: (data: unknown) => void) => {
+        // HMR WebSocket event handling
+      },
+    },
+    restart: async () => {
+      console.log('\x1b[33m⟳\x1b[0m Restarting server...');
+      hmr.reload();
+    },
+    middlewares: [] as ((request: Request, context: AppContext, next: NextFunction) => Response | Promise<Response>)[],
+    watcher: {
+      add: (path: string) => hmrWatcher.watch(path),
+      on: (event: string, callback: (file: string) => void) => {
+        // File watcher event handling
+      },
+    },
+  };
+
+  // Configure plugins with dev server
+  await pluginRegistry.configureServer(devServer);
+
+  // Add plugin middlewares to server
+  for (const middleware of devServer.middlewares) {
+    server.use(middleware);
+  }
+
   // Add HMR middleware
   server.use(async (request: Request, context: AppContext, next: NextFunction) => {
     const url = new URL(request.url);

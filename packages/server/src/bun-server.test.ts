@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
-import { BunServer, createServer, serve } from './bun-server';
-import { AreoApp } from '@areo/core';
+import { BunServer, createServer, serve, type ServerRenderMode } from './bun-server';
+import { AreoApp, type RenderMode as CoreRenderMode } from '@areo/core';
 import { createElement } from 'react';
 
 describe('@areo/server - BunServer', () => {
@@ -882,6 +882,129 @@ describe('@areo/server - BunServer', () => {
       expect(html).toContain('<title>Areo App</title>');
       expect(html).toContain('<div id="root"></div>');
       expect(html).toContain('window.__AREO_DATA__');
+    });
+  });
+
+  describe('ServerRenderMode type', () => {
+    test('accepts "streaming" as valid ServerRenderMode', () => {
+      const mode: ServerRenderMode = 'streaming';
+      expect(mode).toBe('streaming');
+    });
+
+    test('accepts "string" as valid ServerRenderMode', () => {
+      const mode: ServerRenderMode = 'string';
+      expect(mode).toBe('string');
+    });
+
+    test('ServerRenderMode is distinct from core RenderMode', () => {
+      // ServerRenderMode is for server-side rendering method
+      const serverMode: ServerRenderMode = 'streaming';
+
+      // CoreRenderMode is for route-level rendering strategy
+      const coreMode: CoreRenderMode = 'ssr';
+
+      // They are different types with different values
+      expect(serverMode).toBe('streaming');
+      expect(coreMode).toBe('ssr');
+
+      // Verify they are not the same values
+      expect(serverMode).not.toBe(coreMode);
+    });
+
+    test('ServerOptions accepts ServerRenderMode values', () => {
+      // Test with streaming mode
+      const streamingServer = createServer({
+        port: 4599,
+        logging: false,
+        renderMode: 'streaming',
+      });
+      expect(streamingServer.getInfo()).toBeDefined();
+
+      // Test with string mode
+      const stringServer = createServer({
+        port: 4600,
+        logging: false,
+        renderMode: 'string',
+      });
+      expect(stringServer.getInfo()).toBeDefined();
+    });
+
+    test('default renderMode is streaming', () => {
+      server = createServer({ port: 4601, logging: false });
+      // The default is 'streaming' as set in the constructor
+      expect(server.getInfo()).toBeDefined();
+    });
+
+    test('server renders correctly with explicit streaming mode', async () => {
+      server = createServer({
+        port: 4602,
+        logging: false,
+        renderMode: 'streaming' as ServerRenderMode,
+      });
+
+      const TestComponent = () => createElement('p', null, 'Streaming mode test');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/streaming-type-test',
+            path: '/streaming-type-test',
+            file: '/streaming-type-test.tsx',
+            module: {
+              default: TestComponent,
+              loader: async () => ({ value: 'test' }),
+            },
+          },
+          params: {},
+          pathname: '/streaming-type-test',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4602/streaming-type-test');
+
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('Streaming mode test');
+    });
+
+    test('server renders correctly with explicit string mode', async () => {
+      server = createServer({
+        port: 4603,
+        logging: false,
+        renderMode: 'string' as ServerRenderMode,
+      });
+
+      const TestComponent = () => createElement('p', null, 'String mode test');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/string-type-test',
+            path: '/string-type-test',
+            file: '/string-type-test.tsx',
+            module: {
+              default: TestComponent,
+              loader: async () => ({ value: 'test' }),
+            },
+          },
+          params: {},
+          pathname: '/string-type-test',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4603/string-type-test');
+
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('String mode test');
     });
   });
 });

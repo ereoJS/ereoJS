@@ -58,6 +58,7 @@ export {
   buildCacheControl,
   parseCacheControl,
   Cached,
+  createDataCacheAdapter,
 } from './cache';
 
 export type { CacheEntry, CacheStorage } from './cache';

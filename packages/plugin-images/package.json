@@ -12,14 +12,18 @@
     "./components": {
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js"
+    },
+    "./image-types": {
+      "types": "./dist/image-types.d.ts"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts ./src/components/index.ts --outdir ./dist --target bun && bun run build:types",
+    "build": "bun build ./src/index.ts ./src/components/index.ts --outdir ./dist --target bun && bun run build:types && bun run copy:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "copy:types": "cp src/image-types.d.ts dist/",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "test": "bun test",
     "typecheck": "tsc --noEmit"

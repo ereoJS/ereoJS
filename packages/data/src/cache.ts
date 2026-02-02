@@ -5,7 +5,12 @@
  * No hidden magic - you see exactly what's being cached.
  */
 
-import type { CacheOptions } from '@areo/core';
+import type {
+  CacheOptions,
+  CacheAdapter,
+  TaggedCache,
+  CacheSetOptions as CoreCacheSetOptions,
+} from '@areo/core';
 
 /**
  * Cache entry with metadata.
@@ -20,11 +25,13 @@ export interface CacheEntry<T = unknown> {
 
 /**
  * Cache storage interface.
+ * This is the legacy interface used by @areo/data.
+ * For new implementations, consider using CacheAdapter from @areo/core.
  */
 export interface CacheStorage {
   get<T>(key: string): Promise<CacheEntry<T> | null>;
   set<T>(key: string, entry: CacheEntry<T>): Promise<void>;
-  delete(key: string): Promise<void>;
+  delete(key: string): Promise<boolean | void>;
   deleteByTag(tag: string): Promise<void>;
   clear(): Promise<void>;
   keys(): Promise<string[]>;
@@ -32,11 +39,22 @@ export interface CacheStorage {
 
 /**
  * In-memory cache implementation.
+ * Implements the CacheStorage interface with full entry metadata support.
+ *
+ * For the unified CacheAdapter interface, use createDataCacheAdapter() or
+ * asCacheAdapter() to get a compatible wrapper.
  */
 export class MemoryCache implements CacheStorage {
   private cache = new Map<string, CacheEntry>();
   private tagIndex = new Map<string, Set<string>>();
 
+  // ============================================================================
+  // CacheStorage Interface
+  // ============================================================================
+
+  /**
+   * Get a cache entry with full metadata.
+   */
   async get<T>(key: string): Promise<CacheEntry<T> | null> {
     const entry = this.cache.get(key);
     if (!entry) return null;
@@ -55,7 +73,15 @@ export class MemoryCache implements CacheStorage {
     return entry as CacheEntry<T>;
   }
 
+  /**
+   * Set a cache entry with full metadata.
+   */
   async set<T>(key: string, entry: CacheEntry<T>): Promise<void> {
+    // Remove existing entry first (to update tags properly)
+    if (this.cache.has(key)) {
+      await this.delete(key);
+    }
+
     this.cache.set(key, entry as CacheEntry);
 
     // Update tag index
@@ -67,32 +93,53 @@ export class MemoryCache implements CacheStorage {
     }
   }
 
-  async delete(key: string): Promise<void> {
+  /**
+   * Delete a cache entry.
+   */
+  async delete(key: string): Promise<boolean> {
     const entry = this.cache.get(key);
     if (entry) {
       // Remove from tag index
       for (const tag of entry.tags) {
-        this.tagIndex.get(tag)?.delete(key);
+        const tagSet = this.tagIndex.get(tag);
+        if (tagSet) {
+          tagSet.delete(key);
+          if (tagSet.size === 0) {
+            this.tagIndex.delete(tag);
+          }
+        }
       }
       this.cache.delete(key);
+      return true;
     }
+    return false;
   }
 
+  /**
+   * Delete all entries with a specific tag.
+   */
   async deleteByTag(tag: string): Promise<void> {
     const keys = this.tagIndex.get(tag);
     if (keys) {
-      for (const key of keys) {
-        this.cache.delete(key);
+      // Copy keys since we'll be modifying the set during iteration
+      const keysCopy = [...keys];
+      for (const key of keysCopy) {
+        await this.delete(key);
       }
-      this.tagIndex.delete(tag);
     }
   }
 
+  /**
+   * Clear all entries.
+   */
   async clear(): Promise<void> {
     this.cache.clear();
     this.tagIndex.clear();
   }
 
+  /**
+   * Get all keys in the cache.
+   */
   async keys(): Promise<string[]> {
     return Array.from(this.cache.keys());
   }
@@ -106,6 +153,104 @@ export class MemoryCache implements CacheStorage {
       tags: this.tagIndex.size,
     };
   }
+
+  // ============================================================================
+  // Unified CacheAdapter-compatible Methods
+  // ============================================================================
+
+  /**
+   * Get just the value from the cache (not the full entry).
+   * Use this for CacheAdapter-compatible access.
+   */
+  async getValue<T>(key: string): Promise<T | undefined> {
+    const entry = await this.get<T>(key);
+    return entry?.value;
+  }
+
+  /**
+   * Set a value using the unified interface.
+   * Converts ttl (seconds) and tags from options to a CacheEntry.
+   */
+  async setValue<T>(key: string, value: T, options?: CoreCacheSetOptions): Promise<void> {
+    const entry: CacheEntry<T> = {
+      value,
+      timestamp: Date.now(),
+      maxAge: options?.ttl ?? 60,
+      tags: options?.tags ?? [],
+    };
+    await this.set(key, entry);
+  }
+
+  /**
+   * Check if a key exists in the cache.
+   */
+  async has(key: string): Promise<boolean> {
+    const entry = await this.get(key);
+    return entry !== null;
+  }
+
+  /**
+   * Invalidate all cache entries with a specific tag.
+   * Alias for deleteByTag for TaggedCache compatibility.
+   */
+  async invalidateTag(tag: string): Promise<void> {
+    return this.deleteByTag(tag);
+  }
+
+  /**
+   * Invalidate all cache entries with any of the specified tags.
+   */
+  async invalidateTags(tags: string[]): Promise<void> {
+    for (const tag of tags) {
+      await this.invalidateTag(tag);
+    }
+  }
+
+  /**
+   * Get all cache keys associated with a specific tag.
+   */
+  async getByTag(tag: string): Promise<string[]> {
+    const keys = this.tagIndex.get(tag);
+    if (!keys) {
+      return [];
+    }
+
+    // Filter out expired entries
+    const validKeys: string[] = [];
+    for (const key of keys) {
+      if (await this.has(key)) {
+        validKeys.push(key);
+      }
+    }
+
+    return validKeys;
+  }
+
+  /**
+   * Create a CacheAdapter-compatible wrapper around this cache.
+   */
+  asCacheAdapter(): CacheAdapter & TaggedCache {
+    return {
+      get: <T>(key: string) => this.getValue<T>(key),
+      set: <T>(key: string, value: T, options?: CoreCacheSetOptions) =>
+        this.setValue(key, value, options),
+      delete: (key: string) => this.delete(key),
+      has: (key: string) => this.has(key),
+      clear: () => this.clear(),
+      invalidateTag: (tag: string) => this.invalidateTag(tag),
+      invalidateTags: (tags: string[]) => this.invalidateTags(tags),
+      getByTag: (tag: string) => this.getByTag(tag),
+    };
+  }
+}
+
+/**
+ * Create a CacheAdapter-compatible wrapper around a new MemoryCache.
+ * Use this when you need a pure CacheAdapter without legacy methods.
+ */
+export function createDataCacheAdapter(): CacheAdapter & TaggedCache {
+  const memoryCache = new MemoryCache();
+  return memoryCache.asCacheAdapter();
 }
 
 /**

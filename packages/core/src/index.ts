@@ -42,6 +42,22 @@ export {
   typedEnv,
 } from './env';
 
+// Unified Cache Interface
+export {
+  MemoryCacheAdapter,
+  createCache,
+  createTaggedCache,
+  isTaggedCache,
+  wrapCacheAdapter,
+} from './cache';
+
+export type {
+  CacheAdapter,
+  TaggedCache,
+  CacheSetOptions,
+  CacheOptions as CacheAdapterOptions,
+} from './cache';
+
 export type {
   EnvType,
   EnvSchema,
@@ -75,6 +91,8 @@ export type {
   RouteCompositionConfig,
   AuthConfig,
   DevConfig,
+  ErrorConfig,
+  RuntimeConfig,
   RouteVariant,
   RouteConfig,
   RouteModuleWithConfig,

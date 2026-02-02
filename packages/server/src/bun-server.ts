@@ -22,9 +22,13 @@ import { serializeLoaderData } from '@areo/data';
 import { createElement, type ReactElement, type ComponentType } from 'react';
 
 /**
- * Render mode options.
+ * Server render mode options.
+ *
+ * This type is distinct from the route-level RenderMode in @areo/core.
+ * - ServerRenderMode: How the server renders React components ('streaming' vs 'string')
+ * - RenderMode (core): What type of rendering a route uses ('ssg', 'ssr', 'csr', etc.)
  */
-export type RenderMode = 'streaming' | 'string';
+export type ServerRenderMode = 'streaming' | 'string';
 
 /**
  * Server options.
@@ -54,7 +58,7 @@ export interface ServerOptions {
     key: string;
   };
   /** Render mode: 'streaming' for React 18 streaming SSR, 'string' for traditional SSR */
-  renderMode?: RenderMode;
+  renderMode?: ServerRenderMode;
   /** Base path for client assets */
   assetsPath?: string;
   /** Client entry script path */

@@ -3,6 +3,31 @@
  *
  * Executes route-level middleware chains with support for named middleware,
  * inline middleware functions, and type-safe context passing.
+ *
+ * ## Type Compatibility
+ *
+ * This module provides `TypedMiddlewareHandler<TProvides, TRequires>` which extends
+ * the base `MiddlewareHandler` from `@areo/core`. The typed version adds generic
+ * parameters for compile-time context type checking while remaining fully compatible
+ * with the core middleware system.
+ *
+ * ```typescript
+ * // Base type from @areo/core:
+ * type MiddlewareHandler = (
+ *   request: Request,
+ *   context: AppContext,
+ *   next: NextFunction
+ * ) => Response | Promise<Response>
+ *
+ * // Typed version (compatible with base):
+ * type TypedMiddlewareHandler<TProvides, TRequires> = (
+ *   request: Request,
+ *   context: AppContext & TRequires,  // Extends AppContext
+ *   next: NextFunction
+ * ) => Response | Promise<Response>
+ * ```
+ *
+ * Both types can be used interchangeably with `@areo/server`'s middleware chain.
  */
 
 import type {
@@ -27,6 +52,23 @@ export interface TypedMiddlewareContext {
 
 /**
  * Typed middleware handler that declares its context additions.
+ *
+ * This type is fully compatible with `MiddlewareHandler` from `@areo/core`.
+ * The generic parameters allow TypeScript to track what context values
+ * are provided and required by each middleware.
+ *
+ * @template TProvides - Context keys/types this middleware adds
+ * @template TRequires - Context keys/types this middleware expects to exist
+ *
+ * @example
+ * // A TypedMiddlewareHandler can be used anywhere a MiddlewareHandler is expected:
+ * const typed: TypedMiddlewareHandler<{ user: User }> = async (req, ctx, next) => {
+ *   ctx.set('user', await getUser(req));
+ *   return next();
+ * };
+ *
+ * // This works because TypedMiddlewareHandler extends MiddlewareHandler:
+ * const handler: MiddlewareHandler = typed; // OK!
  */
 export type TypedMiddlewareHandler<
   TProvides extends TypedMiddlewareContext = {},

@@ -23,6 +23,45 @@ export {
 
 export type { HydrationProps } from './hydration';
 
+// Hooks
+export {
+  // Hooks
+  useLoaderData,
+  useActionData,
+  useNavigation,
+  useError,
+  // Context accessors (for internal use)
+  useLoaderDataContext,
+  useActionDataContext,
+  useNavigationContext,
+  useErrorContext,
+  // Contexts
+  LoaderDataContext,
+  ActionDataContext,
+  NavigationContext,
+  ErrorContext,
+  // Providers
+  LoaderDataProvider,
+  ActionDataProvider,
+  NavigationProvider,
+  ErrorProvider,
+  AreoProvider,
+} from './hooks';
+
+export type {
+  NavigationStatus,
+  NavigationStateHook,
+  LoaderDataContextValue,
+  ActionDataContextValue,
+  NavigationContextValue,
+  ErrorContextValue,
+  LoaderDataProviderProps,
+  ActionDataProviderProps,
+  NavigationProviderProps,
+  ErrorProviderProps,
+  AreoProviderProps,
+} from './hooks';
+
 // Islands
 export {
   islandRegistry,
@@ -65,6 +104,61 @@ export {
 } from './prefetch';
 
 export type { PrefetchOptions, LinkPrefetchProps } from './prefetch';
+
+// Link Components
+export { Link, NavLink, useIsActive } from './link';
+
+export type {
+  LinkProps,
+  NavLinkProps,
+  NavLinkActiveProps,
+  PrefetchStrategy,
+} from './link';
+
+// Form Components
+export {
+  Form,
+  FormProvider,
+  useFormContext,
+  useSubmit,
+  useFetcher,
+  useActionData as useFormActionData,
+  useNavigation as useFormNavigation,
+  serializeFormData,
+  parseFormData,
+  formDataToObject,
+  objectToFormData,
+} from './form';
+
+export type {
+  FormProps,
+  ActionResult,
+  SubmissionState,
+  SubmitOptions,
+  FetcherState,
+  Fetcher,
+  FormContextValue,
+  FormNavigationState,
+} from './form';
+
+// Error Boundary
+export {
+  ErrorBoundary,
+  RouteErrorBoundary,
+  useErrorBoundary,
+  useRouteError,
+  isRouteErrorResponse,
+  createRouteErrorResponse,
+  withErrorBoundary,
+  RouteError,
+} from './error-boundary';
+
+export type {
+  ErrorBoundaryProps,
+  RouteErrorResponse,
+  RouteErrorBoundaryProps,
+  UseErrorBoundaryReturn,
+} from './error-boundary';
 
 /**
  * Initialize the client runtime.

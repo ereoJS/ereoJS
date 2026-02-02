@@ -7,6 +7,7 @@ import {
   cacheKey,
   buildCacheControl,
   parseCacheControl,
+  createDataCacheAdapter,
 } from './cache';
 
 describe('@areo/data - Cache', () => {
@@ -292,6 +293,147 @@ describe('@areo/data - Cache', () => {
 
       expect(options.private).toBe(true);
       expect(options.maxAge).toBe(0);
+    });
+  });
+
+  // ============================================================================
+  // Unified CacheAdapter Interface Tests
+  // ============================================================================
+
+  describe('MemoryCache unified interface', () => {
+    let cache: MemoryCache;
+
+    beforeEach(() => {
+      cache = new MemoryCache();
+    });
+
+    test('asCacheAdapter returns a valid adapter', () => {
+      const adapter = cache.asCacheAdapter();
+      expect(typeof adapter.get).toBe('function');
+      expect(typeof adapter.set).toBe('function');
+      expect(typeof adapter.delete).toBe('function');
+      expect(typeof adapter.has).toBe('function');
+      expect(typeof adapter.clear).toBe('function');
+      expect(typeof adapter.invalidateTag).toBe('function');
+      expect(typeof adapter.invalidateTags).toBe('function');
+      expect(typeof adapter.getByTag).toBe('function');
+    });
+
+    test('getValue returns just the value', async () => {
+      await cache.set('key', {
+        value: { name: 'test' },
+        timestamp: Date.now(),
+        maxAge: 60,
+        tags: [],
+      });
+
+      const value = await cache.getValue<{ name: string }>('key');
+      expect(value).toEqual({ name: 'test' });
+    });
+
+    test('getValue returns undefined for missing keys', async () => {
+      const value = await cache.getValue('nonexistent');
+      expect(value).toBeUndefined();
+    });
+
+    test('setValue stores with ttl and tags', async () => {
+      await cache.setValue('key', 'value', { ttl: 120, tags: ['myTag'] });
+
+      const entry = await cache.get('key');
+      expect(entry?.value).toBe('value');
+      expect(entry?.maxAge).toBe(120);
+      expect(entry?.tags).toContain('myTag');
+    });
+
+    test('has checks existence correctly', async () => {
+      expect(await cache.has('missing')).toBe(false);
+
+      await cache.set('existing', {
+        value: 'test',
+        timestamp: Date.now(),
+        maxAge: 60,
+        tags: [],
+      });
+
+      expect(await cache.has('existing')).toBe(true);
+    });
+
+    test('invalidateTag removes tagged entries', async () => {
+      await cache.setValue('a', 1, { tags: ['group1'] });
+      await cache.setValue('b', 2, { tags: ['group1'] });
+      await cache.setValue('c', 3, { tags: ['group2'] });
+
+      await cache.invalidateTag('group1');
+
+      expect(await cache.has('a')).toBe(false);
+      expect(await cache.has('b')).toBe(false);
+      expect(await cache.has('c')).toBe(true);
+    });
+
+    test('invalidateTags removes multiple tagged entries', async () => {
+      await cache.setValue('a', 1, { tags: ['tag1'] });
+      await cache.setValue('b', 2, { tags: ['tag2'] });
+      await cache.setValue('c', 3, { tags: ['tag3'] });
+
+      await cache.invalidateTags(['tag1', 'tag2']);
+
+      expect(await cache.has('a')).toBe(false);
+      expect(await cache.has('b')).toBe(false);
+      expect(await cache.has('c')).toBe(true);
+    });
+
+    test('getByTag returns keys with specific tag', async () => {
+      await cache.setValue('post:1', 'content1', { tags: ['posts'] });
+      await cache.setValue('post:2', 'content2', { tags: ['posts'] });
+      await cache.setValue('user:1', 'user', { tags: ['users'] });
+
+      const postKeys = await cache.getByTag('posts');
+
+      expect(postKeys).toContain('post:1');
+      expect(postKeys).toContain('post:2');
+      expect(postKeys).not.toContain('user:1');
+    });
+  });
+
+  describe('createDataCacheAdapter', () => {
+    test('creates a CacheAdapter-compatible wrapper', async () => {
+      const adapter = createDataCacheAdapter();
+
+      // Test basic operations
+      await adapter.set('key', 'value', { ttl: 60, tags: ['test'] });
+      expect(await adapter.get('key')).toBe('value');
+      expect(await adapter.has('key')).toBe(true);
+
+      await adapter.delete('key');
+      expect(await adapter.has('key')).toBe(false);
+    });
+
+    test('adapter supports tag operations', async () => {
+      const adapter = createDataCacheAdapter();
+
+      await adapter.set('a', 1, { tags: ['numbers'] });
+      await adapter.set('b', 2, { tags: ['numbers'] });
+
+      const keys = await adapter.getByTag('numbers');
+      expect(keys).toContain('a');
+      expect(keys).toContain('b');
+
+      await adapter.invalidateTag('numbers');
+
+      expect(await adapter.has('a')).toBe(false);
+      expect(await adapter.has('b')).toBe(false);
+    });
+
+    test('adapter clear removes all entries', async () => {
+      const adapter = createDataCacheAdapter();
+
+      await adapter.set('x', 1);
+      await adapter.set('y', 2);
+
+      await adapter.clear();
+
+      expect(await adapter.has('x')).toBe(false);
+      expect(await adapter.has('y')).toBe(false);
     });
   });
 });
