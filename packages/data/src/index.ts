@@ -74,3 +74,24 @@ export {
 } from './revalidate';
 
 export type { RevalidateOptions, RevalidateResult } from './revalidate';
+
+// Data Pipeline (auto-parallelization)
+export {
+  createPipeline,
+  dataSource,
+  cachedSource,
+  optionalSource,
+  combinePipelines,
+  formatMetrics,
+  generateMetricsVisualization,
+} from './pipeline';
+
+export type {
+  DataSource,
+  PipelineConfig,
+  PipelineResult,
+  PipelineMetrics,
+  LoaderMetrics,
+  ExecutionStep,
+  WaterfallInfo,
+} from './pipeline';

@@ -9,6 +9,7 @@ import { dev, type DevOptions } from './commands/dev';
 import { build, type BuildCommandOptions } from './commands/build';
 import { start, type StartOptions } from './commands/start';
 import { create, type CreateOptions } from './commands/create';
+import { deploy, printDeployHelp, type DeployOptions, type DeployTarget } from './commands/deploy';
 
 /**
  * CLI version.
@@ -30,6 +31,7 @@ function printHelp(): void {
     build       Build for production
     start       Start production server
     create      Create new project
+    deploy      Deploy to production
 
   \x1b[1mDev Options:\x1b[0m
     --port, -p  Port number (default: 3000)
@@ -49,11 +51,17 @@ function printHelp(): void {
     --template, -t  Template (minimal, default, tailwind)
     --typescript    Use TypeScript (default: true)
 
+  \x1b[1mDeploy Options:\x1b[0m
+    --prod      Deploy to production
+    --dry-run   Preview deployment
+    --name      Project name
+
   \x1b[1mExamples:\x1b[0m
     oreo dev --port 8080
     oreo build --minify
     oreo start --port 3001
     oreo create my-app --template tailwind
+    oreo deploy vercel --prod
 
   Version: ${VERSION}
 `);
@@ -168,6 +176,29 @@ async function main(): Promise<void> {
         break;
       }
 
+      case 'deploy': {
+        if (options.help || options.h) {
+          printDeployHelp();
+          break;
+        }
+
+        const target = positional[0] as DeployTarget | undefined;
+        const deployOptions: DeployOptions = {
+          target,
+          production: !!(options.prod || options.production),
+          dryRun: !!(options['dry-run'] || options.dryRun),
+          name: options.name as string | undefined,
+          build: options['no-build'] ? false : true,
+        };
+
+        const result = await deploy(deployOptions);
+        if (!result.success) {
+          console.error(`\n  \x1b[31m✗\x1b[0m ${result.error}\n`);
+          process.exit(1);
+        }
+        break;
+      }
+
       default:
         console.error(`\n  \x1b[31m✗\x1b[0m Unknown command: ${command}\n`);
         printHelp();
@@ -180,8 +211,8 @@ async function main(): Promise<void> {
 }
 
 // Export commands for programmatic use
-export { dev, build, start, create };
-export type { DevOptions, BuildCommandOptions, StartOptions, CreateOptions };
+export { dev, build, start, create, deploy };
+export type { DevOptions, BuildCommandOptions, StartOptions, CreateOptions, DeployOptions, DeployTarget };
 
 // Run CLI
 main().catch(console.error);

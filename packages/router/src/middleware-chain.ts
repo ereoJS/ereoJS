@@ -1,8 +1,8 @@
 /**
  * @oreo/router - Middleware Chain Executor
  *
- * Executes route-level middleware chains with support for named middleware
- * and inline middleware functions.
+ * Executes route-level middleware chains with support for named middleware,
+ * inline middleware functions, and type-safe context passing.
  */
 
 import type {
@@ -13,8 +13,131 @@ import type {
   RouteConfig,
 } from '@oreo/core';
 
+// ============================================================================
+// Type-Safe Middleware Creation
+// ============================================================================
+
+/**
+ * Typed middleware context values.
+ * Middleware can declare what values it adds to the context.
+ */
+export interface TypedMiddlewareContext {
+  [key: string]: unknown;
+}
+
+/**
+ * Typed middleware handler that declares its context additions.
+ */
+export type TypedMiddlewareHandler<
+  TProvides extends TypedMiddlewareContext = {},
+  TRequires extends TypedMiddlewareContext = {}
+> = (
+  request: Request,
+  context: AppContext & TRequires,
+  next: NextFunction
+) => Response | Promise<Response>;
+
+/**
+ * Typed middleware definition with metadata.
+ */
+export interface TypedMiddleware<
+  TProvides extends TypedMiddlewareContext = {},
+  TRequires extends TypedMiddlewareContext = {}
+> {
+  name: string;
+  handler: TypedMiddlewareHandler<TProvides, TRequires>;
+  /** Keys this middleware provides to the context */
+  provides?: (keyof TProvides)[];
+  /** Keys this middleware requires from the context */
+  requires?: (keyof TRequires)[];
+}
+
+/**
+ * Create a typed middleware with context type safety.
+ *
+ * @example
+ * const authMiddleware = createMiddleware<{ user: User }>({
+ *   name: 'auth',
+ *   provides: ['user'],
+ *   handler: async (req, ctx, next) => {
+ *     const session = await getSession(req);
+ *     if (!session) {
+ *       return new Response('Unauthorized', { status: 401 });
+ *     }
+ *     ctx.set('user', session.user); // TypeScript knows 'user' is valid
+ *     return next();
+ *   },
+ * });
+ *
+ * // In your loader:
+ * export const loader = async ({ context }) => {
+ *   const user = context.get<User>('user'); // Set by auth middleware
+ * };
+ */
+export function createMiddleware<
+  TProvides extends TypedMiddlewareContext = {},
+  TRequires extends TypedMiddlewareContext = {}
+>(
+  config: TypedMiddleware<TProvides, TRequires>
+): TypedMiddleware<TProvides, TRequires> & { register: () => void } {
+  return {
+    ...config,
+    register() {
+      registerMiddleware(config.name, config.handler as MiddlewareHandler);
+    },
+  };
+}
+
+/**
+ * Chain multiple typed middleware together with type inference.
+ *
+ * @example
+ * const protectedRoute = chainMiddleware(
+ *   authMiddleware,    // provides: { user: User }
+ *   adminMiddleware,   // requires: { user: User }, provides: { isAdmin: boolean }
+ *   rateLimitMiddleware
+ * );
+ */
+export function chainMiddleware<
+  M1 extends TypedMiddleware<any, any>,
+  M2 extends TypedMiddleware<any, any>,
+>(
+  m1: M1,
+  m2: M2
+): TypedMiddleware<
+  M1 extends TypedMiddleware<infer P1, any> ? (M2 extends TypedMiddleware<infer P2, any> ? P1 & P2 : P1) : {},
+  M1 extends TypedMiddleware<any, infer R1> ? R1 : {}
+>;
+export function chainMiddleware<
+  M1 extends TypedMiddleware<any, any>,
+  M2 extends TypedMiddleware<any, any>,
+  M3 extends TypedMiddleware<any, any>,
+>(
+  m1: M1,
+  m2: M2,
+  m3: M3
+): TypedMiddleware<any, any>;
+export function chainMiddleware(...middlewares: TypedMiddleware<any, any>[]): TypedMiddleware<any, any> {
+  const combinedProvides = middlewares.flatMap((m) => m.provides || []);
+  const combinedRequires = middlewares.flatMap((m) => m.requires || []);
+
+  return {
+    name: middlewares.map((m) => m.name).join('+'),
+    provides: combinedProvides,
+    requires: combinedRequires,
+    handler: composeMiddleware(...middlewares.map((m) => m.handler as MiddlewareHandler)),
+  };
+}
+
+// ============================================================================
+// Registry
+// ============================================================================
+
 /** Registry of named middleware */
 const namedMiddlewareRegistry = new Map<string, MiddlewareHandler>();
+
+/** Registry of typed middleware with metadata */
+const typedMiddlewareRegistry = new Map<string, TypedMiddleware<any, any>>();
 
 /**
  * Register a named middleware in the global registry.
@@ -29,6 +152,62 @@ const namedMiddlewareRegistry = new Map<string, MiddlewareHandler>();
  */
 export function registerMiddleware(name: string, handler: MiddlewareHandler): void {
   namedMiddlewareRegistry.set(name, handler);
+}
+
+/**
+ * Register a typed middleware with metadata.
+ */
+export function registerTypedMiddleware<
+  TProvides extends TypedMiddlewareContext,
+  TRequires extends TypedMiddlewareContext
+>(middleware: TypedMiddleware<TProvides, TRequires>): void {
+  typedMiddlewareRegistry.set(middleware.name, middleware);
+  namedMiddlewareRegistry.set(middleware.name, middleware.handler as MiddlewareHandler);
+}
+
+/**
+ * Get typed middleware metadata.
+ */
+export function getTypedMiddleware(name: string): TypedMiddleware<any, any> | undefined {
+  return typedMiddlewareRegistry.get(name);
+}
+
+/**
+ * Validate middleware chain for type safety.
+ * Ensures that all required context values are provided by preceding middleware.
+ */
+export function validateMiddlewareChain(names: string[]): {
+  valid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+  const providedKeys = new Set<string>();
+
+  for (const name of names) {
+    const middleware = typedMiddlewareRegistry.get(name);
+    if (!middleware) continue;
+
+    // Check if required keys are provided
+    const requires = middleware.requires || [];
+    for (const key of requires) {
+      if (!providedKeys.has(key as string)) {
+        errors.push(
+          `Middleware '${name}' requires '${String(key)}' but it's not provided by preceding middleware`
+        );
+      }
+    }
+
+    // Add provided keys
+    const provides = middleware.provides || [];
+    for (const key of provides) {
+      providedKeys.add(key as string);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
 }
 
 /**

@@ -5,7 +5,12 @@
  */
 
 import { join } from 'node:path';
-import { createApp, type FrameworkConfig } from '@oreo/core';
+import {
+  createApp,
+  type FrameworkConfig,
+  setupEnv,
+  type EnvConfig,
+} from '@oreo/core';
 import { initFileRouter } from '@oreo/router';
 import { createServer, type ServerOptions } from '@oreo/server';
 import {
@@ -25,6 +30,11 @@ export interface DevOptions {
   open?: boolean;
 }
 
+/** Extended config with env schema */
+interface OreoConfig extends FrameworkConfig {
+  env?: EnvConfig;
+}
+
 /**
  * Run the dev command.
  */
@@ -36,7 +46,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mOreo\x1b[0m Dev Server\n');
 
   // Load config if exists
-  let config: FrameworkConfig = {};
+  let config: OreoConfig = {};
   const configPath = join(root, 'oreo.config.ts');
 
   try {
@@ -46,6 +56,17 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     }
   } catch (error) {
     console.warn('Could not load config:', error);
+  }
+
+  // Load and validate environment variables
+  if (config.env) {
+    console.log('  \x1b[2mLoading environment variables...\x1b[0m');
+    const envResult = await setupEnv(root, config.env, 'development');
+    if (!envResult.valid) {
+      console.error('\n  \x1b[31m✖\x1b[0m Environment validation failed\n');
+      process.exit(1);
+    }
+    console.log(`  \x1b[32m✓\x1b[0m Loaded ${Object.keys(envResult.env).length} environment variables\n`);
   }
 
   // Create app

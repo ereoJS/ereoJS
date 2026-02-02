@@ -24,7 +24,9 @@
       "@oreo/bundler": ["./packages/bundler/src/index.ts"],
       "@oreo/cli": ["./packages/cli/src/index.ts"],
       "@oreo/plugin-tailwind": ["./packages/plugin-tailwind/src/index.ts"],
-      "@oreo/runtime-bun": ["./packages/runtime-bun/src/index.ts"]
+      "@oreo/runtime-bun": ["./packages/runtime-bun/src/index.ts"],
+      "@oreo/testing": ["./packages/testing/src/index.ts"],
+      "@oreo/dev-inspector": ["./packages/dev-inspector/src/index.ts"]
     }
   },
   "references": [
@@ -37,7 +39,9 @@
     { "path": "./packages/cli" },
     { "path": "./packages/plugin-tailwind" },
     { "path": "./packages/runtime-bun" },
-    { "path": "./packages/create-oreo" }
+    { "path": "./packages/create-oreo" },
+    { "path": "./packages/testing" },
+    { "path": "./packages/dev-inspector" }
   ],
   "include": ["packages/*/src/**/*"],
   "exclude": ["node_modules", "packages/*/dist"]

@@ -26,6 +26,33 @@ export {
   isPlugin,
 } from './plugin';
 
+// Environment Variables
+export {
+  env,
+  parseEnvFile,
+  loadEnvFiles,
+  validateEnv,
+  initializeEnv,
+  getEnv,
+  requireEnv,
+  getAllEnv,
+  getPublicEnv,
+  setupEnv,
+  generateEnvTypes,
+  typedEnv,
+} from './env';
+
+export type {
+  EnvType,
+  EnvSchema,
+  EnvSchemaBuilder,
+  ParsedEnv,
+  EnvValidationResult,
+  EnvValidationError,
+  EnvConfig,
+  EnvTypes,
+} from './env';
+
 // Types
 export type {
   // Configuration

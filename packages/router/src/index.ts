@@ -47,6 +47,7 @@ export {
 
 // Middleware Chain
 export {
+  // Basic middleware functions
   registerMiddleware,
   getMiddleware,
   hasMiddleware,
@@ -59,9 +60,23 @@ export {
   when,
   method,
   path,
+  // Built-in middleware
   createLoggerMiddleware,
   createCorsMiddleware,
   createRateLimitMiddleware,
+  // Type-safe middleware
+  createMiddleware,
+  chainMiddleware,
+  registerTypedMiddleware,
+  getTypedMiddleware,
+  validateMiddlewareChain,
+} from './middleware-chain';
+
+export type {
+  TypedMiddlewareContext,
+  TypedMiddlewareHandler,
+  TypedMiddleware,
+  MiddlewareChainOptions,
 } from './middleware-chain';
 
 // Validation
