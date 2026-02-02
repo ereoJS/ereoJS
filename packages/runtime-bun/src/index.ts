@@ -100,9 +100,10 @@ export async function serve(options?: BunRuntimeOptions): Promise<BunRuntime> {
 
 /**
  * Get Bun's SQLite database.
+ * Uses dynamic import to avoid bundling issues in non-Bun environments.
  */
-export function getDatabase(path: string) {
-  const { Database } = require('bun:sqlite');
+export async function getDatabase(path: string) {
+  const { Database } = await import('bun:sqlite');
   return new Database(path);
 }
 
@@ -198,16 +199,18 @@ export function spawn(
 
 /**
  * Get environment variable with type safety.
+ * Uses Bun.env for better Bun compatibility.
  */
 export function env<T extends string = string>(key: string, defaultValue?: T): T {
-  return (process.env[key] as T) ?? (defaultValue as T);
+  return (Bun.env[key] as T) ?? (defaultValue as T);
 }
 
 /**
  * Get required environment variable (throws if missing).
+ * Uses Bun.env for better Bun compatibility.
  */
 export function requireEnv(key: string): string {
-  const value = process.env[key];
+  const value = Bun.env[key];
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`);
   }

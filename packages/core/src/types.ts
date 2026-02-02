@@ -481,10 +481,20 @@ export interface RouteComponentProps<T = unknown> {
   children?: ReactElement;
 }
 
-export interface ErrorBoundaryProps {
+/**
+ * Props passed to route-level error components (the fallback UI).
+ * This is distinct from ErrorBoundaryProps in @areo/client which is for the
+ * ErrorBoundary wrapper component itself.
+ */
+export interface RouteErrorComponentProps {
   error: Error;
   params: RouteParams;
 }
+
+/**
+ * @deprecated Use RouteErrorComponentProps instead. This alias is kept for backwards compatibility.
+ */
+export type ErrorBoundaryProps = RouteErrorComponentProps;
 
 // ============================================================================
 // Middleware Types

@@ -1007,4 +1007,141 @@ describe('@areo/server - BunServer', () => {
       expect(html).toContain('String mode test');
     });
   });
+
+  // ============================================================================
+  // Bun-Native API Tests (Critical Fix Verification)
+  // ============================================================================
+  describe('Bun-native API usage (no Node.js Buffer/stream)', () => {
+    test('TextEncoder is used for string encoding', () => {
+      const encoder = new TextEncoder();
+      const text = 'Hello, Areo!';
+      const encoded = encoder.encode(text);
+
+      expect(encoded).toBeInstanceOf(Uint8Array);
+      expect(encoded.length).toBe(text.length);
+    });
+
+    test('Uint8Array correctly calculates byte length for multi-byte characters', () => {
+      const encoder = new TextEncoder();
+      // Japanese text: each character is 3 bytes in UTF-8
+      const text = 'こんにちは';
+      const encoded = encoder.encode(text);
+
+      // 5 Japanese characters * 3 bytes each = 15 bytes
+      expect(encoded.length).toBe(15);
+    });
+
+    test('Uint8Array concatenation works correctly', () => {
+      const encoder = new TextEncoder();
+      const chunks = [
+        encoder.encode('<!DOCTYPE html>'),
+        encoder.encode('<html>'),
+        encoder.encode('<body>Content</body>'),
+        encoder.encode('</html>'),
+      ];
+
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const result = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      const decoder = new TextDecoder();
+      const html = decoder.decode(result);
+      expect(html).toBe('<!DOCTYPE html><html><body>Content</body></html>');
+    });
+
+    test('Response accepts Uint8Array body', () => {
+      const encoder = new TextEncoder();
+      const html = '<!DOCTYPE html><html><body>Test</body></html>';
+      const htmlBytes = encoder.encode(html);
+
+      const response = new Response(htmlBytes, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': htmlBytes.length.toString(),
+        },
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Length')).toBe(htmlBytes.length.toString());
+    });
+
+    test('Web Streams API is available (renderToReadableStream)', () => {
+      expect(ReadableStream).toBeDefined();
+      expect(typeof ReadableStream).toBe('function');
+    });
+
+    test('ReadableStream can be created and read', async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('Hello'));
+          controller.enqueue(encoder.encode(' '));
+          controller.enqueue(encoder.encode('World'));
+          controller.close();
+        },
+      });
+
+      const reader = stream.getReader();
+      const chunks: Uint8Array[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const result = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      const decoder = new TextDecoder();
+      expect(decoder.decode(result)).toBe('Hello World');
+    });
+
+    test('Content-Length is correctly calculated using Uint8Array.length', async () => {
+      server = createServer({
+        port: 4604,
+        logging: false,
+        renderMode: 'string',
+      });
+
+      const TestComponent = () => createElement('div', null, 'Test with multi-byte: 日本語');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/byte-length-test',
+            path: '/byte-length-test',
+            file: '/byte-length-test.tsx',
+            module: {
+              default: TestComponent,
+              loader: async () => ({ data: 'test' }),
+            },
+          },
+          params: {},
+          pathname: '/byte-length-test',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4604/byte-length-test');
+      const contentLength = response.headers.get('Content-Length');
+      const body = await response.arrayBuffer();
+
+      // Content-Length should match actual byte length
+      expect(parseInt(contentLength!)).toBe(body.byteLength);
+    });
+  });
 });

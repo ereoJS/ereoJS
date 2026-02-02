@@ -301,7 +301,7 @@ export class BunServer {
 
   /**
    * Render page using React 18 streaming SSR.
-   * Uses renderToPipeableStream for Node.js/Bun environments and converts to a web ReadableStream.
+   * Uses renderToReadableStream for Bun environments with native Web Streams API.
    */
   private async renderStreamingPage(
     element: ReactElement,
@@ -309,63 +309,52 @@ export class BunServer {
     loaderData: unknown
   ): Promise<Response> {
     try {
-      const { renderToPipeableStream } = await import('react-dom/server');
+      const { renderToReadableStream } = await import('react-dom/server');
 
       const scripts = [this.options.clientEntry!];
       const { head, tail } = createShell({ shell, scripts, loaderData });
 
-      return new Promise((resolve, reject) => {
-        const { pipe, abort } = renderToPipeableStream(element, {
-          onShellReady() {
-            // Create a PassThrough stream to pipe React's output
-            const { Readable, PassThrough } = require('stream');
+      const encoder = new TextEncoder();
+      const headBytes = encoder.encode(head);
+      const tailBytes = encoder.encode(tail);
 
-            const passThrough = new PassThrough();
+      // Use renderToReadableStream which is the Web Streams API version
+      const reactStream = await renderToReadableStream(element, {
+        onError(error: unknown) {
+          console.error('Streaming render error:', error);
+        },
+      });
 
-            // Collect all chunks and convert to a web ReadableStream
-            const chunks: Buffer[] = [];
-            chunks.push(Buffer.from(head));
+      // Wait for the shell to be ready
+      await reactStream.allReady;
 
-            passThrough.on('data', (chunk: Buffer) => {
-              chunks.push(chunk);
-            });
+      // Read the React stream and combine with head/tail
+      const reader = reactStream.getReader();
+      const chunks: Uint8Array[] = [headBytes];
 
-            passThrough.on('end', () => {
-              chunks.push(Buffer.from(tail));
-              const fullHtml = Buffer.concat(chunks).toString('utf-8');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
 
-              resolve(
-                new Response(fullHtml, {
-                  status: 200,
-                  headers: {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Content-Length': Buffer.byteLength(fullHtml).toString(),
-                  },
-                })
-              );
-            });
+      chunks.push(tailBytes);
 
-            passThrough.on('error', (error: Error) => {
-              console.error('Stream error:', error);
-              reject(error);
-            });
+      // Calculate total length and combine chunks
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const fullHtml = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        fullHtml.set(chunk, offset);
+        offset += chunk.length;
+      }
 
-            // Pipe React's output to our PassThrough stream
-            pipe(passThrough);
-          },
-          onShellError(error: unknown) {
-            console.error('Shell render error:', error);
-            reject(error);
-          },
-          onError(error: unknown) {
-            console.error('Streaming render error:', error);
-          },
-        });
-
-        // Set a timeout to abort if rendering takes too long
-        setTimeout(() => {
-          abort();
-        }, 10000);
+      return new Response(fullHtml, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': totalLength.toString(),
+        },
       });
     } catch (error) {
       console.error('Streaming render failed:', error);
@@ -390,12 +379,14 @@ export class BunServer {
 
       const content = reactRenderToString(element);
       const html = head + content + tail;
+      const encoder = new TextEncoder();
+      const htmlBytes = encoder.encode(html);
 
-      return new Response(html, {
+      return new Response(htmlBytes, {
         status: 200,
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Content-Length': Buffer.byteLength(html).toString(),
+          'Content-Length': htmlBytes.length.toString(),
         },
       });
     } catch (error) {
@@ -428,11 +419,14 @@ export class BunServer {
 </body>
 </html>`;
 
-    return new Response(html, {
+    const encoder = new TextEncoder();
+    const htmlBytes = encoder.encode(html);
+
+    return new Response(htmlBytes, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Content-Length': Buffer.byteLength(html).toString(),
+        'Content-Length': htmlBytes.length.toString(),
       },
     });
   }

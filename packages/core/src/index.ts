@@ -130,6 +130,8 @@ export type {
 
   // Components
   RouteComponentProps,
+  RouteErrorComponentProps,
+  /** @deprecated Use RouteErrorComponentProps instead */
   ErrorBoundaryProps,
 
   // Middleware

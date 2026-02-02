@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { createApp, defineConfig, AreoApp, isAreoApp } from './app';
-import type { FrameworkConfig, Plugin, RouteMatch, RequestContext } from './types';
+import type { FrameworkConfig, Plugin, RouteMatch, RequestContext, RouteErrorComponentProps, ErrorBoundaryProps } from './types';
 
 describe('@areo/core - App', () => {
   describe('createApp', () => {
@@ -434,6 +434,101 @@ describe('@areo/core - App', () => {
       const response = await prodApp.handle(request);
 
       expect(response.status).toBe(500);
+    });
+  });
+});
+
+// ============================================================================
+// Type Definition Tests (Critical Fix Verification)
+// ============================================================================
+describe('@areo/core - Type Definitions', () => {
+  describe('RouteErrorComponentProps', () => {
+    test('should have error property of type Error', () => {
+      const props: RouteErrorComponentProps = {
+        error: new Error('Test error'),
+        params: {},
+      };
+
+      expect(props.error).toBeInstanceOf(Error);
+      expect(props.error.message).toBe('Test error');
+    });
+
+    test('should have params property as RouteParams', () => {
+      const props: RouteErrorComponentProps = {
+        error: new Error('Test'),
+        params: { id: '123', slug: 'test-slug' },
+      };
+
+      expect(props.params.id).toBe('123');
+      expect(props.params.slug).toBe('test-slug');
+    });
+
+    test('should work with empty params', () => {
+      const props: RouteErrorComponentProps = {
+        error: new Error('Test'),
+        params: {},
+      };
+
+      expect(Object.keys(props.params)).toHaveLength(0);
+    });
+
+    test('should support array params (catch-all routes)', () => {
+      const props: RouteErrorComponentProps = {
+        error: new Error('Test'),
+        params: { path: ['docs', 'api', 'reference'] },
+      };
+
+      expect(Array.isArray(props.params.path)).toBe(true);
+      expect(props.params.path).toEqual(['docs', 'api', 'reference']);
+    });
+  });
+
+  describe('ErrorBoundaryProps (deprecated alias)', () => {
+    test('should be assignable to RouteErrorComponentProps', () => {
+      // ErrorBoundaryProps is now a type alias for RouteErrorComponentProps
+      const props: ErrorBoundaryProps = {
+        error: new Error('Test error'),
+        params: { id: '123' },
+      };
+
+      // Should be compatible with RouteErrorComponentProps
+      const routeErrorProps: RouteErrorComponentProps = props;
+      expect(routeErrorProps.error.message).toBe('Test error');
+    });
+
+    test('should work the same as RouteErrorComponentProps', () => {
+      const errorBoundaryProps: ErrorBoundaryProps = {
+        error: new Error('Boundary error'),
+        params: { slug: 'test' },
+      };
+
+      const routeErrorProps: RouteErrorComponentProps = {
+        error: new Error('Route error'),
+        params: { slug: 'test' },
+      };
+
+      // Both should have the same structure
+      expect(Object.keys(errorBoundaryProps)).toEqual(Object.keys(routeErrorProps));
+    });
+  });
+
+  describe('Type distinctness from @areo/client ErrorBoundaryProps', () => {
+    // This test documents that RouteErrorComponentProps is for the props
+    // passed to error component (fallback UI), not for the ErrorBoundary
+    // wrapper component itself (which is in @areo/client)
+    test('RouteErrorComponentProps is for error fallback components', () => {
+      // A route error component receives error and params
+      const ErrorComponent = (props: RouteErrorComponentProps) => {
+        return `Error: ${props.error.message}, Route: ${JSON.stringify(props.params)}`;
+      };
+
+      const result = ErrorComponent({
+        error: new Error('Page not found'),
+        params: { id: '404' },
+      });
+
+      expect(result).toContain('Page not found');
+      expect(result).toContain('404');
     });
   });
 });
