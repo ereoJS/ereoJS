@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noEmit": true,
+    "types": ["bun-types"],
+    "paths": {
+      "@oreo/core": ["./packages/core/src/index.ts"],
+      "@oreo/router": ["./packages/router/src/index.ts"],
+      "@oreo/data": ["./packages/data/src/index.ts"],
+      "@oreo/server": ["./packages/server/src/index.ts"],
+      "@oreo/client": ["./packages/client/src/index.ts"],
+      "@oreo/bundler": ["./packages/bundler/src/index.ts"],
+      "@oreo/cli": ["./packages/cli/src/index.ts"],
+      "@oreo/plugin-tailwind": ["./packages/plugin-tailwind/src/index.ts"],
+      "@oreo/runtime-bun": ["./packages/runtime-bun/src/index.ts"]
+    }
+  },
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/router" },
+    { "path": "./packages/data" },
+    { "path": "./packages/server" },
+    { "path": "./packages/client" },
+    { "path": "./packages/bundler" },
+    { "path": "./packages/cli" },
+    { "path": "./packages/plugin-tailwind" },
+    { "path": "./packages/runtime-bun" },
+    { "path": "./packages/create-oreo" }
+  ],
+  "include": ["packages/*/src/**/*"],
+  "exclude": ["node_modules", "packages/*/dist"]
+}

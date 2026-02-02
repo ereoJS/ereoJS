@@ -1,0 +1,8 @@
+[install]
+# Use exact versions by default
+exact = true
+
+[test]
+# Test configuration
+preload = ["./test-setup.ts"]
+coverage = false

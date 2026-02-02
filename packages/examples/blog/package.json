@@ -1,0 +1,28 @@
+{
+  "name": "@oreo/example-blog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "oreo dev",
+    "build": "oreo build",
+    "start": "oreo start"
+  },
+  "dependencies": {
+    "@oreo/core": "workspace:*",
+    "@oreo/router": "workspace:*",
+    "@oreo/server": "workspace:*",
+    "@oreo/client": "workspace:*",
+    "@oreo/data": "workspace:*",
+    "@oreo/cli": "workspace:*",
+    "@oreo/plugin-tailwind": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.4.0",
+    "tailwindcss": "^3.4.0"
+  }
+}
