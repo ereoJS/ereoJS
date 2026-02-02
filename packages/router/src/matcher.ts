@@ -330,32 +330,34 @@ export function matchWithLayouts(
     return null;
   }
 
-  // Find all parent layouts
+  // Find all layouts that apply to this route by checking path prefixes
+  // Layouts apply if the matched route's path starts with the layout's path
   const layouts: Route[] = [];
-  const collectLayouts = (routeList: Route[], targetId: string): boolean => {
+
+  const collectLayouts = (routeList: Route[], currentPath: string): void => {
     for (const route of routeList) {
       if (route.layout) {
-        layouts.push(route);
+        // A layout at path "/" applies to all routes
+        // A layout at path "/blog" applies to "/blog", "/blog/post", etc.
+        const layoutPath = route.path === '/' ? '' : route.path;
+        const matchPath = match.pathname === '/' ? '' : match.pathname;
+
+        if (matchPath === layoutPath || matchPath.startsWith(layoutPath + '/') || layoutPath === '') {
+          layouts.push(route);
+        }
       }
 
-      if (route.id === targetId) {
-        return true;
-      }
-
+      // Recurse into children
       if (route.children) {
-        if (collectLayouts(route.children, targetId)) {
-          return true;
-        }
-        // Remove layout if not in the path to target
-        if (route.layout) {
-          layouts.pop();
-        }
+        collectLayouts(route.children, currentPath + route.path);
       }
     }
-    return false;
   };
 
-  collectLayouts(routes, match.route.id);
+  collectLayouts(routes, '');
+
+  // Sort layouts by path length (shortest first = outermost)
+  layouts.sort((a, b) => a.path.length - b.path.length);
 
   return {
     ...match,

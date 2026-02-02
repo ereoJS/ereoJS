@@ -1,7 +1,7 @@
 /**
  * @areo/cli - Create Command
  *
- * Create a new Areo project.
+ * Create a new Areo project with all essential features demonstrated.
  */
 
 import { join } from 'node:path';
@@ -33,10 +33,12 @@ export async function create(
   // Create project structure
   await mkdir(projectDir, { recursive: true });
   await mkdir(join(projectDir, 'app/routes'), { recursive: true });
+  await mkdir(join(projectDir, 'app/components'), { recursive: true });
+  await mkdir(join(projectDir, 'app/middleware'), { recursive: true });
   await mkdir(join(projectDir, 'public'), { recursive: true });
 
   // Generate files based on template
-  const files = generateTemplateFiles(template, typescript);
+  const files = generateTemplateFiles(template, typescript, projectName);
 
   for (const [path, content] of Object.entries(files)) {
     const fullPath = join(projectDir, path);
@@ -57,15 +59,32 @@ export async function create(
  */
 function generateTemplateFiles(
   template: string,
-  typescript: boolean
+  typescript: boolean,
+  projectName: string
 ): Record<string, string> {
   const ext = typescript ? 'tsx' : 'jsx';
   const files: Record<string, string> = {};
 
-  // package.json
+  // package.json - includes all necessary dependencies
+  const dependencies: Record<string, string> = {
+    '@areo/core': '^0.1.0',
+    '@areo/router': '^0.1.0',
+    '@areo/server': '^0.1.0',
+    '@areo/client': '^0.1.0',
+    '@areo/data': '^0.1.0',
+    '@areo/cli': '^0.1.0',
+    'react': '^18.2.0',
+    'react-dom': '^18.2.0',
+  };
+
+  // Add plugin-tailwind when using tailwind template
+  if (template === 'tailwind') {
+    dependencies['@areo/plugin-tailwind'] = '^0.1.0';
+  }
+
   files['package.json'] = JSON.stringify(
     {
-      name: 'areo-app',
+      name: projectName,
       version: '0.1.0',
       type: 'module',
       scripts: {
@@ -73,21 +92,12 @@ function generateTemplateFiles(
         build: 'areo build',
         start: 'areo start',
       },
-      dependencies: {
-        '@areo/core': '^0.1.0',
-        '@areo/router': '^0.1.0',
-        '@areo/server': '^0.1.0',
-        '@areo/client': '^0.1.0',
-        '@areo/data': '^0.1.0',
-        '@areo/cli': '^0.1.0',
-        react: '^18.2.0',
-        'react-dom': '^18.2.0',
-      },
+      dependencies,
       devDependencies: typescript
         ? {
             '@types/react': '^18.2.0',
             '@types/react-dom': '^18.2.0',
-            typescript: '^5.4.0',
+            'typescript': '^5.4.0',
           }
         : {},
     },
@@ -118,10 +128,59 @@ function generateTemplateFiles(
   }
 
   // Areo config
-  files[`areo.config.${typescript ? 'ts' : 'js'}`] = `
-import { defineConfig } from '@areo/core';
-${template === 'tailwind' ? "import tailwind from '@areo/plugin-tailwind';" : ''}
+  files[`areo.config.${typescript ? 'ts' : 'js'}`] = generateAreoConfig(template);
 
+  // Environment variables example
+  files['.env'] = generateEnvFile();
+  files['.env.example'] = generateEnvFile();
+
+  // Root layout with proper types and Link component
+  files[`app/routes/_layout.${ext}`] = generateRootLayout(template, typescript);
+
+  // Client entry point for hydration
+  files[`app/entry.client.${ext}`] = generateClientEntry(typescript);
+
+  // Index page with loader, meta, and cache control
+  files[`app/routes/index.${ext}`] = generateIndexPage(template, typescript);
+
+  // About page - simple static page
+  files[`app/routes/about.${ext}`] = generateAboutPage(template, typescript);
+
+  // Contact page with Form and Action example
+  files[`app/routes/contact.${ext}`] = generateContactPage(template, typescript);
+
+  // Counter component - Islands architecture example
+  files[`app/components/Counter.${ext}`] = generateCounterComponent(template, typescript);
+
+  // Middleware example
+  files[`app/middleware/logger.${typescript ? 'ts' : 'js'}`] = generateLoggerMiddleware(typescript);
+
+  // Error boundary example
+  files[`app/routes/_error.${ext}`] = generateErrorBoundary(template, typescript);
+
+  // Tailwind-specific files
+  if (template === 'tailwind') {
+    files['tailwind.config.js'] = generateTailwindConfig();
+    files['app/globals.css'] = generateGlobalCSS();
+  }
+
+  // .gitignore
+  files['.gitignore'] = generateGitignore();
+
+  return files;
+}
+
+/**
+ * Generate areo.config.ts
+ */
+function generateAreoConfig(template: string): string {
+  const tailwindImport = template === 'tailwind'
+    ? "import tailwind from '@areo/plugin-tailwind';\n"
+    : '';
+  const tailwindPlugin = template === 'tailwind' ? '    tailwind(),' : '';
+
+  return `import { defineConfig } from '@areo/core';
+${tailwindImport}
 export default defineConfig({
   server: {
     port: 3000,
@@ -130,102 +189,676 @@ export default defineConfig({
     target: 'bun',
   },
   plugins: [
-    ${template === 'tailwind' ? 'tailwind(),' : ''}
+${tailwindPlugin}
   ],
 });
-  `.trim();
+`.trim();
+}
 
-  // Root layout
-  files[`app/routes/_layout.${ext}`] = `
-${typescript ? "import type { RouteComponentProps } from '@areo/core';" : ''}
+/**
+ * Generate .env file
+ */
+function generateEnvFile(): string {
+  return `# Environment Variables
+# Prefix with AREO_PUBLIC_ to expose to the client
 
-export default function RootLayout({ children }${typescript ? ': RouteComponentProps' : ''}) {
+# Server-only (never sent to browser)
+DATABASE_URL=postgresql://localhost:5432/mydb
+API_SECRET=your-secret-key
+
+# Public (available in client code)
+AREO_PUBLIC_APP_NAME=Areo App
+AREO_PUBLIC_API_URL=http://localhost:3000/api
+`.trim();
+}
+
+/**
+ * Generate root layout with proper types
+ * Uses <a> tags for SSR compatibility - client-side navigation is handled by the client runtime
+ */
+function generateRootLayout(template: string, typescript: boolean): string {
+  const imports = typescript
+    ? `import type { ReactNode } from 'react';`
+    : '';
+
+  const propsType = typescript ? ': { children: ReactNode }' : '';
+
+  const tailwindStyles = template === 'tailwind';
+  const navClasses = tailwindStyles
+    ? ' className="flex gap-4 p-4 border-b border-gray-200 dark:border-gray-700"'
+    : '';
+  const linkClasses = tailwindStyles
+    ? ' className="text-blue-600 hover:text-blue-800 dark:text-blue-400"'
+    : '';
+  const bodyClasses = tailwindStyles
+    ? ' className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white"'
+    : '';
+  const stylesheet = tailwindStyles
+    ? '\n        <link rel="stylesheet" href="/app/globals.css" />'
+    : '';
+
+  return `${imports}
+
+export default function RootLayout({ children }${propsType}) {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Areo App</title>
-        ${template === 'tailwind' ? '<link rel="stylesheet" href="/__tailwind.css" />' : ''}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />${stylesheet}
       </head>
-      <body${template === 'tailwind' ? ' className="min-h-screen bg-white dark:bg-gray-900"' : ''}>
+      <body${bodyClasses}>
+        <nav${navClasses}>
+          <a href="/"${linkClasses}>Home</a>
+          <a href="/about"${linkClasses}>About</a>
+          <a href="/contact"${linkClasses}>Contact</a>
+        </nav>
         {children}
+        {/* Client-side hydration script */}
+        <script type="module" src="/app/entry.client.tsx" />
       </body>
     </html>
   );
 }
-  `.trim();
+`.trim();
+}
 
-  // Index page
-  files[`app/routes/index.${ext}`] = `
-${typescript ? "import type { LoaderArgs } from '@areo/core';" : ''}
+/**
+ * Generate client entry point for hydration
+ */
+function generateClientEntry(typescript: boolean): string {
+  return `/**
+ * Client Entry Point
+ *
+ * This file initializes the client-side runtime:
+ * - Hydrates island components
+ * - Sets up client-side navigation
+ * - Enables link prefetching
+ */
+import { initClient } from '@areo/client';
 
-export async function loader({ request }${typescript ? ': LoaderArgs' : ''}) {
+// Initialize the Areo client runtime
+initClient();
+
+// You can also manually hydrate specific islands:
+// import { hydrateIslands } from '@areo/client';
+// hydrateIslands();
+`.trim();
+}
+
+/**
+ * Generate index page with loader, meta, and cache control
+ */
+function generateIndexPage(template: string, typescript: boolean): string {
+  const imports = typescript
+    ? `import type { LoaderArgs, MetaArgs, RouteComponentProps } from '@areo/core';
+import { Counter } from '../components/Counter';`
+    : `import { Counter } from '../components/Counter';`;
+
+  const loaderType = typescript ? ': LoaderArgs' : '';
+  const loaderDataType = `{ message: string; timestamp: string; visitors: number }`;
+  const propsType = typescript ? `: RouteComponentProps<${loaderDataType}>` : '';
+  const metaType = typescript ? `: MetaArgs<${loaderDataType}>` : '';
+
+  const tailwindStyles = template === 'tailwind';
+  const mainClasses = tailwindStyles
+    ? ' className="flex flex-col items-center justify-center min-h-[80vh] p-8"'
+    : '';
+  const h1Classes = tailwindStyles
+    ? ' className="text-4xl font-bold mb-4"'
+    : '';
+  const pClasses = tailwindStyles
+    ? ' className="text-gray-600 dark:text-gray-400 mb-2"'
+    : '';
+  const sectionClasses = tailwindStyles
+    ? ' className="mt-8 p-6 border border-gray-200 dark:border-gray-700 rounded-lg"'
+    : '';
+  const h2Classes = tailwindStyles
+    ? ' className="text-xl font-semibold mb-4"'
+    : '';
+
+  return `${imports}
+
+/**
+ * Loader - Server-side data fetching
+ *
+ * Runs on the server for every request. Use context.cache
+ * for explicit cache control with tagged invalidation.
+ */
+export async function loader({ request, params, context }${loaderType}) {
+  // Set cache headers - explicit and visible
+  context.cache.set({
+    maxAge: 60,                    // Cache for 60 seconds
+    staleWhileRevalidate: 300,     // Serve stale while revalidating for 5 min
+    tags: ['homepage', 'content'], // Tags for invalidation
+  });
+
+  // Access environment variables
+  const appName = context.env.AREO_PUBLIC_APP_NAME || 'Areo App';
+
   return {
-    message: 'Welcome to Areo!',
+    message: \`Welcome to \${appName}!\`,
     timestamp: new Date().toISOString(),
+    visitors: Math.floor(Math.random() * 1000),
   };
 }
 
-export default function HomePage({ loaderData }${typescript ? ': { loaderData: { message: string; timestamp: string } }' : ''}) {
+/**
+ * Meta - Dynamic SEO metadata
+ *
+ * Generate meta tags based on loader data.
+ */
+export function meta({ data }${metaType}) {
+  return [
+    { title: data.message },
+    { name: 'description', content: 'A blazing fast React framework built on Bun' },
+    { property: 'og:title', content: data.message },
+  ];
+}
+
+/**
+ * Page Component
+ *
+ * Receives loaderData from the loader function.
+ * Uses RouteComponentProps<T> for type-safe data access.
+ */
+export default function HomePage({ loaderData }${propsType}) {
   return (
-    <main${template === 'tailwind' ? ' className="flex flex-col items-center justify-center min-h-screen p-8"' : ''}>
-      <h1${template === 'tailwind' ? ' className="text-4xl font-bold text-gray-900 dark:text-white mb-4"' : ''}>
+    <main${mainClasses}>
+      <h1${h1Classes}>
         {loaderData.message}
       </h1>
-      <p${template === 'tailwind' ? ' className="text-gray-600 dark:text-gray-400"' : ''}>
+      <p${pClasses}>
         Server time: {loaderData.timestamp}
       </p>
+      <p${pClasses}>
+        Today's visitors: {loaderData.visitors}
+      </p>
+
+      {/* Islands Architecture Example */}
+      <section${sectionClasses}>
+        <h2${h2Classes}>Interactive Island</h2>
+        <p${pClasses}>
+          This counter is an "island" - only this component hydrates on the client.
+          The rest of the page stays static HTML with zero JavaScript.
+        </p>
+        {/* client:load hydrates immediately */}
+        <Counter client:load initialCount={0} />
+      </section>
     </main>
   );
 }
-  `.trim();
+`.trim();
+}
 
-  // About page
-  files[`app/routes/about.${ext}`] = `
+/**
+ * Generate about page - simple static page
+ */
+function generateAboutPage(template: string, typescript: boolean): string {
+  const imports = typescript
+    ? `import type { MetaFunction } from '@areo/core';`
+    : '';
+
+  const tailwindStyles = template === 'tailwind';
+  const mainClasses = tailwindStyles
+    ? ' className="flex flex-col items-center justify-center min-h-[80vh] p-8"'
+    : '';
+  const h1Classes = tailwindStyles
+    ? ' className="text-4xl font-bold mb-4"'
+    : '';
+  const pClasses = tailwindStyles
+    ? ' className="text-gray-600 dark:text-gray-400 max-w-2xl text-center"'
+    : '';
+  const ulClasses = tailwindStyles
+    ? ' className="mt-6 space-y-2 text-left"'
+    : '';
+  const liClasses = tailwindStyles
+    ? ' className="flex items-center gap-2"'
+    : '';
+
+  const metaExport = typescript
+    ? `
+/**
+ * Static meta tags for this page
+ */
+export const meta: MetaFunction = () => {
+  return [
+    { title: 'About - Areo App' },
+    { name: 'description', content: 'Learn about the Areo framework' },
+  ];
+};
+`
+    : `
+/**
+ * Static meta tags for this page
+ */
+export function meta() {
+  return [
+    { title: 'About - Areo App' },
+    { name: 'description', content: 'Learn about the Areo framework' },
+  ];
+}
+`;
+
+  return `${imports}
+${metaExport}
+/**
+ * About Page - Static content (no loader needed)
+ *
+ * Pages without loaders are rendered as static HTML.
+ */
 export default function AboutPage() {
   return (
-    <main${template === 'tailwind' ? ' className="flex flex-col items-center justify-center min-h-screen p-8"' : ''}>
-      <h1${template === 'tailwind' ? ' className="text-4xl font-bold text-gray-900 dark:text-white mb-4"' : ''}>
-        About
+    <main${mainClasses}>
+      <h1${h1Classes}>
+        About Areo
       </h1>
-      <p${template === 'tailwind' ? ' className="text-gray-600 dark:text-gray-400"' : ''}>
-        Built with Areo Framework
+      <p${pClasses}>
+        Areo is a React fullstack framework built on Bun, designed for
+        simplicity and performance. It features islands architecture for
+        minimal JavaScript and explicit caching for predictable behavior.
       </p>
+      <ul${ulClasses}>
+        <li${liClasses}>
+          <span>5-6x faster than Node.js</span>
+        </li>
+        <li${liClasses}>
+          <span>Islands architecture for minimal JS</span>
+        </li>
+        <li${liClasses}>
+          <span>One unified loader pattern</span>
+        </li>
+        <li${liClasses}>
+          <span>Explicit tagged cache invalidation</span>
+        </li>
+      </ul>
     </main>
   );
 }
-  `.trim();
+`.trim();
+}
 
-  // Tailwind config (if using tailwind template)
-  if (template === 'tailwind') {
-    files['tailwind.config.js'] = `
-/** @type {import('tailwindcss').Config} */
+/**
+ * Generate contact page with Form and Action
+ */
+function generateContactPage(template: string, typescript: boolean): string {
+  const imports = typescript
+    ? `import type { ActionArgs, LoaderArgs, RouteComponentProps } from '@areo/core';
+import { json } from '@areo/data';`
+    : `import { json } from '@areo/data';`;
+
+  const loaderType = typescript ? ': LoaderArgs' : '';
+  const actionType = typescript ? ': ActionArgs' : '';
+  const propsType = typescript ? ': RouteComponentProps<{ csrfToken: string }>' : '';
+
+  const tailwindStyles = template === 'tailwind';
+  const mainClasses = tailwindStyles
+    ? ' className="flex flex-col items-center justify-center min-h-[80vh] p-8"'
+    : '';
+  const h1Classes = tailwindStyles
+    ? ' className="text-4xl font-bold mb-4"'
+    : '';
+  const formClasses = tailwindStyles
+    ? ' className="w-full max-w-md space-y-4"'
+    : '';
+  const labelClasses = tailwindStyles
+    ? ' className="block text-sm font-medium mb-1"'
+    : '';
+  const inputClasses = tailwindStyles
+    ? ' className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"'
+    : '';
+  const textareaClasses = tailwindStyles
+    ? ' className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 h-32"'
+    : '';
+  const buttonClasses = tailwindStyles
+    ? ' className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"'
+    : '';
+
+  return `${imports}
+
+/**
+ * Loader - Provide CSRF token for form security
+ */
+export async function loader({ context }${loaderType}) {
+  return {
+    csrfToken: crypto.randomUUID(),
+  };
+}
+
+/**
+ * Action - Handle form submission
+ *
+ * Actions handle POST/PUT/DELETE requests.
+ * Use json() for responses, redirect() for redirects.
+ */
+export async function action({ request, context }${actionType}) {
+  const formData = await request.formData();
+
+  const name = formData.get('name') as string;
+  const email = formData.get('email') as string;
+  const message = formData.get('message') as string;
+
+  // Validate
+  const errors: Record<string, string> = {};
+  if (!name || name.length < 2) {
+    errors.name = 'Name must be at least 2 characters';
+  }
+  if (!email || !email.includes('@')) {
+    errors.email = 'Please enter a valid email';
+  }
+  if (!message || message.length < 10) {
+    errors.message = 'Message must be at least 10 characters';
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return json({ success: false, errors }, { status: 400 });
+  }
+
+  // Process the submission (e.g., send email, save to DB)
+  console.log('Contact form submitted:', { name, email, message });
+
+  // Return success or redirect
+  return json({ success: true, message: 'Thank you for your message!' });
+}
+
+/**
+ * Contact Page with Form
+ *
+ * This is a simple SSR-compatible form.
+ * For enhanced client-side features (loading states, error display),
+ * use an island component with the Form/useActionData hooks from @areo/client.
+ */
+export default function ContactPage({ loaderData }${propsType}) {
+  return (
+    <main${mainClasses}>
+      <h1${h1Classes}>Contact Us</h1>
+
+      <form method="post"${formClasses}>
+        <input type="hidden" name="csrf" value={loaderData.csrfToken} />
+
+        <div>
+          <label htmlFor="name"${labelClasses}>Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required${inputClasses}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="email"${labelClasses}>Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required${inputClasses}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="message"${labelClasses}>Message</label>
+          <textarea
+            id="message"
+            name="message"
+            required${textareaClasses}
+          />
+        </div>
+
+        <button type="submit"${buttonClasses}>
+          Send Message
+        </button>
+      </form>
+    </main>
+  );
+}
+`.trim();
+}
+
+/**
+ * Generate Counter component - Islands example
+ */
+function generateCounterComponent(template: string, typescript: boolean): string {
+  const propsType = typescript ? ': { initialCount?: number }' : '';
+
+  const tailwindStyles = template === 'tailwind';
+  const containerClasses = tailwindStyles
+    ? ' className="flex items-center gap-4 mt-4"'
+    : '';
+  const buttonClasses = tailwindStyles
+    ? ' className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"'
+    : '';
+  const countClasses = tailwindStyles
+    ? ' className="text-2xl font-bold min-w-[3ch] text-center"'
+    : '';
+
+  return `'use client';
+/**
+ * Counter Component - Island Example
+ *
+ * This component demonstrates the islands architecture.
+ * Only components with 'use client' directive hydrate on the client.
+ *
+ * Hydration strategies:
+ * - client:load   - Hydrate immediately on page load
+ * - client:idle   - Hydrate when browser is idle
+ * - client:visible - Hydrate when element is visible (IntersectionObserver)
+ * - client:media  - Hydrate when media query matches
+ *
+ * Usage:
+ *   <Counter client:load initialCount={0} />
+ *   <Counter client:visible initialCount={5} />
+ */
+import { useState } from 'react';
+
+export function Counter({ initialCount = 0 }${propsType}) {
+  const [count, setCount] = useState(initialCount);
+
+  return (
+    <div${containerClasses}>
+      <button onClick={() => setCount(c => c - 1)}${buttonClasses}>
+        -
+      </button>
+      <span${countClasses}>{count}</span>
+      <button onClick={() => setCount(c => c + 1)}${buttonClasses}>
+        +
+      </button>
+    </div>
+  );
+}
+`.trim();
+}
+
+/**
+ * Generate logger middleware example
+ */
+function generateLoggerMiddleware(typescript: boolean): string {
+  const imports = typescript
+    ? `import type { MiddlewareHandler } from '@areo/core';`
+    : '';
+  const typeAnnotation = typescript ? ': MiddlewareHandler' : '';
+
+  return `${imports}
+/**
+ * Logger Middleware
+ *
+ * Logs request information and timing.
+ *
+ * Register in areo.config.ts or use the route config:
+ *
+ * export const config = {
+ *   middleware: ['logger'],
+ * };
+ */
+export const logger${typeAnnotation} = async (request, context, next) => {
+  const start = Date.now();
+  const url = new URL(request.url);
+
+  console.log(\`--> \${request.method} \${url.pathname}\`);
+
+  // Call next middleware/handler
+  const response = await next();
+
+  const duration = Date.now() - start;
+  console.log(\`<-- \${request.method} \${url.pathname} \${response.status} \${duration}ms\`);
+
+  return response;
+};
+
+export default logger;
+`.trim();
+}
+
+/**
+ * Generate error boundary page
+ */
+function generateErrorBoundary(template: string, typescript: boolean): string {
+  const imports = typescript
+    ? `import type { RouteErrorComponentProps } from '@areo/core';`
+    : '';
+
+  const propsType = typescript ? ': RouteErrorComponentProps' : '';
+
+  const tailwindStyles = template === 'tailwind';
+  const mainClasses = tailwindStyles
+    ? ' className="flex flex-col items-center justify-center min-h-[80vh] p-8"'
+    : '';
+  const h1Classes = tailwindStyles
+    ? ' className="text-4xl font-bold text-red-600 mb-4"'
+    : '';
+  const pClasses = tailwindStyles
+    ? ' className="text-gray-600 dark:text-gray-400 mb-4"'
+    : '';
+  const preClasses = tailwindStyles
+    ? ' className="p-4 bg-gray-100 dark:bg-gray-800 rounded-md overflow-auto max-w-2xl text-sm"'
+    : '';
+  const linkClasses = tailwindStyles
+    ? ' className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 inline-block"'
+    : '';
+
+  return `${imports}
+
+/**
+ * Error Boundary Page
+ *
+ * This component renders when an error occurs in a route.
+ * It receives the error and route params.
+ *
+ * File naming:
+ * - _error.tsx  - Catches errors in current route and children
+ * - error.tsx   - Same as above (alternative naming)
+ *
+ * The error boundary closest to the error will be used.
+ */
+export default function ErrorBoundary({ error, params }${propsType}) {
+  return (
+    <main${mainClasses}>
+      <h1${h1Classes}>Something went wrong</h1>
+      <p${pClasses}>
+        We're sorry, but an error occurred while processing your request.
+      </p>
+
+      {process.env.NODE_ENV === 'development' && (
+        <pre${preClasses}>
+          <code>{error.message}</code>
+          {error.stack && (
+            <>
+              {'\\n\\n'}
+              {error.stack}
+            </>
+          )}
+        </pre>
+      )}
+
+      <a href="/"${linkClasses}>
+        Go back home
+      </a>
+    </main>
+  );
+}
+`.trim();
+}
+
+/**
+ * Generate Tailwind config
+ */
+function generateTailwindConfig(): string {
+  return `/** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./app/**/*.{js,ts,jsx,tsx}'],
+  content: [
+    './app/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+  ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      // Add your custom theme extensions here
+    },
   },
   plugins: [],
 };
-    `.trim();
+`.trim();
+}
 
-    files['app/globals.css'] = `
-@tailwind base;
+/**
+ * Generate global CSS
+ */
+function generateGlobalCSS(): string {
+  return `@tailwind base;
 @tailwind components;
 @tailwind utilities;
-    `.trim();
+
+/* Custom global styles */
+@layer base {
+  html {
+    @apply antialiased;
   }
 
-  // .gitignore
-  files['.gitignore'] = `
+  body {
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-white;
+  }
+}
+
+@layer components {
+  /* Add reusable component styles here */
+}
+
+@layer utilities {
+  /* Add custom utilities here */
+}
+`.trim();
+}
+
+/**
+ * Generate .gitignore
+ */
+function generateGitignore(): string {
+  return `# Dependencies
 node_modules
+
+# Build output
 .areo
 dist
-*.log
-.DS_Store
-  `.trim();
 
-  return files;
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Bun
+bun.lockb
+`.trim();
 }

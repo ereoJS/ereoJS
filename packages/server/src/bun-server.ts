@@ -8,7 +8,7 @@
 import type { Server } from 'bun';
 import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler } from '@areo/core';
 import { createContext, RequestContext, AreoApp } from '@areo/core';
-import { FileRouter, createFileRouter } from '@areo/router';
+import { FileRouter, createFileRouter, matchWithLayouts, type MatchResult } from '@areo/router';
 import {
   MiddlewareChain,
   createMiddlewareChain,
@@ -167,27 +167,56 @@ export class BunServer {
 
       // Run through middleware chain
       const response = await this.middleware.execute(request, context, async () => {
-        // Custom handler
+        // Custom handler takes precedence
         if (this.options.handler) {
           return this.options.handler(request);
         }
 
-        // App handler
-        if (this.app) {
-          return this.app.handle(request);
+        // Use router for matching and BunServer for rendering
+        // This ensures we get full HTML SSR instead of JSON from AreoApp
+        if (this.router) {
+          const pathname = new URL(request.url).pathname;
+
+          // Check if router has getRoutes (FileRouter) or is a simple mock
+          if (typeof this.router.getRoutes === 'function') {
+            // Full FileRouter - use matchWithLayouts for layout support
+            const routes = this.router.getRoutes();
+            const matchResult = matchWithLayouts(pathname, routes);
+
+            if (!matchResult) {
+              return new Response('Not Found', { status: 404 });
+            }
+
+            // Load the main route module
+            await this.router.loadModule(matchResult.route);
+
+            // Load all layout modules
+            for (const layout of matchResult.layouts) {
+              await this.router.loadModule(layout);
+            }
+
+            // Use BunServer's handleRoute for full HTML rendering with layouts
+            return this.handleRoute(request, matchResult, context);
+          } else {
+            // Simple router (e.g., mock in tests) - use basic match
+            const match = this.router.match(pathname);
+            if (!match) {
+              return new Response('Not Found', { status: 404 });
+            }
+
+            // Load module if the router supports it
+            if (typeof this.router.loadModule === 'function') {
+              await this.router.loadModule(match.route);
+            }
+
+            // Handle without layouts
+            return this.handleRoute(request, { ...match, layouts: [] }, context);
+          }
         }
 
-        // Router only
-        if (this.router) {
-          const match = this.router.match(new URL(request.url).pathname);
-          if (!match) {
-            return new Response('Not Found', { status: 404 });
-          }
-
-          // Load module if needed
-          await this.router.loadModule(match.route);
-
-          return this.handleRoute(request, match, context);
+        // Fallback to app handler (returns JSON, no SSR)
+        if (this.app) {
+          return this.app.handle(request);
         }
 
         return new Response('Not Found', { status: 404 });
@@ -204,7 +233,7 @@ export class BunServer {
    */
   private async handleRoute(
     request: Request,
-    match: RouteMatch,
+    match: MatchResult,
     context: RequestContext
   ): Promise<Response> {
     const module = match.route.module;
@@ -253,16 +282,16 @@ export class BunServer {
       });
     }
 
-    // Full page render - render React component to HTML
+    // Full page render - render React component to HTML with layouts
     return this.renderPage(request, match, context, loaderData);
   }
 
   /**
-   * Render a full HTML page with the route component.
+   * Render a full HTML page with the route component and layouts.
    */
   private async renderPage(
     request: Request,
-    match: RouteMatch,
+    match: MatchResult,
     context: RequestContext,
     loaderData: unknown
   ): Promise<Response> {
@@ -272,26 +301,54 @@ export class BunServer {
       return this.renderMinimalPage(match, loaderData);
     }
 
-    const Component = module.default;
     const url = new URL(request.url);
 
     // Build meta descriptors from route's meta function
     const metaDescriptors = this.buildMeta(module, loaderData, match.params, url);
 
-    // Build the shell template
+    // Build the shell template (only used if no root layout provides html/head/body)
     const shell: ShellTemplate = {
       ...this.options.shell,
       title: this.extractTitle(metaDescriptors) || this.options.shell?.title,
       meta: this.extractMetaTags(metaDescriptors),
     };
 
-    // Create the React element for the page component
-    const element = createElement(Component, {
+    // Create the page component element
+    const PageComponent = module.default;
+    let element: ReactElement = createElement(PageComponent, {
       loaderData,
       params: match.params,
     });
 
-    // Choose between streaming and string rendering
+    // Compose with layouts from innermost to outermost
+    // Layouts wrap the page component, with children passed down
+    const layouts = match.layouts || [];
+    for (let i = layouts.length - 1; i >= 0; i--) {
+      const layout = layouts[i];
+      if (layout.module?.default) {
+        const LayoutComponent = layout.module.default;
+        element = createElement(LayoutComponent, {
+          loaderData: null, // Layouts could have their own loaders in the future
+          params: match.params,
+          children: element,
+        });
+      }
+    }
+
+    // Check if the outermost layout already provides the html structure
+    // If so, we render directly without the shell wrapper
+    const hasRootLayout = layouts.length > 0 && layouts[0].module?.default;
+
+    if (hasRootLayout) {
+      // Layout provides the full HTML document structure
+      if (this.options.renderMode === 'streaming') {
+        return this.renderStreamingPageDirect(element, loaderData);
+      } else {
+        return this.renderStringPageDirect(element, loaderData);
+      }
+    }
+
+    // No layout - use shell template wrapper
     if (this.options.renderMode === 'streaming') {
       return this.renderStreamingPage(element, shell, loaderData);
     } else {
@@ -392,6 +449,103 @@ export class BunServer {
     } catch (error) {
       console.error('String render failed:', error);
       // Return error page
+      return this.renderErrorPage(error);
+    }
+  }
+
+  /**
+   * Render page directly using streaming when layout provides HTML structure.
+   * The layout component is expected to render the full HTML document.
+   */
+  private async renderStreamingPageDirect(
+    element: ReactElement,
+    loaderData: unknown
+  ): Promise<Response> {
+    try {
+      const { renderToReadableStream } = await import('react-dom/server');
+
+      // Render the element directly - layout provides html/head/body
+      const reactStream = await renderToReadableStream(element, {
+        onError(error: unknown) {
+          console.error('Streaming render error:', error);
+        },
+      });
+
+      // Wait for the shell to be ready
+      await reactStream.allReady;
+
+      // Read the React stream
+      const reader = reactStream.getReader();
+      const chunks: Uint8Array[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      // Inject loader data script before closing body tag
+      const encoder = new TextEncoder();
+      const loaderScript = loaderData
+        ? `<script>window.__AREO_DATA__=${serializeLoaderData(loaderData)}</script>`
+        : '';
+      const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
+      const injectedScripts = encoder.encode(loaderScript + clientScript);
+
+      // Calculate total length
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0) + injectedScripts.length;
+      const fullHtml = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        fullHtml.set(chunk, offset);
+        offset += chunk.length;
+      }
+      fullHtml.set(injectedScripts, offset);
+
+      return new Response(fullHtml, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': totalLength.toString(),
+        },
+      });
+    } catch (error) {
+      console.error('Streaming render failed:', error);
+      return this.renderStringPageDirect(element, loaderData);
+    }
+  }
+
+  /**
+   * Render page directly using string when layout provides HTML structure.
+   */
+  private async renderStringPageDirect(
+    element: ReactElement,
+    loaderData: unknown
+  ): Promise<Response> {
+    try {
+      const { renderToString: reactRenderToString } = await import('react-dom/server');
+
+      let html = reactRenderToString(element);
+
+      // Inject loader data and client script before closing body tag
+      const loaderScript = loaderData
+        ? `<script>window.__AREO_DATA__=${serializeLoaderData(loaderData)}</script>`
+        : '';
+      const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
+      html = html.replace('</body>', `${loaderScript}${clientScript}</body>`);
+
+      const encoder = new TextEncoder();
+      const htmlBytes = encoder.encode(html);
+
+      return new Response(htmlBytes, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': htmlBytes.length.toString(),
+        },
+      });
+    } catch (error) {
+      console.error('String render failed:', error);
       return this.renderErrorPage(error);
     }
   }

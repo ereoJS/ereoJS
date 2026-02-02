@@ -193,7 +193,8 @@ describe('create command', () => {
 
         // Check tailwind.config.js content
         const tailwindConfig = await readFile(join(projectDir, 'tailwind.config.js'), 'utf-8');
-        expect(tailwindConfig).toContain("content: ['./app/**/*.{js,ts,jsx,tsx}']");
+        expect(tailwindConfig).toContain("'./app/**/*.{js,ts,jsx,tsx}'");
+        expect(tailwindConfig).toContain("darkMode: 'class'");
       } finally {
         process.chdir(originalCwd);
       }
