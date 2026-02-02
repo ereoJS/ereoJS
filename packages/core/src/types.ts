@@ -76,6 +76,247 @@ export interface DevServer {
 }
 
 // ============================================================================
+// Route-Level Configuration Types (Phase 1: Core Framework)
+// ============================================================================
+
+/** Middleware reference - can be a named middleware or inline function */
+export type MiddlewareReference =
+  | string  // Named middleware from app/middleware/
+  | MiddlewareHandler;  // Inline middleware function
+
+/** Render mode for a route */
+export type RenderMode = 'ssg' | 'ssr' | 'csr' | 'json' | 'xml';
+
+/** Prerender/SSG configuration */
+export interface PrerenderConfig {
+  /** Enable static generation at build time */
+  enabled: boolean;
+  /** Static paths to pre-render. Can be array or function that returns paths */
+  paths?: string[] | (() => Promise<string[]> | string[]);
+  /** Revalidation period in seconds (ISR-style) */
+  revalidate?: number;
+  /** Cache tags for on-demand invalidation */
+  tags?: string[] | ((params: RouteParams) => string[]);
+  /** Fallback behavior for non-prerendered paths */
+  fallback?: 'blocking' | 'static' | '404';
+}
+
+/** SSR streaming configuration */
+export interface StreamingConfig {
+  /** Enable streaming for this route */
+  enabled: boolean;
+  /** Named suspense boundaries that can stream independently */
+  suspenseBoundaries?: string[];
+}
+
+/** Client-side rendering configuration */
+export interface CSRConfig {
+  /** Enable client-side only rendering */
+  enabled: boolean;
+  /** Client-side data loader (runs in browser) */
+  clientLoader?: (params: RouteParams) => unknown | Promise<unknown>;
+}
+
+/** Complete render mode configuration */
+export interface RenderConfig {
+  /** Primary render mode */
+  mode: RenderMode;
+  /** SSG/ISR configuration */
+  prerender?: PrerenderConfig;
+  /** Streaming configuration for SSR */
+  streaming?: StreamingConfig;
+  /** CSR configuration */
+  csr?: CSRConfig;
+}
+
+/** Island component hydration strategy */
+export interface IslandStrategy {
+  /** Component name or selector */
+  component: string;
+  /** Hydration strategy */
+  strategy: HydrationStrategy;
+  /** Media query (for 'media' strategy) */
+  mediaQuery?: string;
+}
+
+/** Per-route island configuration */
+export interface IslandsConfig {
+  /** Default hydration strategy for this route's islands */
+  defaultStrategy?: HydrationStrategy;
+  /** Component-specific overrides */
+  components?: IslandStrategy[];
+  /** Disable all hydration for this route */
+  disabled?: boolean;
+}
+
+/** Route-level cache configuration */
+export interface RouteCacheConfig {
+  /** Edge/CDN cache configuration */
+  edge?: {
+    maxAge: number;
+    staleWhileRevalidate?: number;
+    /** Vary on these request headers */
+    vary?: string[];
+    /** Generate custom cache key */
+    keyGenerator?: (args: { request: Request; params: RouteParams }) => string;
+  };
+  /** Browser cache configuration */
+  browser?: {
+    maxAge: number;
+    private?: boolean;
+  };
+  /** Data cache (framework-level) */
+  data?: {
+    /** Cache key or key generator */
+    key?: string | ((params: RouteParams) => string);
+    /** Cache tags for invalidation */
+    tags?: string[] | ((params: RouteParams) => string[]);
+  };
+}
+
+/** Progressive enhancement configuration */
+export interface ProgressiveConfig {
+  /** Form submission behavior without JS */
+  forms?: {
+    /** Fallback behavior: 'server' uses native form posts, 'spa' requires JS */
+    fallback: 'server' | 'spa';
+    /** How to handle redirects from form submissions */
+    redirect?: 'follow' | 'manual';
+  };
+  /** Link prefetching configuration */
+  prefetch?: {
+    /** When to prefetch: hover, visible, intent (near viewport), or never */
+    trigger: 'hover' | 'visible' | 'intent' | 'never';
+    /** Also prefetch loader data */
+    data?: boolean;
+    /** Time to keep prefetched data (ms) */
+    ttl?: number;
+  };
+}
+
+/** Route composition/layout configuration */
+export interface RouteCompositionConfig {
+  /** Layout stack from root to leaf */
+  layouts?: string[];
+  /** Inherit settings from parent routes */
+  inherit?: {
+    /** Inherit middleware from parent */
+    middleware?: boolean;
+    /** Merge or replace parent meta */
+    meta?: 'merge' | 'replace' | false;
+  };
+  /** Error boundary configuration */
+  errorBoundary?: {
+    /** Error boundary component */
+    component?: ComponentType<ErrorBoundaryProps>;
+    /** Which errors to capture */
+    capture?: 'all' | 'loader' | 'render';
+  };
+  /** Loading state configuration */
+  loading?: {
+    /** Loading component/skeleton */
+    component?: ComponentType;
+    /** Delay before showing loading UI (ms) */
+    delay?: number;
+    /** Timeout before showing error (ms) */
+    timeout?: number;
+  };
+}
+
+/** Authentication/authorization configuration */
+export interface AuthConfig {
+  /** Whether authentication is required */
+  required?: boolean;
+  /** Required roles */
+  roles?: string[];
+  /** Required permissions */
+  permissions?: string[];
+  /** Custom auth check */
+  check?: (args: { request: Request; context: AppContext; params: RouteParams }) => boolean | Promise<boolean>;
+  /** Redirect URL for unauthenticated users (can use {pathname} placeholder) */
+  redirect?: string;
+  /** API response for unauthorized access */
+  unauthorized?: {
+    status: number;
+    body: unknown;
+  };
+}
+
+/** Development mode configuration */
+export interface DevConfig {
+  /** Mock data configuration */
+  mock?: {
+    /** Enable mocking */
+    enabled: boolean;
+    /** Mock data to inject */
+    data?: Record<string, unknown>;
+  };
+  /** Artificial latency for testing (ms) */
+  latency?: number;
+  /** Error injection rate (0-1) */
+  errorRate?: number;
+}
+
+/** Route variant (multiple URL patterns for same file) */
+export interface RouteVariant {
+  /** URL path pattern */
+  path: string;
+  /** Parameter schema/validation */
+  params?: Record<string, 'string' | 'number'>;
+  /** Variant-specific config */
+  config?: Partial<RouteConfig>;
+}
+
+/** Complete route-level configuration export */
+export interface RouteConfig {
+  /** Route middleware chain */
+  middleware?: MiddlewareReference[];
+  /** Render mode configuration */
+  render?: RenderConfig;
+  /** Island hydration strategy */
+  islands?: IslandsConfig;
+  /** Cache configuration */
+  cache?: RouteCacheConfig;
+  /** Progressive enhancement */
+  progressive?: ProgressiveConfig;
+  /** Route composition */
+  route?: RouteCompositionConfig;
+  /** Authentication */
+  auth?: AuthConfig;
+  /** Development settings */
+  dev?: DevConfig;
+  /** Route variants (multiple URL patterns) */
+  variants?: RouteVariant[];
+}
+
+/** Extended RouteModule with config export */
+export interface RouteModuleWithConfig extends RouteModule {
+  /** Route-level configuration */
+  config?: RouteConfig;
+}
+
+// ============================================================================
+// Validation Types
+// ============================================================================
+
+/** Parameter validation schema */
+export interface ParamValidationSchema {
+  [key: string]: ParamValidator<unknown>;
+}
+
+/** Search parameter validation schema */
+export interface SearchParamValidationSchema {
+  [key: string]: ParamValidator<unknown> | { default: unknown; validator?: ParamValidator<unknown> };
+}
+
+/** Parameter validator function or schema */
+export type ParamValidator<T> = {
+  parse: (value: string | string[] | undefined) => T;
+  optional?: boolean;
+  default?: T;
+};
+
+// ============================================================================
 // Route Types
 // ============================================================================
 
@@ -98,6 +339,8 @@ export interface Route {
   children?: Route[];
   /** Loaded module */
   module?: RouteModule;
+  /** Parsed route configuration from module */
+  config?: RouteConfig;
 }
 
 export interface RouteModule {
@@ -108,6 +351,12 @@ export interface RouteModule {
   headers?: HeadersFunction;
   handle?: RouteHandle;
   ErrorBoundary?: ComponentType<ErrorBoundaryProps>;
+  /** Route-level configuration export */
+  config?: RouteConfig;
+  /** Parameter validation schema */
+  params?: ParamValidationSchema;
+  /** Search parameter validation schema */
+  searchParams?: SearchParamValidationSchema;
 }
 
 export interface RouteHandle {

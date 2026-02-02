@@ -453,6 +453,18 @@ describe('@oreo/data - Action', () => {
       expect(contentType).toBe('json');
       expect(body).toEqual({ data: 'test' });
     });
+
+    test('returns unknown content type for non-JSON text without content-type', async () => {
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        body: 'not valid json at all {{{',
+      });
+
+      const { body, contentType } = await parseRequestBody(request);
+
+      expect(contentType).toBe('unknown');
+      expect(body).toBeNull();
+    });
   });
 
   describe('typedAction', () => {
@@ -644,6 +656,68 @@ describe('@oreo/data - Action', () => {
 
       expect(result.success).toBe(true);
       expect((result.data as any)?.errorMessage).toBe('Handler error');
+    });
+
+    test('works with schema using parse instead of safeParse', async () => {
+      // Mock schema with only parse method (no safeParse)
+      const mockSchema = {
+        parse: (data: unknown) => {
+          const d = data as { name: string };
+          if (!d.name) {
+            throw new Error('Name is required');
+          }
+          return d;
+        },
+      };
+
+      const actionFn = typedAction<{ name: string }>({
+        schema: mockSchema as any,
+        handler: async ({ body }) => body,
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'John' }),
+      });
+
+      const result = await actionFn({
+        request,
+        params: {},
+        context: createContext(request),
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.name).toBe('John');
+    });
+
+    test('onError can return Response which is thrown', async () => {
+      const actionFn = typedAction<{ value: number }>({
+        handler: async () => {
+          throw new Error('Handler error');
+        },
+        onError: () => {
+          return new Response('Redirecting', { status: 302, headers: { Location: '/error' } });
+        },
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: 1 }),
+      });
+
+      try {
+        await actionFn({
+          request,
+          params: {},
+          context: createContext(request),
+        });
+        expect(true).toBe(false); // Should not reach here
+      } catch (e) {
+        expect(e).toBeInstanceOf(Response);
+        expect((e as Response).status).toBe(302);
+      }
     });
   });
 

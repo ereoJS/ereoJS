@@ -3,6 +3,7 @@ import {
   createShell,
   createResponse,
   createSuspenseStream,
+  renderToString,
 } from './streaming';
 
 describe('@oreo/server - Streaming', () => {
@@ -178,6 +179,71 @@ describe('@oreo/server - Streaming', () => {
       const { value } = await reader.read();
 
       expect(decoder.decode(value)).toBe('Hello 世界');
+    });
+  });
+
+  describe('renderToString', () => {
+    test('renders element to string with Content-Length header', async () => {
+      const React = await import('react');
+      const element = React.createElement('div', null, 'Test Content');
+
+      const mockContext = {
+        cache: { set: () => {}, get: () => undefined, getTags: () => [] },
+        get: () => undefined,
+        set: () => {},
+        responseHeaders: new Headers(),
+        url: new URL('http://localhost:3000/test'),
+        env: {},
+      };
+
+      const result = await renderToString(element, {
+        match: {
+          route: { id: '/test', path: '/test', file: '/test.tsx' },
+          params: {},
+          pathname: '/test',
+        },
+        context: mockContext as any,
+        shell: { title: 'String Render' },
+      });
+
+      expect(result.status).toBe(200);
+      expect(result.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
+      expect(result.headers.has('Content-Length')).toBe(true);
+      expect(typeof result.body).toBe('string');
+      expect(result.body).toContain('<!DOCTYPE html>');
+      expect(result.body).toContain('<title>String Render</title>');
+    });
+
+    test('executes loader and includes data in response', async () => {
+      const React = await import('react');
+      const element = React.createElement('span', null, 'Content');
+
+      const mockContext = {
+        cache: { set: () => {}, get: () => undefined, getTags: () => [] },
+        get: () => undefined,
+        set: () => {},
+        responseHeaders: new Headers(),
+        url: new URL('http://localhost:3000/test'),
+        env: {},
+      };
+
+      const result = await renderToString(element, {
+        match: {
+          route: {
+            id: '/loader-test',
+            path: '/loader-test',
+            file: '/loader-test.tsx',
+            module: {
+              loader: async ({ params }: any) => ({ id: params.id, name: 'Test' }),
+            },
+          },
+          params: { id: '456' },
+          pathname: '/loader-test',
+        },
+        context: mockContext as any,
+      });
+
+      expect(result.body).toContain('window.__OREO_DATA__');
     });
   });
 });

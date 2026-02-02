@@ -12,6 +12,20 @@ export {
   initFileRouter,
 } from './file-router';
 
+// Route Config
+export {
+  parseMiddleware,
+  parseRenderConfig,
+  parseIslandsConfig,
+  parseCacheConfig,
+  parseProgressiveConfig,
+  parseAuthConfig,
+  parseDevConfig,
+  parseVariants,
+  parseRouteConfig,
+  mergeRouteConfigs,
+} from './route-config';
+
 // Route Tree
 export {
   RouteTree,
@@ -30,6 +44,37 @@ export {
   calculateRouteScore,
   patternToRegex,
 } from './matcher';
+
+// Middleware Chain
+export {
+  registerMiddleware,
+  getMiddleware,
+  hasMiddleware,
+  unregisterMiddleware,
+  clearMiddlewareRegistry,
+  resolveMiddleware,
+  executeMiddlewareChain,
+  createMiddlewareExecutor,
+  composeMiddleware,
+  when,
+  method,
+  path,
+  createLoggerMiddleware,
+  createCorsMiddleware,
+  createRateLimitMiddleware,
+} from './middleware-chain';
+
+// Validation
+export {
+  ParamValidationError,
+  validators,
+  validateParams,
+  safeValidateParams,
+  validateSearchParams,
+  createRouteValidator,
+  matchParamPattern,
+  extractParamNames,
+} from './validation';
 
 // Types
 export type {

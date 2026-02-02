@@ -6,7 +6,10 @@ import {
   getIslandComponent,
   registerIslandComponents,
   cleanupIslands,
+  createIsland,
+  initializeIslands,
 } from './islands';
+import { resetIslandCounter } from './hydration';
 
 // Mock DOM environment for testing
 class MockElement {
@@ -201,6 +204,95 @@ describe('@oreo/client - Islands', () => {
       registerIslandComponent('Overwrite', Replacement);
 
       expect(getIslandComponent('Overwrite')).toBe(Replacement);
+    });
+  });
+
+  describe('createIsland', () => {
+    beforeEach(() => {
+      resetIslandCounter();
+    });
+
+    test('creates an island wrapper component', () => {
+      const TestComponent = (props: { name: string }) => null;
+
+      const IslandComponent = createIsland(TestComponent, 'TestComponent');
+
+      expect(typeof IslandComponent).toBe('function');
+      expect(getIslandComponent('TestComponent')).toBe(TestComponent);
+    });
+
+    test('island wrapper returns element with data attributes', () => {
+      const TestComponent = (props: { name: string }) => null;
+      const IslandComponent = createIsland(TestComponent, 'TestIsland');
+
+      const result = IslandComponent({ name: 'test', 'client:load': true });
+
+      expect(result.type).toBe('div');
+      expect(result.props['data-island']).toMatch(/^island-\d+$/);
+      expect(result.props['data-component']).toBe('TestIsland');
+      expect(result.props['data-props']).toBe(JSON.stringify({ name: 'test' }));
+      expect(result.props['data-strategy']).toBe('load');
+    });
+
+    test('island wrapper handles media strategy', () => {
+      const TestComponent = (props: { value: number }) => null;
+      const IslandComponent = createIsland(TestComponent, 'MediaIsland');
+
+      const result = IslandComponent({ value: 42, 'client:media': '(max-width: 768px)' });
+
+      expect(result.props['data-strategy']).toBe('media');
+      expect(result.props['data-media']).toBe('(max-width: 768px)');
+    });
+
+    test('island wrapper strips hydration props from child props', () => {
+      const TestComponent = (props: { data: string }) => null;
+      const IslandComponent = createIsland(TestComponent, 'StripTest');
+
+      const result = IslandComponent({
+        data: 'test',
+        'client:load': true,
+        'client:idle': true,
+      });
+
+      const propsString = result.props['data-props'];
+      const parsedProps = JSON.parse(propsString);
+
+      expect(parsedProps).toEqual({ data: 'test' });
+      expect(parsedProps['client:load']).toBeUndefined();
+    });
+  });
+
+  describe('initializeIslands', () => {
+    test('returns early when document is undefined', () => {
+      const originalDocument = (globalThis as any).document;
+      delete (globalThis as any).document;
+
+      // Should not throw
+      expect(() => initializeIslands()).not.toThrow();
+
+      if (originalDocument) {
+        (globalThis as any).document = originalDocument;
+      }
+    });
+
+    test('adds DOMContentLoaded listener when document is loading', () => {
+      let listenerAdded = false;
+      let eventType = '';
+
+      (globalThis as any).document = {
+        readyState: 'loading',
+        addEventListener: (type: string, cb: () => void) => {
+          listenerAdded = true;
+          eventType = type;
+        },
+      };
+
+      initializeIslands();
+
+      expect(listenerAdded).toBe(true);
+      expect(eventType).toBe('DOMContentLoaded');
+
+      delete (globalThis as any).document;
     });
   });
 });

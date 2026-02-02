@@ -7,10 +7,11 @@
 
 import { readdir, stat } from 'node:fs/promises';
 import { join, relative, extname } from 'node:path';
-import type { Route } from '@oreo/core';
+import type { Route, RouteConfig } from '@oreo/core';
 import type { FileRoute, RouterOptions, RouterEvents } from './types';
 import { buildRouteTree, RouteTree } from './route-tree';
 import { createMatcher, RouteMatcher } from './matcher';
+import { parseRouteConfig, mergeRouteConfigs } from './route-config';
 
 /**
  * Default router options.
@@ -268,17 +269,100 @@ export class FileRouter {
   }
 
   /**
-   * Load a route module.
+   * Load a route module and parse its configuration.
    */
   async loadModule(route: Route): Promise<void> {
     if (route.module) return;
 
     try {
-      route.module = await import(route.file);
+      const mod = await import(route.file);
+      route.module = mod;
+
+      // Parse and apply route config from module
+      if (mod.config) {
+        route.config = parseRouteConfig(mod.config);
+      }
+
+      // Merge with parent config if available
+      const parent = this.findParentRoute(route);
+      if (parent?.config) {
+        route.config = mergeRouteConfigs(parent.config, route.config);
+      }
     } catch (error) {
       console.error(`Failed to load route module: ${route.file}`, error);
       throw error;
     }
+  }
+
+  /**
+   * Find parent route for a given route.
+   */
+  private findParentRoute(route: Route): Route | undefined {
+    const parentId = route.id.split('/').slice(0, -1).join('/') || '/';
+    return this.routes.find((r) => r.id === parentId);
+  }
+
+  /**
+   * Get route configuration (loads module if needed).
+   */
+  async getRouteConfig(route: Route): Promise<RouteConfig | undefined> {
+    if (!route.config && !route.module) {
+      await this.loadModule(route);
+    }
+    return route.config;
+  }
+
+  /**
+   * Get all routes with their configurations loaded.
+   * Only loads modules for routes that don't already have configs.
+   */
+  async getRoutesWithConfig(): Promise<Route[]> {
+    // Only load modules for routes without configs
+    const loadPromises = this.routes.map(async (route) => {
+      if (!route.config && !route.module) {
+        await this.loadModule(route);
+      }
+    });
+    await Promise.all(loadPromises);
+    return this.routes;
+  }
+
+  /**
+   * Find routes by render mode.
+   */
+  async findRoutesByRenderMode(mode: 'ssg' | 'ssr' | 'csr' | 'json' | 'xml'): Promise<Route[]> {
+    const routes = await this.getRoutesWithConfig();
+    return routes.filter((r) => r.config?.render?.mode === mode);
+  }
+
+  /**
+   * Find routes that require authentication.
+   */
+  async findProtectedRoutes(): Promise<Route[]> {
+    const routes = await this.getRoutesWithConfig();
+    return routes.filter((r) => r.config?.auth?.required);
+  }
+
+  /**
+   * Get all prerender paths from routes with SSG config.
+   */
+  async getPrerenderPaths(): Promise<string[]> {
+    const routes = await this.findRoutesByRenderMode('ssg');
+    const paths: string[] = [];
+
+    for (const route of routes) {
+      const prerender = route.config?.render?.prerender;
+      if (prerender?.enabled && prerender.paths) {
+        if (Array.isArray(prerender.paths)) {
+          paths.push(...prerender.paths);
+        } else if (typeof prerender.paths === 'function') {
+          const result = await prerender.paths();
+          paths.push(...(Array.isArray(result) ? result : []));
+        }
+      }
+    }
+
+    return paths;
   }
 
   /**

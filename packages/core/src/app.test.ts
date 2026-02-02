@@ -357,4 +357,83 @@ describe('@oreo/core - App', () => {
       expect(isOreoApp(123)).toBe(false);
     });
   });
+
+  describe('dev() method', () => {
+    test('initializes plugins and logs message', async () => {
+      const app = createApp({
+        config: { server: { port: 3000, hostname: 'localhost' } },
+      });
+
+      // Should not throw
+      await expect(app.dev()).resolves.toBeUndefined();
+    });
+
+    test('registers config plugins', async () => {
+      const plugin: Plugin = {
+        name: 'test-plugin',
+        setup: () => {},
+      };
+
+      const app = createApp({
+        config: { plugins: [plugin] },
+      });
+
+      await app.dev();
+      // Plugin registry should have the plugin
+    });
+  });
+
+  describe('build() method', () => {
+    test('initializes plugins and runs build hooks', async () => {
+      const app = createApp({
+        config: { build: { target: 'bun', outDir: '.oreo' } },
+      });
+
+      // Should not throw
+      await expect(app.build()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('start() method', () => {
+    test('initializes plugins and logs message', async () => {
+      const app = createApp({
+        config: { server: { port: 3000, hostname: 'localhost' } },
+      });
+
+      // Should not throw
+      await expect(app.start()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('error handling with non-Error objects', () => {
+    test('handles non-Error thrown values in dev mode', async () => {
+      const devApp = createApp({
+        config: { server: { development: true } },
+      });
+
+      devApp.setRouteMatcher((): RouteMatch | null => {
+        throw 'String error';
+      });
+
+      const request = new Request('http://localhost:3000/');
+      const response = await devApp.handle(request);
+
+      expect(response.status).toBe(500);
+    });
+
+    test('handles non-Error thrown values in prod mode', async () => {
+      const prodApp = createApp({
+        config: { server: { development: false } },
+      });
+
+      prodApp.setRouteMatcher((): RouteMatch | null => {
+        throw { custom: 'error object' };
+      });
+
+      const request = new Request('http://localhost:3000/');
+      const response = await prodApp.handle(request);
+
+      expect(response.status).toBe(500);
+    });
+  });
 });

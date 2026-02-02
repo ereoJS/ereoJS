@@ -143,6 +143,112 @@ describe('@oreo/data - Cache', () => {
       expect(result2).toBe('result');
       expect(callCount).toBe(1); // Should only call once
     });
+
+    test('returns stale value and revalidates in background with stale-while-revalidate', async () => {
+      const cache = new MemoryCache();
+      setCache(cache);
+
+      let callCount = 0;
+      const fn = async () => {
+        callCount++;
+        return `result-${callCount}`;
+      };
+
+      // First call - fetches and caches
+      const result1 = await cached('swr-test', fn, { maxAge: 1, staleWhileRevalidate: 300 });
+      expect(result1).toBe('result-1');
+      expect(callCount).toBe(1);
+
+      // Manually make the entry stale by modifying timestamp
+      const entry = await cache.get('swr-test');
+      if (entry) {
+        await cache.set('swr-test', {
+          ...entry,
+          timestamp: Date.now() - 2000, // 2 seconds ago, stale (maxAge is 1s)
+        });
+      }
+
+      // Second call - should return stale value and trigger background revalidation
+      const result2 = await cached('swr-test', fn, { maxAge: 1, staleWhileRevalidate: 300 });
+      expect(result2).toBe('result-1'); // Returns stale value immediately
+
+      // Wait for background revalidation to complete
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Call count should have increased due to background revalidation
+      expect(callCount).toBe(2);
+
+      // Now the cache should have the fresh value
+      const freshEntry = await cache.get('swr-test');
+      expect(freshEntry?.value).toBe('result-2');
+    });
+
+    test('handles revalidation errors gracefully', async () => {
+      const cache = new MemoryCache();
+      setCache(cache);
+
+      let callCount = 0;
+      const fn = async () => {
+        callCount++;
+        if (callCount === 2) {
+          throw new Error('Revalidation failed');
+        }
+        return `result-${callCount}`;
+      };
+
+      // First call - fetches and caches
+      await cached('error-test', fn, { maxAge: 1, staleWhileRevalidate: 300 });
+      expect(callCount).toBe(1);
+
+      // Make the entry stale
+      const entry = await cache.get('error-test');
+      if (entry) {
+        await cache.set('error-test', {
+          ...entry,
+          timestamp: Date.now() - 2000,
+        });
+      }
+
+      // Second call - should return stale value; background revalidation will fail
+      const result = await cached('error-test', fn, { maxAge: 1, staleWhileRevalidate: 300 });
+      expect(result).toBe('result-1');
+
+      // Wait for background revalidation attempt
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // The cache should still have the stale value (revalidation failed)
+      const cachedEntry = await cache.get('error-test');
+      expect(cachedEntry?.value).toBe('result-1');
+    });
+
+    test('fetches fresh data when cache is fully expired without stale-while-revalidate', async () => {
+      const cache = new MemoryCache();
+      setCache(cache);
+
+      let callCount = 0;
+      const fn = async () => {
+        callCount++;
+        return `result-${callCount}`;
+      };
+
+      // First call
+      await cached('expired-test', fn, { maxAge: 1 });
+
+      // Make the entry stale (no stale-while-revalidate)
+      const entry = await cache.get('expired-test');
+      if (entry) {
+        await cache.set('expired-test', {
+          ...entry,
+          timestamp: Date.now() - 2000,
+          staleWhileRevalidate: undefined,
+        });
+      }
+
+      // Second call - should fetch fresh data since no stale-while-revalidate
+      const result = await cached('expired-test', fn, { maxAge: 1 });
+      expect(result).toBe('result-2');
+      expect(callCount).toBe(2);
+    });
   });
 
   describe('cacheKey', () => {

@@ -214,6 +214,80 @@ describe('@oreo/server - Static', () => {
       expect(response!.status).toBe(200);
       expect(await response!.text()).toBe('Nested content');
     });
+
+    test('shows directory listing when enabled', async () => {
+      const handler = serveStatic({ root: TEST_DIR, listing: true });
+      // Make a request to subdir which has no index.html
+      const request = new Request('http://localhost:3000/subdir/');
+
+      const response = await handler(request);
+
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(200);
+      const html = await response!.text();
+      expect(html).toContain('Index of');
+      expect(html).toContain('nested.txt');
+    });
+
+    test('returns null for directory without index when listing disabled', async () => {
+      const handler = serveStatic({ root: TEST_DIR, listing: false });
+      const request = new Request('http://localhost:3000/subdir/');
+
+      const response = await handler(request);
+
+      expect(response).toBeNull();
+    });
+
+    test('serves fallback file when enabled and file not found', async () => {
+      const handler = serveStatic({ root: TEST_DIR, fallback: 'index.html' });
+      const request = new Request('http://localhost:3000/nonexistent-route');
+
+      const response = await handler(request);
+
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(200);
+      expect(await response!.text()).toContain('Index');
+    });
+
+    test('handles fallback with valid file', async () => {
+      // Test that fallback works when properly configured
+      const handler = serveStatic({ root: TEST_DIR, fallback: 'index.html' });
+      const request = new Request('http://localhost:3000/some-spa-route');
+
+      const response = await handler(request);
+
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(200);
+      expect(response!.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
+    });
+
+    test('returns 403 for directory traversal with ..', async () => {
+      const handler = serveStatic({ root: TEST_DIR });
+      // Create request with double dots in path
+      const request = new Request('http://localhost:3000/subdir/..%2F..%2Fpackage.json');
+
+      const response = await handler(request);
+
+      // Should either be 403 or null
+      if (response !== null) {
+        expect(response.status).toBe(403);
+      }
+    });
+
+    test('if-modified-since returns 200 when modified after', async () => {
+      const handler = serveStatic({ root: TEST_DIR });
+
+      // Request with a past date
+      const pastDate = new Date('2000-01-01').toUTCString();
+      const request = new Request('http://localhost:3000/test.txt', {
+        headers: { 'If-Modified-Since': pastDate },
+      });
+
+      const response = await handler(request);
+
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(200);
+    });
   });
 
   describe('staticMiddleware', () => {

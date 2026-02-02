@@ -34,6 +34,27 @@ export type {
   BuildConfig,
   FrameworkConfig,
 
+  // Route-Level Configuration (NEW)
+  MiddlewareReference,
+  RenderMode,
+  PrerenderConfig,
+  StreamingConfig,
+  CSRConfig,
+  RenderConfig,
+  IslandStrategy,
+  IslandsConfig,
+  RouteCacheConfig,
+  ProgressiveConfig,
+  RouteCompositionConfig,
+  AuthConfig,
+  DevConfig,
+  RouteVariant,
+  RouteConfig,
+  RouteModuleWithConfig,
+  ParamValidationSchema,
+  SearchParamValidationSchema,
+  ParamValidator,
+
   // Plugins
   Plugin,
   PluginContext,

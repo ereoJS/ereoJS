@@ -83,6 +83,85 @@ describe('@oreo/plugin-tailwind', () => {
     });
   });
 
+  describe('setup', () => {
+    test('calls setup without error when config does not exist', async () => {
+      const plugin = tailwind();
+      const mockContext = {
+        root: '/nonexistent/path',
+        mode: 'development' as const,
+        config: {},
+      };
+
+      // Should not throw
+      await expect(plugin.setup!(mockContext)).resolves.toBeUndefined();
+    });
+
+    test('calls setup with existing config path', async () => {
+      const plugin = tailwind({ config: 'tailwind.config.js' });
+      const mockContext = {
+        root: import.meta.dir,
+        mode: 'development' as const,
+        config: {},
+      };
+
+      // Should not throw even if config doesn't exist
+      await expect(plugin.setup!(mockContext)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('configureServer', () => {
+    test('adds middleware to serve tailwind CSS', async () => {
+      const plugin = tailwind();
+      const middlewares: any[] = [];
+      const mockServer = {
+        middlewares: {
+          push: (fn: any) => middlewares.push(fn),
+        },
+      };
+
+      await plugin.configureServer!(mockServer);
+
+      expect(middlewares.length).toBe(1);
+    });
+
+    test('serves tailwind CSS on __tailwind.css path', async () => {
+      const plugin = tailwind();
+      let middleware: any;
+      const mockServer = {
+        middlewares: {
+          push: (fn: any) => { middleware = fn; },
+        },
+      };
+
+      await plugin.configureServer!(mockServer);
+
+      const request = new Request('http://localhost:3000/__tailwind.css');
+      const response = await middleware(request, {}, () => new Response('fallback'));
+
+      expect(response.headers.get('Content-Type')).toBe('text/css');
+      expect(response.headers.get('Cache-Control')).toBe('no-cache');
+      const text = await response.text();
+      expect(text).toContain('Tailwind CSS');
+    });
+
+    test('calls next for non-tailwind paths', async () => {
+      const plugin = tailwind();
+      let middleware: any;
+      const mockServer = {
+        middlewares: {
+          push: (fn: any) => { middleware = fn; },
+        },
+      };
+
+      await plugin.configureServer!(mockServer);
+
+      const request = new Request('http://localhost:3000/other-path');
+      const response = await middleware(request, {}, () => new Response('fallback'));
+
+      expect(await response.text()).toBe('fallback');
+    });
+  });
+
   describe('generateConfig', () => {
     test('generates config with Oreo preset by default', () => {
       const config = generateConfig();
