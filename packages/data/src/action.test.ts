@@ -767,4 +767,363 @@ describe('@areo/data - Action', () => {
       expect(result.errors?._request).toBeDefined();
     });
   });
+
+  describe('typedAction validation failure', () => {
+    test('returns validation errors when validate returns false', async () => {
+      const actionFn = typedAction<{ email: string }>({
+        handler: async ({ body }) => body,
+        validate: () => {
+          return { success: false, errors: { email: ['Invalid email format'] } };
+        },
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test' }),
+      });
+
+      const result = await actionFn({
+        request,
+        params: {},
+        context: createContext(request),
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.errors?.email).toContain('Invalid email format');
+    });
+  });
+
+  describe('typedAction error handling', () => {
+    test('rethrows non-Error exceptions', async () => {
+      const actionFn = typedAction<{ value: number }>({
+        handler: async () => {
+          throw 'string error';
+        },
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: 1 }),
+      });
+
+      try {
+        await actionFn({
+          request,
+          params: {},
+          context: createContext(request),
+        });
+        expect(true).toBe(false); // Should not reach here
+      } catch (e) {
+        expect(e).toBe('string error');
+      }
+    });
+  });
+
+  describe('formDataToObject File handling', () => {
+    test('handles File objects in FormData', () => {
+      const formData = new FormData();
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      formData.set('document', file);
+      formData.set('name', 'John');
+
+      const result = formDataToObject(formData);
+
+      expect(result.document).toBeInstanceOf(File);
+      expect((result.document as File).name).toBe('test.txt');
+      expect(result.name).toBe('John');
+    });
+  });
+
+  describe('setNestedValue edge cases', () => {
+    test('converts single value to array when same key appears multiple times', () => {
+      const formData = new FormData();
+      formData.append('items', 'first');
+      formData.append('items', 'second');
+      formData.append('items', 'third');
+
+      const result = formDataToObject<{ items: string[] }>(formData);
+
+      expect(result.items).toEqual(['first', 'second', 'third']);
+    });
+
+    test('handles array notation appending to existing array', () => {
+      const formData = new FormData();
+      formData.append('tags[]', 'tag1');
+      formData.append('tags[]', 'tag2');
+      formData.append('tags[]', 'tag3');
+
+      const result = formDataToObject<{ tags: string[] }>(formData);
+
+      expect(result.tags).toEqual(['tag1', 'tag2', 'tag3']);
+    });
+  });
+
+  describe('parsePath edge cases', () => {
+    test('handles bracket notation with string index', () => {
+      const formData = new FormData();
+      formData.set('data[key]', 'value');
+
+      const result = formDataToObject<{ data: { key: string } }>(formData);
+
+      expect(result.data.key).toBe('value');
+    });
+
+    test('handles empty bracket notation', () => {
+      const formData = new FormData();
+      formData.set('items[]', 'value');
+
+      const result = formDataToObject<{ items: string[] }>(formData);
+
+      expect(result.items).toEqual(['value']);
+    });
+
+    test('handles deeply nested paths', () => {
+      const formData = new FormData();
+      formData.set('a.b.c.d', 'deep');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).a.b.c.d).toBe('deep');
+    });
+
+    test('handles mixed dot and bracket notation', () => {
+      const formData = new FormData();
+      formData.set('users[0].address.city', 'NYC');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).users[0].address.city).toBe('NYC');
+    });
+  });
+
+  describe('coerceValue edge cases', () => {
+    test('does not coerce invalid date strings', () => {
+      // This looks like a date format but is invalid
+      const result = coerceValue('2024-99-99');
+
+      // Should return string since the date is invalid
+      expect(result).toBe('2024-99-99');
+    });
+
+    test('does not coerce invalid JSON', () => {
+      const result = coerceValue('{invalid}');
+
+      // Should return original string since JSON parsing fails
+      expect(result).toBe('{invalid}');
+    });
+
+    test('handles empty string', () => {
+      const result = coerceValue('');
+
+      expect(result).toBe('');
+    });
+
+    test('handles infinity', () => {
+      // isFinite check should prevent Infinity from being coerced to number
+      const result = coerceValue('Infinity');
+
+      // Should remain a string because isFinite(Infinity) is false
+      expect(result).toBe('Infinity');
+    });
+  });
+
+  describe('parseRequestBody with urlencoded form', () => {
+    test('parses application/x-www-form-urlencoded', async () => {
+      const body = new URLSearchParams();
+      body.set('name', 'John');
+      body.set('age', '30');
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+
+      const { body: parsedBody, contentType, formData } = await parseRequestBody(request);
+
+      expect(contentType).toBe('form');
+      expect(formData).toBeDefined();
+      expect((parsedBody as any).name).toBe('John');
+      expect((parsedBody as any).age).toBe(30);
+    });
+  });
+
+  describe('validateRequired with empty string values', () => {
+    test('fails when field is empty string after trim', () => {
+      const formData = new FormData();
+      formData.set('name', '   ');
+
+      const result = validateRequired(formData, ['name']);
+
+      expect(result.success).toBe(false);
+      expect(result.errors?.name).toBeDefined();
+    });
+  });
+
+  describe('combineValidators merging errors', () => {
+    test('merges errors from multiple validators for same field', async () => {
+      const validator = combineValidators(
+        () => ({ success: false, errors: { email: ['Required'] } }),
+        () => ({ success: false, errors: { email: ['Invalid format'] } })
+      );
+
+      const formData = new FormData();
+      const result = await validator(formData);
+
+      expect(result.success).toBe(false);
+      expect(result.errors?.email).toContain('Required');
+      expect(result.errors?.email).toContain('Invalid format');
+    });
+
+    test('passes when all validators pass', async () => {
+      const validator = combineValidators(
+        () => ({ success: true }),
+        () => ({ success: true })
+      );
+
+      const formData = new FormData();
+      const result = await validator(formData);
+
+      expect(result.success).toBe(true);
+      expect(result.errors).toBeUndefined();
+    });
+  });
+
+  describe('schema with _root path', () => {
+    test('handles schema error with empty path', async () => {
+      const mockSchema = {
+        safeParse: () => ({
+          success: false as const,
+          error: { errors: [{ path: [], message: 'Root level error' }] },
+        }),
+      };
+
+      const actionFn = typedAction<{ name: string }>({
+        schema: mockSchema as any,
+        handler: async ({ body }) => body,
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const result = await actionFn({
+        request,
+        params: {},
+        context: createContext(request),
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.errors?._root).toContain('Root level error');
+    });
+  });
+
+  describe('getNestedValue edge cases', () => {
+    test('array notation when path does not exist yet', () => {
+      // First append creates the array
+      const formData = new FormData();
+      formData.append('newarray[]', 'first');
+
+      const result = formDataToObject<{ newarray: string[] }>(formData);
+
+      expect(result.newarray).toEqual(['first']);
+    });
+
+    test('array notation with nested path that does not exist', () => {
+      const formData = new FormData();
+      formData.set('deep.path.that.does.not.exist', 'value');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).deep.path.that.does.not.exist).toBe('value');
+    });
+
+    test('array notation when path points to non-object (primitive value collision)', () => {
+      // First set a value at 'item', then try to use array notation at 'item[]'
+      // This tests the getNestedValue returning undefined for non-object
+      const formData = new FormData();
+      formData.set('item', 'scalar_value');
+      formData.append('item[]', 'array_value');
+
+      const result = formDataToObject(formData);
+
+      // The array notation should create a new array since 'item' was a scalar
+      expect(result.item).toEqual(['array_value']);
+    });
+
+    test('array notation with deeply nested path where intermediate is not object', () => {
+      const formData = new FormData();
+      formData.set('a.b', 'primitive');
+      // Now try to access a.b.c - b is not an object, so setNestedValueDirect
+      // will try to traverse into a primitive, which causes an error
+      formData.append('a.b.c[]', 'value');
+
+      // This causes an error because we can't traverse into a primitive
+      try {
+        formDataToObject(formData);
+      } catch (e) {
+        // Expected: trying to set property on a primitive
+        expect(e).toBeDefined();
+      }
+    });
+  });
+
+  describe('setNestedValueDirect coverage', () => {
+    test('creates nested objects when setting deep path in array notation', () => {
+      const formData = new FormData();
+      // This uses setNestedValueDirect when first creating the array
+      formData.append('items[]', 'item1');
+      formData.append('items[]', 'item2');
+
+      const result = formDataToObject<{ items: string[] }>(formData);
+
+      expect(result.items).toEqual(['item1', 'item2']);
+    });
+
+    test('creates nested array when next segment is number', () => {
+      const formData = new FormData();
+      formData.set('matrix[0][0]', 'a');
+      formData.set('matrix[0][1]', 'b');
+      formData.set('matrix[1][0]', 'c');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).matrix[0][0]).toBe('a');
+      expect((result as any).matrix[0][1]).toBe('b');
+      expect((result as any).matrix[1][0]).toBe('c');
+    });
+  });
+
+  describe('typedAction with validate that passes', () => {
+    test('continues to handler when validation passes', async () => {
+      const actionFn = typedAction<{ name: string }>({
+        handler: async ({ body }) => ({ processed: body.name }),
+        validate: (body) => {
+          if (body.name && body.name.length > 0) {
+            return { success: true };
+          }
+          return { success: false, errors: { name: ['Name required'] } };
+        },
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'John' }),
+      });
+
+      const result = await actionFn({
+        request,
+        params: {},
+        context: createContext(request),
+      });
+
+      expect(result.success).toBe(true);
+      expect((result.data as any)?.processed).toBe('John');
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import {
   extractIslands,
   transformIslandJSX,
@@ -6,8 +6,10 @@ import {
   generateIslandEntry,
   findIslandByName,
   hasIslands,
+  createIslandsPlugin,
   type IslandMeta,
 } from './islands';
+import { rm, mkdir } from 'node:fs/promises';
 
 describe('@areo/bundler - Islands Plugin', () => {
   describe('extractIslands', () => {
@@ -300,6 +302,165 @@ export function Component() {}`;
     test('returns false for regular files', () => {
       expect(hasIslands('export function Component() { return <div />; }')).toBe(false);
       expect(hasIslands('const x = 1;')).toBe(false);
+    });
+  });
+
+  describe('createIslandsPlugin', () => {
+    const testOutDir = '.areo';
+
+    beforeEach(async () => {
+      // Clean up test output directory
+      await rm(testOutDir, { recursive: true, force: true });
+    });
+
+    afterEach(async () => {
+      await rm(testOutDir, { recursive: true, force: true });
+    });
+
+    test('creates plugin with correct name', () => {
+      const plugin = createIslandsPlugin();
+
+      expect(plugin.name).toBe('areo:islands');
+    });
+
+    test('plugin has transform function', () => {
+      const plugin = createIslandsPlugin();
+
+      expect(plugin.transform).toBeDefined();
+      expect(typeof plugin.transform).toBe('function');
+    });
+
+    test('plugin has buildEnd function', () => {
+      const plugin = createIslandsPlugin();
+
+      expect(plugin.buildEnd).toBeDefined();
+      expect(typeof plugin.buildEnd).toBe('function');
+    });
+
+    test('transform returns null for non-JSX files', () => {
+      const plugin = createIslandsPlugin();
+
+      const result = plugin.transform!('const x = 1;', '/app/utils.ts');
+
+      expect(result).toBeNull();
+    });
+
+    test('transform returns null for JSX files without islands', () => {
+      const plugin = createIslandsPlugin();
+
+      const result = plugin.transform!('export function Component() { return <div />; }', '/app/component.tsx');
+
+      expect(result).toBeNull();
+    });
+
+    test('transform processes use client files', () => {
+      const plugin = createIslandsPlugin();
+
+      const code = `'use client'
+export function Counter() { return <button client:load>+</button>; }`;
+      const result = plugin.transform!(code, '/app/components/Counter.tsx');
+
+      expect(result).not.toBeNull();
+      expect(result).toContain('data-island');
+    });
+
+    test('transform handles .jsx files', () => {
+      const plugin = createIslandsPlugin();
+
+      const code = `'use client'
+export function Button() { return <button client:idle>Click</button>; }`;
+      const result = plugin.transform!(code, '/app/components/Button.jsx');
+
+      expect(result).not.toBeNull();
+    });
+
+    test('buildEnd does nothing with no islands', async () => {
+      const plugin = createIslandsPlugin();
+
+      // Should not throw or create files
+      await plugin.buildEnd!();
+
+      const manifestExists = await Bun.file('.areo/islands.json').exists();
+      expect(manifestExists).toBe(false);
+    });
+
+    test('buildEnd writes manifest and entry for islands', async () => {
+      const plugin = createIslandsPlugin();
+
+      // Process a file with islands
+      const code = `'use client'
+export function Counter() { return <button>+</button>; }`;
+      plugin.transform!(code, '/app/components/Counter.tsx');
+
+      // Create output directory
+      await mkdir('.areo', { recursive: true });
+
+      // Build end should write files
+      await plugin.buildEnd!();
+
+      // Check files were created
+      const manifestExists = await Bun.file('.areo/islands.json').exists();
+      const entryExists = await Bun.file('.areo/islands.entry.ts').exists();
+
+      expect(manifestExists).toBe(true);
+      expect(entryExists).toBe(true);
+    });
+
+    test('buildEnd writes valid JSON manifest', async () => {
+      const plugin = createIslandsPlugin();
+
+      const code = `'use client'
+export function Timer() { return <span>Timer</span>; }`;
+      plugin.transform!(code, '/app/components/Timer.tsx');
+
+      await mkdir('.areo', { recursive: true });
+      await plugin.buildEnd!();
+
+      const manifestContent = await Bun.file('.areo/islands.json').text();
+      const manifest = JSON.parse(manifestContent);
+
+      expect(Object.keys(manifest).length).toBeGreaterThan(0);
+      const firstIsland = Object.values(manifest)[0] as any;
+      expect(firstIsland.name).toBe('Timer');
+      expect(firstIsland.strategy).toBe('load');
+    });
+
+    test('buildEnd writes valid entry file', async () => {
+      const plugin = createIslandsPlugin();
+
+      const code = `'use client'
+export function Widget() { return <div>Widget</div>; }`;
+      plugin.transform!(code, '/app/components/Widget.tsx');
+
+      await mkdir('.areo', { recursive: true });
+      await plugin.buildEnd!();
+
+      const entryContent = await Bun.file('.areo/islands.entry.ts').text();
+
+      expect(entryContent).toContain("from '@areo/client'");
+      expect(entryContent).toContain('registerIslandComponent');
+      expect(entryContent).toContain('initializeIslands');
+      expect(entryContent).toContain('Widget');
+    });
+
+    test('transform accumulates multiple islands', async () => {
+      const plugin = createIslandsPlugin();
+
+      const code1 = `'use client'
+export function Counter() { return <button>+</button>; }`;
+      const code2 = `'use client'
+export function Timer() { return <span>0:00</span>; }`;
+
+      plugin.transform!(code1, '/app/components/Counter.tsx');
+      plugin.transform!(code2, '/app/components/Timer.tsx');
+
+      await mkdir('.areo', { recursive: true });
+      await plugin.buildEnd!();
+
+      const manifestContent = await Bun.file('.areo/islands.json').text();
+      const manifest = JSON.parse(manifestContent);
+
+      expect(Object.keys(manifest).length).toBe(2);
     });
   });
 });

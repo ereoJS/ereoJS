@@ -276,4 +276,230 @@ describe('api helper', () => {
     expect(typeof postsApi.patch).toBe('function');
     expect(typeof postsApi.delete).toBe('function');
   });
+
+  it('should call get method on global client', async () => {
+    const mockFetch = () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ items: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    configureClient({ fetch: mockFetch, baseUrl: '' });
+
+    const response = await api('/api/posts').get();
+    expect(response.ok).toBe(true);
+    expect(response.data).toEqual({ items: [] });
+  });
+
+  it('should call post method on global client', async () => {
+    const mockFetch = () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ id: 1 }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    configureClient({ fetch: mockFetch, baseUrl: '' });
+
+    const response = await api('/api/posts').post({ body: { title: 'Test' } });
+    expect(response.ok).toBe(true);
+    expect(response.data).toEqual({ id: 1 });
+  });
+
+  it('should call put method on global client', async () => {
+    const mockFetch = () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ updated: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    configureClient({ fetch: mockFetch, baseUrl: '' });
+
+    const response = await api('/api/posts/1').put({ body: { title: 'Updated' } });
+    expect(response.ok).toBe(true);
+    expect(response.data).toEqual({ updated: true });
+  });
+
+  it('should call patch method on global client', async () => {
+    const mockFetch = () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ patched: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    configureClient({ fetch: mockFetch, baseUrl: '' });
+
+    const response = await api('/api/posts/1').patch({ body: { title: 'Patched' } });
+    expect(response.ok).toBe(true);
+    expect(response.data).toEqual({ patched: true });
+  });
+
+  it('should call delete method on global client', async () => {
+    const mockFetch = () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ deleted: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    configureClient({ fetch: mockFetch, baseUrl: '' });
+
+    const response = await api('/api/posts/1').delete();
+    expect(response.ok).toBe(true);
+    expect(response.data).toEqual({ deleted: true });
+  });
+});
+
+describe('ApiClient error handling', () => {
+  it('should create API error with correct properties', async () => {
+    const errorFetch = () => Promise.reject(new Error('Network error'));
+
+    const client = new ApiClient({ fetch: errorFetch });
+
+    try {
+      await client.get('/api/posts');
+      expect(true).toBe(false); // Should not reach here
+    } catch (error: unknown) {
+      const apiError = error as {
+        message: string;
+        status: number;
+        path: string;
+        method: string;
+        name: string;
+      };
+      expect(apiError.message).toBe('Network error');
+      expect(apiError.status).toBe(0);
+      expect(apiError.path).toBe('/api/posts');
+      expect(apiError.method).toBe('GET');
+      expect(apiError.name).toBe('ApiError');
+    }
+  });
+
+  it('should call onError callback when request fails', async () => {
+    const errorFetch = () => Promise.reject(new Error('Connection refused'));
+    let capturedError: unknown = null;
+
+    const client = new ApiClient({
+      fetch: errorFetch,
+      onError: async (error) => {
+        capturedError = error;
+      },
+    });
+
+    try {
+      await client.get('/api/data');
+    } catch {
+      // Expected to throw
+    }
+
+    expect(capturedError).not.toBeNull();
+    const err = capturedError as { message: string; path: string };
+    expect(err.message).toBe('Connection refused');
+    expect(err.path).toBe('/api/data');
+  });
+
+  it('should set correct method in error for POST requests', async () => {
+    const errorFetch = () => Promise.reject(new Error('Server error'));
+
+    const client = new ApiClient({ fetch: errorFetch });
+
+    try {
+      await client.post('/api/items', { body: { name: 'test' } });
+    } catch (error: unknown) {
+      const apiError = error as { method: string };
+      expect(apiError.method).toBe('POST');
+    }
+  });
+});
+
+describe('ApiClient request body handling', () => {
+  it('should handle FormData body', async () => {
+    let capturedInit: RequestInit | undefined;
+    const customFetch = (_url: string, init?: RequestInit) => {
+      capturedInit = init;
+      return Promise.resolve(
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    };
+
+    const client = new ApiClient({ fetch: customFetch });
+    const formData = new FormData();
+    formData.append('file', 'test');
+
+    await client.request({
+      path: '/api/upload',
+      method: 'POST',
+      body: formData,
+    });
+
+    expect(capturedInit?.body).toBe(formData);
+    // Content-Type should not be set for FormData
+    const headers = capturedInit?.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBeUndefined();
+  });
+
+  it('should handle URLSearchParams body', async () => {
+    let capturedInit: RequestInit | undefined;
+    const customFetch = (_url: string, init?: RequestInit) => {
+      capturedInit = init;
+      return Promise.resolve(
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    };
+
+    const client = new ApiClient({ fetch: customFetch });
+    const params = new URLSearchParams();
+    params.append('key', 'value');
+
+    await client.request({
+      path: '/api/form',
+      method: 'POST',
+      body: params,
+    });
+
+    expect(capturedInit?.body).toBe(params);
+    const headers = capturedInit?.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('application/x-www-form-urlencoded');
+  });
+});
+
+describe('ApiClient debug mode', () => {
+  it('should log requests when debug is enabled', async () => {
+    const logs: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      logs.push(args.join(' '));
+    };
+
+    const mockFetch = () =>
+      Promise.resolve(
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    const client = new ApiClient({ fetch: mockFetch, debug: true });
+    await client.get('/api/test');
+
+    console.log = originalLog;
+
+    expect(logs.some((log) => log.includes('[API]') && log.includes('GET') && log.includes('/api/test'))).toBe(
+      true
+    );
+  });
 });

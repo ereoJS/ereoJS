@@ -89,6 +89,55 @@ describe('createTestContext', () => {
     expect(ctx.get('initial')).toBe('value');
     expect(ctx.getCacheOperations()).toEqual([]);
   });
+
+  test('creates context with URL object', () => {
+    const urlObj = new URL('https://api.example.com/v1/users');
+    const ctx = createTestContext({
+      url: urlObj,
+    });
+
+    expect(ctx.url.pathname).toBe('/v1/users');
+    expect(ctx.url.hostname).toBe('api.example.com');
+  });
+
+  test('creates context with response headers', () => {
+    const ctx = createTestContext({
+      responseHeaders: {
+        'X-Custom-Header': 'custom-value',
+        'Cache-Control': 'no-cache',
+      },
+    });
+
+    expect(ctx.responseHeaders.get('X-Custom-Header')).toBe('custom-value');
+    expect(ctx.responseHeaders.get('Cache-Control')).toBe('no-cache');
+  });
+
+  test('cache set without tags', () => {
+    const ctx = createTestContext();
+
+    ctx.cache.set({ maxAge: 3600 });
+
+    const operations = ctx.getCacheOperations();
+    expect(operations).toHaveLength(1);
+    expect(operations[0].options?.maxAge).toBe(3600);
+    expect(ctx.cache.getTags()).toEqual([]);
+  });
+
+  test('resets cache tags and response headers', () => {
+    const ctx = createTestContext({
+      cacheTags: ['initial-tag'],
+      responseHeaders: { 'X-Initial': 'value' },
+    });
+
+    ctx.cache.set({ tags: ['added-tag'] });
+    ctx.responseHeaders.set('X-Added', 'new-value');
+
+    ctx.reset();
+
+    expect(ctx.cache.getTags()).toEqual(['initial-tag']);
+    expect(ctx.responseHeaders.get('X-Initial')).toBe('value');
+    expect(ctx.responseHeaders.get('X-Added')).toBeNull();
+  });
 });
 
 describe('createContextFactory', () => {
@@ -140,5 +189,44 @@ describe('createContextFactory', () => {
 
     expect(ctx1.get('value')).toBe('ctx1');
     expect(ctx2.get('value')).toBe('ctx2');
+  });
+
+  test('merges env values', () => {
+    const factory = createContextFactory({
+      env: { BASE_URL: 'http://base.com' },
+    });
+
+    const ctx = factory({
+      env: { API_KEY: 'key123' },
+    });
+
+    expect(ctx.env.BASE_URL).toBe('http://base.com');
+    expect(ctx.env.API_KEY).toBe('key123');
+  });
+
+  test('merges response headers', () => {
+    const factory = createContextFactory({
+      responseHeaders: { 'X-Base': 'value' },
+    });
+
+    const ctx = factory({
+      responseHeaders: { 'X-Override': 'new-value' },
+    });
+
+    expect(ctx.responseHeaders.get('X-Base')).toBe('value');
+    expect(ctx.responseHeaders.get('X-Override')).toBe('new-value');
+  });
+
+  test('merges cache tags', () => {
+    const factory = createContextFactory({
+      cacheTags: ['base-tag'],
+    });
+
+    const ctx = factory({
+      cacheTags: ['override-tag'],
+    });
+
+    expect(ctx.cache.getTags()).toContain('base-tag');
+    expect(ctx.cache.getTags()).toContain('override-tag');
   });
 });

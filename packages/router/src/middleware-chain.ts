@@ -398,7 +398,7 @@ export function method(
  * Convert a glob pattern to a RegExp.
  * Supports * (match anything except /) and ** (match anything including /).
  */
-function globToRegex(glob: string): RegExp {
+export function globToRegex(glob: string): RegExp {
   const escaped = glob
     .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars except * and ?
     .replace(/\*\*/g, '{{GLOBSTAR}}')     // Temporarily replace **

@@ -244,6 +244,86 @@ describe('@areo/client - Hydration', () => {
       });
     });
 
+    test('idle strategy cleanup cancels requestIdleCallback', () => {
+      let cancelCalled = false;
+      let cancelledId: number | null = null;
+      const onHydrate = () => {};
+      const element = {} as Element;
+
+      // Mock requestIdleCallback that doesn't immediately call the callback
+      const originalWindow = (globalThis as any).window;
+      const originalRIC = (globalThis as any).requestIdleCallback;
+      const originalCIC = (globalThis as any).cancelIdleCallback;
+
+      (globalThis as any).window = {
+        ...(originalWindow || {}),
+        requestIdleCallback: (cb: () => void) => 456,
+        cancelIdleCallback: (id: number) => {
+          cancelCalled = true;
+          cancelledId = id;
+        },
+      };
+      (globalThis as any).requestIdleCallback = (cb: () => void) => 456;
+      (globalThis as any).cancelIdleCallback = (id: number) => {
+        cancelCalled = true;
+        cancelledId = id;
+      };
+
+      const cleanup = createHydrationTrigger('idle', element, onHydrate);
+
+      // Call cleanup before the idle callback fires
+      cleanup();
+
+      expect(cancelCalled).toBe(true);
+      expect(cancelledId).toBe(456);
+
+      // Restore
+      if (originalWindow) {
+        (globalThis as any).window = originalWindow;
+      } else {
+        delete (globalThis as any).window;
+      }
+      if (originalRIC) {
+        (globalThis as any).requestIdleCallback = originalRIC;
+      } else {
+        delete (globalThis as any).requestIdleCallback;
+      }
+      if (originalCIC) {
+        (globalThis as any).cancelIdleCallback = originalCIC;
+      } else {
+        delete (globalThis as any).cancelIdleCallback;
+      }
+    });
+
+    test('idle strategy cleanup cancels setTimeout when requestIdleCallback unavailable', () => {
+      let clearTimeoutCalled = false;
+      const onHydrate = () => {};
+      const element = {} as Element;
+
+      // Ensure requestIdleCallback is not available
+      const originalRIC = (globalThis as any).requestIdleCallback;
+      const originalClearTimeout = globalThis.clearTimeout;
+      delete (globalThis as any).requestIdleCallback;
+
+      globalThis.clearTimeout = ((id: any) => {
+        clearTimeoutCalled = true;
+        originalClearTimeout(id);
+      }) as typeof clearTimeout;
+
+      const cleanup = createHydrationTrigger('idle', element, onHydrate);
+
+      // Call cleanup before the timeout fires
+      cleanup();
+
+      expect(clearTimeoutCalled).toBe(true);
+
+      // Restore
+      globalThis.clearTimeout = originalClearTimeout;
+      if (originalRIC) {
+        (globalThis as any).requestIdleCallback = originalRIC;
+      }
+    });
+
     test('visible strategy uses IntersectionObserver', () => {
       let observedElement: Element | null = null;
       let disconnectCalled = false;
@@ -274,6 +354,107 @@ describe('@areo/client - Hydration', () => {
       expect(onHydrateCalled).toBe(true);
       expect(disconnectCalled).toBe(true);
       expect(typeof cleanup).toBe('function');
+
+      // Restore
+      (globalThis as any).IntersectionObserver = originalIO;
+    });
+
+    test('visible strategy does not hydrate when element is not intersecting', () => {
+      let onHydrateCalled = false;
+      let disconnectCalled = false;
+      const onHydrate = () => { onHydrateCalled = true; };
+      const element = { id: 'test' } as Element;
+
+      // Mock IntersectionObserver
+      const originalIO = (globalThis as any).IntersectionObserver;
+      (globalThis as any).IntersectionObserver = class {
+        callback: IntersectionObserverCallback;
+        constructor(callback: IntersectionObserverCallback, options: any) {
+          this.callback = callback;
+        }
+        observe(el: Element) {
+          // Simulate NOT intersecting
+          this.callback([{ isIntersecting: false }] as IntersectionObserverEntry[], this as any);
+        }
+        disconnect() {
+          disconnectCalled = true;
+        }
+      };
+
+      const cleanup = createHydrationTrigger('visible', element, onHydrate);
+
+      expect(onHydrateCalled).toBe(false);
+      expect(disconnectCalled).toBe(false);
+      expect(typeof cleanup).toBe('function');
+
+      // Restore
+      (globalThis as any).IntersectionObserver = originalIO;
+    });
+
+    test('visible strategy handles multiple entries and stops at first intersecting', () => {
+      let onHydrateCallCount = 0;
+      let disconnectCalled = false;
+      const onHydrate = () => { onHydrateCallCount++; };
+      const element = { id: 'test' } as Element;
+
+      // Mock IntersectionObserver
+      const originalIO = (globalThis as any).IntersectionObserver;
+      (globalThis as any).IntersectionObserver = class {
+        callback: IntersectionObserverCallback;
+        constructor(callback: IntersectionObserverCallback, options: any) {
+          this.callback = callback;
+        }
+        observe(el: Element) {
+          // Simulate multiple entries - first not intersecting, second intersecting
+          this.callback([
+            { isIntersecting: false },
+            { isIntersecting: true },
+            { isIntersecting: true }, // This should not trigger another call due to break
+          ] as IntersectionObserverEntry[], this as any);
+        }
+        disconnect() {
+          disconnectCalled = true;
+        }
+      };
+
+      const cleanup = createHydrationTrigger('visible', element, onHydrate);
+
+      // Should only be called once due to break after first intersecting entry
+      expect(onHydrateCallCount).toBe(1);
+      expect(disconnectCalled).toBe(true);
+
+      // Restore
+      (globalThis as any).IntersectionObserver = originalIO;
+    });
+
+    test('visible strategy cleanup disconnects observer', () => {
+      let disconnectCalled = false;
+      const onHydrate = () => {};
+      const element = { id: 'test' } as Element;
+
+      // Mock IntersectionObserver
+      const originalIO = (globalThis as any).IntersectionObserver;
+      (globalThis as any).IntersectionObserver = class {
+        callback: IntersectionObserverCallback;
+        constructor(callback: IntersectionObserverCallback, options: any) {
+          this.callback = callback;
+        }
+        observe(el: Element) {
+          // Don't trigger intersection - element stays not visible
+        }
+        disconnect() {
+          disconnectCalled = true;
+        }
+      };
+
+      const cleanup = createHydrationTrigger('visible', element, onHydrate);
+
+      expect(disconnectCalled).toBe(false);
+
+      // Call cleanup
+      cleanup();
+
+      expect(disconnectCalled).toBe(true);
 
       // Restore
       (globalThis as any).IntersectionObserver = originalIO;
@@ -346,6 +527,72 @@ describe('@areo/client - Hydration', () => {
 
       expect(called).toBe(false);
       expect(typeof cleanup).toBe('function');
+    });
+
+    test('media strategy cleanup removes event listener', () => {
+      let removeListenerCalled = false;
+      let called = false;
+      const onHydrate = () => { called = true; };
+      const element = {} as Element;
+
+      // Mock matchMedia that doesn't match
+      (globalThis as any).window = {
+        matchMedia: (query: string) => ({
+          matches: false,
+          addEventListener: () => {},
+          removeEventListener: () => {
+            removeListenerCalled = true;
+          },
+        }),
+      };
+
+      const cleanup = createHydrationTrigger('media', element, onHydrate, '(max-width: 768px)');
+
+      expect(called).toBe(false);
+
+      // Call cleanup
+      cleanup();
+
+      expect(removeListenerCalled).toBe(true);
+    });
+
+    test('load strategy cleanup does nothing (no cleanup needed)', () => {
+      let called = false;
+      const onHydrate = () => { called = true; };
+      const element = {} as Element;
+
+      const cleanup = createHydrationTrigger('load', element, onHydrate);
+
+      expect(called).toBe(true);
+
+      // Cleanup should not throw
+      expect(() => cleanup()).not.toThrow();
+    });
+
+    test('none strategy cleanup does nothing (no cleanup needed)', () => {
+      let called = false;
+      const onHydrate = () => { called = true; };
+      const element = {} as Element;
+
+      const cleanup = createHydrationTrigger('none', element, onHydrate);
+
+      expect(called).toBe(false);
+
+      // Cleanup should not throw
+      expect(() => cleanup()).not.toThrow();
+    });
+
+    test('handles unknown strategy gracefully', () => {
+      let called = false;
+      const onHydrate = () => { called = true; };
+      const element = {} as Element;
+
+      // Cast to any to test unknown strategy
+      const cleanup = createHydrationTrigger('unknown' as any, element, onHydrate);
+
+      expect(called).toBe(false);
+      expect(typeof cleanup).toBe('function');
+      expect(() => cleanup()).not.toThrow();
     });
   });
 });

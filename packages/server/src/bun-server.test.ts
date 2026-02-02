@@ -1,5 +1,6 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
 import { BunServer, createServer, serve } from './bun-server';
+import { AreoApp } from '@areo/core';
 
 describe('@areo/server - BunServer', () => {
   let server: BunServer;
@@ -154,6 +155,435 @@ describe('@areo/server - BunServer', () => {
 
       expect(server).toBeInstanceOf(BunServer);
       expect(server.getServer()).not.toBeNull();
+    });
+  });
+
+  describe('setApp', () => {
+    test('sets the app instance', async () => {
+      server = createServer({ port: 4573, logging: false });
+      const app = new AreoApp();
+
+      server.setApp(app);
+
+      // App should be set - we verify by starting and making a request
+      await server.start();
+      const response = await fetch('http://localhost:4573/');
+      // App returns 500 when router is not configured
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe('setRouter with app', () => {
+    test('sets router and connects to app', async () => {
+      server = createServer({ port: 4574, logging: false });
+      const app = new AreoApp();
+      server.setApp(app);
+
+      const mockRouter = {
+        match: (pathname: string) => {
+          if (pathname === '/test-route') {
+            return {
+              route: { id: '/test', path: '/test', file: '/test.tsx' },
+              params: {},
+              pathname: '/test-route',
+            };
+          }
+          return null;
+        },
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+
+      await server.start();
+      // The router is connected to the app
+      const response = await fetch('http://localhost:4574/unknown');
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('handleRoute', () => {
+    test('handles route with action (POST request)', async () => {
+      server = createServer({ port: 4575, logging: false });
+
+      const mockRouter = {
+        match: (pathname: string) => {
+          return {
+            route: {
+              id: '/action',
+              path: '/action',
+              file: '/action.tsx',
+              module: {
+                action: async ({ request, params }: any) => {
+                  return { success: true, method: request.method };
+                },
+              },
+            },
+            params: { id: '123' },
+            pathname,
+          };
+        },
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4575/action', {
+        method: 'POST',
+        body: JSON.stringify({ data: 'test' }),
+      });
+
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json.success).toBe(true);
+      expect(json.method).toBe('POST');
+    });
+
+    test('handles action that returns a Response directly', async () => {
+      server = createServer({ port: 4576, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/action-response',
+            path: '/action-response',
+            file: '/action-response.tsx',
+            module: {
+              action: async () => new Response('Direct Response', { status: 201 }),
+            },
+          },
+          params: {},
+          pathname: '/action-response',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4576/action-response', {
+        method: 'PUT',
+      });
+
+      expect(response.status).toBe(201);
+      expect(await response.text()).toBe('Direct Response');
+    });
+
+    test('returns 405 for non-GET without action', async () => {
+      server = createServer({ port: 4577, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/no-action',
+            path: '/no-action',
+            file: '/no-action.tsx',
+            module: {
+              // No action defined
+              loader: async () => ({ data: 'test' }),
+            },
+          },
+          params: {},
+          pathname: '/no-action',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4577/no-action', {
+        method: 'DELETE',
+      });
+
+      expect(response.status).toBe(405);
+      expect(await response.text()).toBe('Method Not Allowed');
+    });
+
+    test('handles route without module loaded', async () => {
+      server = createServer({ port: 4578, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/no-module',
+            path: '/no-module',
+            file: '/no-module.tsx',
+            module: null, // Module not loaded
+          },
+          params: {},
+          pathname: '/no-module',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4578/no-module');
+
+      expect(response.status).toBe(500);
+      expect(await response.text()).toBe('Route module not loaded');
+    });
+
+    test('handles loader that returns Response directly', async () => {
+      server = createServer({ port: 4579, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/loader-response',
+            path: '/loader-response',
+            file: '/loader-response.tsx',
+            module: {
+              loader: async () => new Response('Loader Response', { status: 302 }),
+            },
+          },
+          params: {},
+          pathname: '/loader-response',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4579/loader-response');
+
+      expect(response.status).toBe(302);
+      expect(await response.text()).toBe('Loader Response');
+    });
+
+    test('handles JSON request (Accept: application/json)', async () => {
+      server = createServer({ port: 4580, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/json-route',
+            path: '/json-route',
+            file: '/json-route.tsx',
+            module: {
+              loader: async () => ({ user: 'test', id: 1 }),
+            },
+          },
+          params: { slug: 'my-post' },
+          pathname: '/json-route',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4580/json-route', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+      const json = await response.json();
+      expect(json.data).toEqual({ user: 'test', id: 1 });
+      expect(json.params).toEqual({ slug: 'my-post' });
+    });
+
+    test('handles GET request without JSON Accept header (full page render)', async () => {
+      server = createServer({ port: 4581, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/page-render',
+            path: '/page-render',
+            file: '/page-render.tsx',
+            module: {
+              loader: async () => ({ title: 'My Page' }),
+            },
+          },
+          params: {},
+          pathname: '/page-render',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4581/page-render', {
+        headers: { Accept: 'text/html' },
+      });
+
+      expect(response.status).toBe(200);
+      // Currently returns JSON until React rendering is set up
+      const json = await response.json();
+      expect(json.data).toEqual({ title: 'My Page' });
+    });
+
+    test('handles route with no loader', async () => {
+      server = createServer({ port: 4582, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/no-loader',
+            path: '/no-loader',
+            file: '/no-loader.tsx',
+            module: {
+              // No loader defined
+            },
+          },
+          params: {},
+          pathname: '/no-loader',
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4582/no-loader');
+
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json.data).toBeNull();
+    });
+  });
+
+  describe('stop', () => {
+    test('stop when server is already null does nothing', () => {
+      server = createServer({ port: 4583, logging: false });
+      // Don't start the server
+      server.stop(); // Should not throw
+      expect(server.getServer()).toBeNull();
+    });
+  });
+
+  describe('reload', () => {
+    test('reloads the server when running', async () => {
+      server = createServer({ port: 4584, logging: false });
+      await server.start();
+
+      // Reload should not throw
+      await server.reload();
+
+      // Server should still be running
+      expect(server.getServer()).not.toBeNull();
+
+      // Should still handle requests
+      const response = await fetch('http://localhost:4584/');
+      expect(response.status).toBe(404);
+    });
+
+    test('reload does nothing when server is not running', async () => {
+      server = createServer({ port: 4585, logging: false });
+      // Don't start the server
+      await server.reload(); // Should not throw
+      expect(server.getServer()).toBeNull();
+    });
+  });
+
+  describe('error handling', () => {
+    test('handles non-Error throws', async () => {
+      server = createServer({
+        port: 4586,
+        logging: false,
+        development: true,
+        handler: async () => {
+          throw 'string error'; // Non-Error object
+        },
+      });
+
+      await server.start();
+
+      const response = await fetch('http://localhost:4586/');
+
+      expect(response.status).toBe(500);
+      const json = await response.json();
+      expect(json.error).toBe('Internal Server Error');
+    });
+
+    test('handles non-Error in production mode', async () => {
+      server = createServer({
+        port: 4587,
+        logging: false,
+        development: false,
+        handler: async () => {
+          throw { custom: 'error object' };
+        },
+      });
+
+      await server.start();
+
+      const response = await fetch('http://localhost:4587/');
+
+      expect(response.status).toBe(500);
+      expect(await response.text()).toBe('Internal Server Error');
+    });
+  });
+
+  describe('middleware setup', () => {
+    test('enables CORS with object options', async () => {
+      server = createServer({
+        port: 4588,
+        logging: false,
+        cors: { origin: 'http://example.com' },
+        handler: async () => new Response('OK'),
+      });
+
+      await server.start();
+
+      const response = await fetch('http://localhost:4588/', {
+        headers: { Origin: 'http://example.com' },
+      });
+
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://example.com');
+    });
+
+    test('disables security headers when security is false', async () => {
+      server = createServer({
+        port: 4589,
+        logging: false,
+        security: false,
+        handler: async () => new Response('OK'),
+      });
+
+      await server.start();
+
+      const response = await fetch('http://localhost:4589/');
+
+      // Security headers should not be present
+      expect(response.headers.get('X-Content-Type-Options')).toBeNull();
+    });
+
+    test('enables security headers with object options', async () => {
+      server = createServer({
+        port: 4590,
+        logging: false,
+        security: { frameOptions: 'SAMEORIGIN' },
+        handler: async () => new Response('OK'),
+      });
+
+      await server.start();
+
+      const response = await fetch('http://localhost:4590/');
+
+      expect(response.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
+    });
+  });
+
+  describe('TLS and WebSocket options', () => {
+    test('accepts WebSocket configuration', () => {
+      // Just verify it doesn't throw when configuring websocket
+      server = createServer({
+        port: 4591,
+        logging: false,
+        websocket: {
+          message: (ws, message) => {},
+        },
+      });
+
+      expect(server).toBeInstanceOf(BunServer);
     });
   });
 });

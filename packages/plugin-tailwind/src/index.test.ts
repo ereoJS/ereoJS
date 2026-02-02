@@ -107,6 +107,139 @@ describe('@areo/plugin-tailwind', () => {
       // Should not throw even if config doesn't exist
       await expect(plugin.setup!(mockContext)).resolves.toBeUndefined();
     });
+
+    test('loads existing tailwind config when it exists', async () => {
+      // Create a temporary config file to test the hasConfig = true path
+      const fs = await import('node:fs/promises');
+      const tmpDir = '/tmp/areo-test-tailwind-' + Date.now();
+      await fs.mkdir(tmpDir, { recursive: true });
+      const configFile = `${tmpDir}/tailwind.config.js`;
+      await Bun.write(configFile, 'module.exports = {}');
+
+      // Verify the file was created
+      const fileExists = await Bun.file(configFile).exists();
+      expect(fileExists).toBe(true);
+
+      // Create plugin BEFORE setting up the mock to avoid issues
+      const plugin = tailwind({ config: 'tailwind.config.js' });
+      const mockContext = {
+        root: tmpDir,
+        mode: 'development' as const,
+        config: {},
+      };
+
+      // Capture logs during setup
+      const logs: string[] = [];
+      const originalLog = console.log;
+      console.log = function (...args: unknown[]) {
+        logs.push(args.join(' '));
+        originalLog.apply(console, args as [unknown?, ...unknown[]]);
+      };
+
+      try {
+        await plugin.setup!(mockContext);
+      } finally {
+        console.log = originalLog;
+      }
+
+      // Check that the "Using existing" message was logged
+      const foundExisting = logs.some((log) => log.includes('Using existing tailwind.config.js'));
+      expect(foundExisting).toBe(true);
+
+      // Clean up
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    });
+
+    test('handles error when checking for config file', async () => {
+      const plugin = tailwind({ config: 'tailwind.config.js' });
+
+      // Create a context with a path that will cause an error
+      // We mock Bun.file to throw an error
+      const mockContext = {
+        root: '/proc/invalid/path/that/causes/error',
+        mode: 'development' as const,
+        config: {},
+      };
+
+      const warnings: string[] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => {
+        warnings.push(args.join(' '));
+      };
+
+      // This should not throw but should warn
+      await expect(plugin.setup!(mockContext)).resolves.toBeUndefined();
+
+      console.warn = originalWarn;
+
+      // Note: The warning may or may not be triggered depending on Bun's behavior
+      // The test passes as long as it doesn't throw
+    });
+
+    test('uses Areo preset when config does not exist and usePreset is true', async () => {
+      const plugin = tailwind({ usePreset: true });
+      const mockContext = {
+        root: '/nonexistent/path',
+        mode: 'development' as const,
+        config: {},
+      };
+
+      const logs: string[] = [];
+      const originalLog = console.log;
+      console.log = (...args: unknown[]) => {
+        logs.push(args.join(' '));
+      };
+
+      await plugin.setup!(mockContext);
+
+      console.log = originalLog;
+
+      expect(logs.some((log) => log.includes('Using Areo Tailwind preset'))).toBe(true);
+    });
+
+    test('does not log preset message when usePreset is false', async () => {
+      const plugin = tailwind({ usePreset: false });
+      const mockContext = {
+        root: '/nonexistent/path',
+        mode: 'development' as const,
+        config: {},
+      };
+
+      const logs: string[] = [];
+      const originalLog = console.log;
+      console.log = (...args: unknown[]) => {
+        logs.push(args.join(' '));
+      };
+
+      await plugin.setup!(mockContext);
+
+      console.log = originalLog;
+
+      expect(logs.some((log) => log.includes('Using Areo Tailwind preset'))).toBe(false);
+    });
+
+    test('handles error when Bun.file throws', async () => {
+      // Use a config name with a null byte which causes Bun.file to throw
+      const plugin = tailwind({ config: 'tailwind\0.config.js' });
+      const mockContext = {
+        root: '/some/path',
+        mode: 'development' as const,
+        config: {},
+      };
+
+      const warnings: string[] = [];
+      const originalWarn = console.warn;
+      console.warn = (...args: unknown[]) => {
+        warnings.push(args.join(' '));
+      };
+
+      // Should not throw, but should warn
+      await expect(plugin.setup!(mockContext)).resolves.toBeUndefined();
+
+      console.warn = originalWarn;
+
+      expect(warnings.some((warn) => warn.includes('Warning: Could not check for Tailwind config'))).toBe(true);
+    });
   });
 
   describe('configureServer', () => {

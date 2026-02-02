@@ -128,8 +128,64 @@ describe('@areo/client - Prefetch', () => {
   });
 
   describe('prefetchAll', () => {
+    let originalFetch: typeof globalThis.fetch;
+
+    beforeEach(() => {
+      clearPrefetchCache();
+      originalFetch = globalThis.fetch;
+    });
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+    });
+
     test('is a function', () => {
       expect(typeof prefetchAll).toBe('function');
+    });
+
+    test('prefetches multiple URLs in parallel', async () => {
+      let fetchCount = 0;
+      const fetchedUrls: string[] = [];
+
+      globalThis.fetch = async (url: any) => {
+        fetchCount++;
+        fetchedUrls.push(url.toString());
+        return new Response(JSON.stringify({ url }), { status: 200 });
+      };
+
+      await prefetchAll(['/url1', '/url2', '/url3']);
+
+      expect(fetchCount).toBe(3);
+      expect(fetchedUrls).toContain('/url1');
+      expect(fetchedUrls).toContain('/url2');
+      expect(fetchedUrls).toContain('/url3');
+    });
+
+    test('handles empty URL array', async () => {
+      let fetchCount = 0;
+      globalThis.fetch = async () => {
+        fetchCount++;
+        return new Response('{}', { status: 200 });
+      };
+
+      await prefetchAll([]);
+
+      expect(fetchCount).toBe(0);
+    });
+
+    test('handles mixed success and failure', async () => {
+      globalThis.fetch = async (url: any) => {
+        if (url === '/success') {
+          return new Response(JSON.stringify({ ok: true }), { status: 200 });
+        }
+        return new Response('Not Found', { status: 404 });
+      };
+
+      // Should not throw even if some prefetches fail
+      await expect(prefetchAll(['/success', '/fail'])).resolves.toBeUndefined();
+
+      expect(isPrefetched('/success')).toBe(true);
+      expect(isPrefetched('/fail')).toBe(false);
     });
   });
 
@@ -241,6 +297,17 @@ describe('@areo/client - Prefetch', () => {
       await prefetch('/network-error');
 
       expect(isPrefetched('/network-error')).toBe(false);
+    });
+
+    test('handles non-Error thrown objects', async () => {
+      globalThis.fetch = async () => {
+        throw 'string error'; // Not an Error instance
+      };
+
+      await prefetch('/string-error');
+
+      expect(isPrefetched('/string-error')).toBe(false);
+      expect(isPrefetching('/string-error')).toBe(false);
     });
 
     test('does not re-fetch valid cached entries', async () => {

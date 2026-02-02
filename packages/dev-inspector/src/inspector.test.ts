@@ -163,4 +163,215 @@ describe('formatRouteTree', () => {
     expect(output).toContain('action');
     expect(output).toContain('2 islands');
   });
+
+  it('should display correct icons for all render modes', () => {
+    const routes = [
+      {
+        id: 'ssr',
+        path: '/ssr',
+        file: 'ssr.tsx',
+        renderMode: 'ssr',
+        islandCount: 0,
+        hasLoader: false,
+        hasAction: false,
+        middlewareCount: 0,
+      },
+      {
+        id: 'ssg',
+        path: '/ssg',
+        file: 'ssg.tsx',
+        renderMode: 'ssg',
+        islandCount: 0,
+        hasLoader: false,
+        hasAction: false,
+        middlewareCount: 0,
+      },
+      {
+        id: 'csr',
+        path: '/csr',
+        file: 'csr.tsx',
+        renderMode: 'csr',
+        islandCount: 0,
+        hasLoader: false,
+        hasAction: false,
+        middlewareCount: 0,
+      },
+      {
+        id: 'api',
+        path: '/api',
+        file: 'api.ts',
+        renderMode: 'api',
+        islandCount: 0,
+        hasLoader: false,
+        hasAction: false,
+        middlewareCount: 0,
+      },
+      {
+        id: 'rsc',
+        path: '/rsc',
+        file: 'rsc.tsx',
+        renderMode: 'rsc',
+        islandCount: 0,
+        hasLoader: false,
+        hasAction: false,
+        middlewareCount: 0,
+      },
+      {
+        id: 'unknown',
+        path: '/unknown',
+        file: 'unknown.tsx',
+        renderMode: 'custom',
+        islandCount: 0,
+        hasLoader: false,
+        hasAction: false,
+        middlewareCount: 0,
+      },
+    ];
+
+    const output = formatRouteTree(routes);
+
+    // SSR icon
+    expect(output).toContain('⚡');
+    // SSG icon
+    expect(output).toContain('📄');
+    // CSR icon
+    expect(output).toContain('💻');
+    // API icon
+    expect(output).toContain('🔌');
+    // RSC icon
+    expect(output).toContain('🚀');
+    // Default icon for unknown mode
+    expect(output).toContain('•');
+  });
+
+  it('should display auth tag when authRequired is true', () => {
+    const routes = [
+      {
+        id: 'protected',
+        path: '/protected',
+        file: 'protected.tsx',
+        renderMode: 'ssr',
+        islandCount: 0,
+        hasLoader: false,
+        hasAction: false,
+        middlewareCount: 0,
+        authRequired: true,
+      },
+    ];
+
+    const output = formatRouteTree(routes);
+
+    expect(output).toContain('auth');
+  });
+});
+
+describe('createDevInspector configureServer', () => {
+  it('should return inspector HTML at mount path', async () => {
+    const plugin = createDevInspector({ mountPath: '/__test-inspector' });
+
+    let middleware: (
+      request: Request,
+      ctx: unknown,
+      next: () => Promise<Response>
+    ) => Promise<Response>;
+    const mockServer = {
+      middlewares: {
+        push: (fn: typeof middleware) => {
+          middleware = fn;
+        },
+      },
+    };
+
+    plugin.configureServer!(mockServer);
+
+    const request = new Request('http://localhost:3000/__test-inspector');
+    const next = () => Promise.resolve(new Response('fallback'));
+
+    const response = await middleware!(request, {}, next);
+
+    expect(response.headers.get('Content-Type')).toBe('text/html');
+    const text = await response.text();
+    expect(text).toContain('<!DOCTYPE html>');
+    expect(text).toContain('Route Inspector');
+  });
+
+  it('should return routes JSON at api/routes endpoint', async () => {
+    const plugin = createDevInspector({ mountPath: '/__areo' });
+
+    let middleware: (
+      request: Request,
+      ctx: unknown,
+      next: () => Promise<Response>
+    ) => Promise<Response>;
+    const mockServer = {
+      middlewares: {
+        push: (fn: typeof middleware) => {
+          middleware = fn;
+        },
+      },
+    };
+
+    plugin.configureServer!(mockServer);
+
+    const request = new Request('http://localhost:3000/__areo/api/routes');
+    const next = () => Promise.resolve(new Response('fallback'));
+
+    const response = await middleware!(request, {}, next);
+
+    expect(response.headers.get('Content-Type')).toBe('application/json');
+    const json = await response.json();
+    expect(Array.isArray(json)).toBe(true);
+  });
+
+  it('should call next for unmatched paths', async () => {
+    const plugin = createDevInspector();
+
+    let middleware: (
+      request: Request,
+      ctx: unknown,
+      next: () => Promise<Response>
+    ) => Promise<Response>;
+    const mockServer = {
+      middlewares: {
+        push: (fn: typeof middleware) => {
+          middleware = fn;
+        },
+      },
+    };
+
+    plugin.configureServer!(mockServer);
+
+    const request = new Request('http://localhost:3000/some-other-path');
+    const next = () => Promise.resolve(new Response('next handler'));
+
+    const response = await middleware!(request, {}, next);
+
+    expect(await response.text()).toBe('next handler');
+  });
+
+  it('should use default mount path when not specified', async () => {
+    const plugin = createDevInspector();
+
+    let middleware: (
+      request: Request,
+      ctx: unknown,
+      next: () => Promise<Response>
+    ) => Promise<Response>;
+    const mockServer = {
+      middlewares: {
+        push: (fn: typeof middleware) => {
+          middleware = fn;
+        },
+      },
+    };
+
+    plugin.configureServer!(mockServer);
+
+    const request = new Request('http://localhost:3000/__areo');
+    const next = () => Promise.resolve(new Response('fallback'));
+
+    const response = await middleware!(request, {}, next);
+
+    expect(response.headers.get('Content-Type')).toBe('text/html');
+  });
 });

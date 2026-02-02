@@ -70,6 +70,8 @@ export {
   registerTypedMiddleware,
   getTypedMiddleware,
   validateMiddlewareChain,
+  // Utilities
+  globToRegex,
 } from './middleware-chain';
 
 export type {

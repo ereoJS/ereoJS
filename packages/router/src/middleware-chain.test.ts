@@ -20,6 +20,13 @@ import {
   createLoggerMiddleware,
   createCorsMiddleware,
   createRateLimitMiddleware,
+  createMiddleware,
+  chainMiddleware,
+  registerTypedMiddleware,
+  getTypedMiddleware,
+  validateMiddlewareChain,
+  globToRegex,
+  type TypedMiddleware,
 } from './middleware-chain';
 
 // Mock context helper
@@ -713,5 +720,545 @@ describe('createRateLimitMiddleware', () => {
     expect(response.headers.get('X-RateLimit-Limit')).toBe('10');
     expect(response.headers.has('X-RateLimit-Remaining')).toBe(true);
     expect(response.headers.has('X-RateLimit-Reset')).toBe(true);
+  });
+
+  it('should skip successful requests when configured', async () => {
+    const rateLimit = createRateLimitMiddleware({
+      windowMs: 60000,
+      maxRequests: 2,
+      skipSuccessfulRequests: true,
+    });
+
+    const request = new Request('http://localhost:3000/test');
+    const context = createMockContext();
+
+    // Successful requests should reset count
+    const response1 = await rateLimit(request, context, async () => new Response('OK', { status: 200 }));
+    expect(response1.status).toBe(200);
+
+    const response2 = await rateLimit(request, context, async () => new Response('OK', { status: 200 }));
+    expect(response2.status).toBe(200);
+
+    // Should still be under limit because successful requests were skipped
+    const response3 = await rateLimit(request, context, async () => new Response('OK', { status: 200 }));
+    expect(response3.status).toBe(200);
+  });
+
+  it('should use custom key generator', async () => {
+    const rateLimit = createRateLimitMiddleware({
+      maxRequests: 1,
+      keyGenerator: (req) => req.headers.get('X-User-ID') || 'anonymous',
+    });
+
+    const context = createMockContext();
+
+    // Different users should have separate rate limits
+    const request1 = new Request('http://localhost:3000/test', {
+      headers: { 'X-User-ID': 'user1' },
+    });
+    const request2 = new Request('http://localhost:3000/test', {
+      headers: { 'X-User-ID': 'user2' },
+    });
+
+    const response1 = await rateLimit(request1, context, async () => new Response('OK'));
+    expect(response1.status).toBe(200);
+
+    const response2 = await rateLimit(request2, context, async () => new Response('OK'));
+    expect(response2.status).toBe(200);
+  });
+});
+
+describe('createMiddleware (typed middleware)', () => {
+  beforeEach(() => {
+    clearMiddlewareRegistry();
+  });
+
+  it('should create typed middleware with config', () => {
+    const authMiddleware = createMiddleware<{ user: { id: string } }>({
+      name: 'auth',
+      provides: ['user'],
+      handler: async (req, ctx, next) => {
+        ctx.set('user', { id: '123' });
+        return next();
+      },
+    });
+
+    expect(authMiddleware.name).toBe('auth');
+    expect(authMiddleware.provides).toEqual(['user']);
+    expect(typeof authMiddleware.handler).toBe('function');
+    expect(typeof authMiddleware.register).toBe('function');
+  });
+
+  it('should register middleware via register method', () => {
+    const middleware = createMiddleware({
+      name: 'test-typed',
+      handler: async (req, ctx, next) => next(),
+    });
+
+    middleware.register();
+
+    expect(hasMiddleware('test-typed')).toBe(true);
+  });
+
+  it('should handle middleware with requires constraint', () => {
+    const adminMiddleware = createMiddleware<
+      { isAdmin: boolean },
+      { user: { id: string } }
+    >({
+      name: 'admin',
+      provides: ['isAdmin'],
+      requires: ['user'],
+      handler: async (req, ctx, next) => {
+        ctx.set('isAdmin', true);
+        return next();
+      },
+    });
+
+    expect(adminMiddleware.requires).toEqual(['user']);
+  });
+});
+
+describe('chainMiddleware', () => {
+  beforeEach(() => {
+    clearMiddlewareRegistry();
+  });
+
+  it('should chain two middleware together', async () => {
+    const order: string[] = [];
+
+    const m1 = createMiddleware({
+      name: 'first',
+      provides: ['firstValue'],
+      handler: async (req, ctx, next) => {
+        order.push('first');
+        return next();
+      },
+    });
+
+    const m2 = createMiddleware({
+      name: 'second',
+      provides: ['secondValue'],
+      handler: async (req, ctx, next) => {
+        order.push('second');
+        return next();
+      },
+    });
+
+    const chained = chainMiddleware(m1, m2);
+
+    expect(chained.name).toBe('first+second');
+    expect(chained.provides).toContain('firstValue');
+    expect(chained.provides).toContain('secondValue');
+
+    const request = new Request('http://localhost:3000/test');
+    const context = createMockContext();
+
+    await chained.handler(request, context, async () => {
+      order.push('final');
+      return new Response('OK');
+    });
+
+    expect(order).toEqual(['first', 'second', 'final']);
+  });
+
+  it('should chain three middleware together', async () => {
+    const order: string[] = [];
+
+    const m1 = createMiddleware({
+      name: 'a',
+      handler: async (req, ctx, next) => {
+        order.push('a');
+        return next();
+      },
+    });
+
+    const m2 = createMiddleware({
+      name: 'b',
+      handler: async (req, ctx, next) => {
+        order.push('b');
+        return next();
+      },
+    });
+
+    const m3 = createMiddleware({
+      name: 'c',
+      handler: async (req, ctx, next) => {
+        order.push('c');
+        return next();
+      },
+    });
+
+    const chained = chainMiddleware(m1, m2, m3);
+
+    expect(chained.name).toBe('a+b+c');
+
+    const request = new Request('http://localhost:3000/test');
+    const context = createMockContext();
+
+    await chained.handler(request, context, async () => {
+      order.push('final');
+      return new Response('OK');
+    });
+
+    expect(order).toEqual(['a', 'b', 'c', 'final']);
+  });
+
+  it('should combine requires from all middleware', () => {
+    const m1 = createMiddleware<{}, { a: string }>({
+      name: 'first',
+      requires: ['a'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    const m2 = createMiddleware<{}, { b: string }>({
+      name: 'second',
+      requires: ['b'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    const chained = chainMiddleware(m1, m2);
+
+    expect(chained.requires).toContain('a');
+    expect(chained.requires).toContain('b');
+  });
+});
+
+describe('registerTypedMiddleware and getTypedMiddleware', () => {
+  beforeEach(() => {
+    clearMiddlewareRegistry();
+  });
+
+  it('should register and retrieve typed middleware', () => {
+    const typedMiddleware: TypedMiddleware<{ user: string }> = {
+      name: 'auth-typed',
+      provides: ['user'],
+      handler: async (req, ctx, next) => next(),
+    };
+
+    registerTypedMiddleware(typedMiddleware);
+
+    const retrieved = getTypedMiddleware('auth-typed');
+    expect(retrieved).toBeDefined();
+    expect(retrieved?.name).toBe('auth-typed');
+    expect(retrieved?.provides).toEqual(['user']);
+
+    // Should also be in regular registry
+    expect(hasMiddleware('auth-typed')).toBe(true);
+  });
+
+  it('should return undefined for unregistered typed middleware', () => {
+    const result = getTypedMiddleware('nonexistent');
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('validateMiddlewareChain', () => {
+  beforeEach(() => {
+    clearMiddlewareRegistry();
+  });
+
+  it('should validate chain where all requirements are met', () => {
+    registerTypedMiddleware({
+      name: 'auth',
+      provides: ['user'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    registerTypedMiddleware({
+      name: 'admin',
+      requires: ['user'],
+      provides: ['isAdmin'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    const result = validateMiddlewareChain(['auth', 'admin']);
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should detect missing required context', () => {
+    registerTypedMiddleware({
+      name: 'admin',
+      requires: ['user'],
+      provides: ['isAdmin'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    const result = validateMiddlewareChain(['admin']);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toContain('user');
+    expect(result.errors[0]).toContain('admin');
+  });
+
+  it('should skip validation for non-typed middleware', () => {
+    registerMiddleware('simple', async (req, ctx, next) => next());
+
+    const result = validateMiddlewareChain(['simple']);
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should validate complex chain with multiple dependencies', () => {
+    registerTypedMiddleware({
+      name: 'session',
+      provides: ['session'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    registerTypedMiddleware({
+      name: 'auth',
+      requires: ['session'],
+      provides: ['user'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    registerTypedMiddleware({
+      name: 'admin',
+      requires: ['user', 'session'],
+      provides: ['isAdmin'],
+      handler: async (req, ctx, next) => next(),
+    });
+
+    // Correct order
+    const validResult = validateMiddlewareChain(['session', 'auth', 'admin']);
+    expect(validResult.valid).toBe(true);
+
+    // Wrong order
+    const invalidResult = validateMiddlewareChain(['admin', 'auth', 'session']);
+    expect(invalidResult.valid).toBe(false);
+  });
+
+  it('should handle middleware without provides or requires', () => {
+    registerTypedMiddleware({
+      name: 'logger',
+      handler: async (req, ctx, next) => next(),
+    });
+
+    const result = validateMiddlewareChain(['logger']);
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+});
+
+describe('path middleware with glob patterns', () => {
+  it('should match glob pattern with ** for nested paths', async () => {
+    let ran = false;
+    const handler: MiddlewareHandler = async (req, ctx, next) => {
+      ran = true;
+      return next();
+    };
+
+    // Test simple prefix match
+    const conditional = path('/admin', handler);
+
+    const request = new Request('http://localhost:3000/admin/users/123');
+    const context = createMockContext();
+
+    await conditional(request, context, async () => new Response('OK'));
+
+    expect(ran).toBe(true);
+  });
+
+  it('should handle array of regex patterns', async () => {
+    let ran = false;
+    const handler: MiddlewareHandler = async (req, ctx, next) => {
+      ran = true;
+      return next();
+    };
+
+    const conditional = path([/^\/api\//, /^\/v2\//], handler);
+
+    const request = new Request('http://localhost:3000/api/users');
+    const context = createMockContext();
+
+    await conditional(request, context, async () => new Response('OK'));
+
+    expect(ran).toBe(true);
+  });
+
+  it('should not run for non-matching regex', async () => {
+    let ran = false;
+    const handler: MiddlewareHandler = async (req, ctx, next) => {
+      ran = true;
+      return next();
+    };
+
+    const conditional = path(/^\/api\//, handler);
+
+    const request = new Request('http://localhost:3000/other/users');
+    const context = createMockContext();
+
+    await conditional(request, context, async () => new Response('OK'));
+
+    expect(ran).toBe(false);
+  });
+});
+
+describe('method middleware with array of methods', () => {
+  it('should run middleware for any method in array', async () => {
+    let ran = false;
+    const handler: MiddlewareHandler = async (req, ctx, next) => {
+      ran = true;
+      return next();
+    };
+
+    const conditional = method(['GET', 'POST'], handler);
+
+    const request = new Request('http://localhost:3000/test', { method: 'POST' });
+    const context = createMockContext();
+
+    await conditional(request, context, async () => new Response('OK'));
+
+    expect(ran).toBe(true);
+  });
+
+  it('should skip middleware for methods not in array', async () => {
+    let ran = false;
+    const handler: MiddlewareHandler = async (req, ctx, next) => {
+      ran = true;
+      return next();
+    };
+
+    const conditional = method(['GET', 'POST'], handler);
+
+    const request = new Request('http://localhost:3000/test', { method: 'DELETE' });
+    const context = createMockContext();
+
+    await conditional(request, context, async () => new Response('OK'));
+
+    expect(ran).toBe(false);
+  });
+});
+
+describe('createMiddlewareExecutor with empty middleware', () => {
+  it('should call final handler directly when no middleware', async () => {
+    const executor = createMiddlewareExecutor({});
+
+    const request = new Request('http://localhost:3000/test');
+    const context = createMockContext();
+
+    let finalCalled = false;
+    const response = await executor({
+      request,
+      context,
+      finalHandler: async () => {
+        finalCalled = true;
+        return new Response('OK');
+      },
+    });
+
+    expect(finalCalled).toBe(true);
+    expect(response.status).toBe(200);
+  });
+});
+
+describe('globToRegex', () => {
+  it('should convert simple glob pattern with single asterisk', () => {
+    const regex = globToRegex('/api/*');
+
+    expect(regex.test('/api/users')).toBe(true);
+    expect(regex.test('/api/products')).toBe(true);
+    expect(regex.test('/api/')).toBe(true);
+    expect(regex.test('/api/users/123')).toBe(false); // Single * doesn't match /
+    expect(regex.test('/other')).toBe(false);
+  });
+
+  it('should convert glob pattern with double asterisk (globstar)', () => {
+    const regex = globToRegex('/api/**');
+
+    expect(regex.test('/api/users')).toBe(true);
+    expect(regex.test('/api/users/123')).toBe(true);
+    expect(regex.test('/api/a/b/c/d')).toBe(true);
+    expect(regex.test('/api/')).toBe(true);
+    expect(regex.test('/other')).toBe(false);
+  });
+
+  it('should handle question mark for single character', () => {
+    const regex = globToRegex('/api/user?');
+
+    expect(regex.test('/api/user1')).toBe(true);
+    expect(regex.test('/api/userX')).toBe(true);
+    expect(regex.test('/api/user')).toBe(false);
+    // Note: 'users' matches because ? matches any single char (s), so user + s = users
+    expect(regex.test('/api/users')).toBe(true);
+    expect(regex.test('/api/user12')).toBe(false);
+  });
+
+  it('should escape regex special characters', () => {
+    const regex = globToRegex('/api/v1.0/users');
+
+    expect(regex.test('/api/v1.0/users')).toBe(true);
+    expect(regex.test('/api/v1X0/users')).toBe(false); // . is escaped, not wildcard
+  });
+
+  it('should handle complex patterns', () => {
+    const regex = globToRegex('/api/**/users/*.json');
+
+    expect(regex.test('/api/v1/users/data.json')).toBe(true);
+    expect(regex.test('/api/v1/v2/users/file.json')).toBe(true);
+    // Note: ** is greedy and matches anything including empty, but needs to include /users/
+    expect(regex.test('/api//users/info.json')).toBe(true); // ** matches empty
+    expect(regex.test('/api/users/data.xml')).toBe(false);
+  });
+
+  it('should handle patterns with brackets', () => {
+    const regex = globToRegex('/users/[id]');
+
+    // Brackets should be escaped
+    expect(regex.test('/users/[id]')).toBe(true);
+    expect(regex.test('/users/123')).toBe(false);
+  });
+
+  it('should handle patterns with plus sign', () => {
+    const regex = globToRegex('/math/1+1');
+
+    expect(regex.test('/math/1+1')).toBe(true);
+    expect(regex.test('/math/11')).toBe(false); // + is escaped, not regex quantifier
+  });
+
+  it('should handle patterns with caret and dollar', () => {
+    const regex = globToRegex('/regex/^test$');
+
+    expect(regex.test('/regex/^test$')).toBe(true);
+    expect(regex.test('/regex/test')).toBe(false);
+  });
+
+  it('should handle patterns with curly braces', () => {
+    const regex = globToRegex('/api/{resource}');
+
+    expect(regex.test('/api/{resource}')).toBe(true);
+    expect(regex.test('/api/users')).toBe(false);
+  });
+
+  it('should handle patterns with parentheses', () => {
+    const regex = globToRegex('/group/(name)');
+
+    expect(regex.test('/group/(name)')).toBe(true);
+  });
+
+  it('should handle patterns with pipe', () => {
+    const regex = globToRegex('/cmd/a|b');
+
+    expect(regex.test('/cmd/a|b')).toBe(true);
+    expect(regex.test('/cmd/a')).toBe(false); // | is escaped
+  });
+
+  it('should handle patterns with backslash', () => {
+    const regex = globToRegex('/path\\to');
+
+    expect(regex.test('/path\\to')).toBe(true);
+  });
+
+  it('should match exact paths', () => {
+    const regex = globToRegex('/exact/path');
+
+    expect(regex.test('/exact/path')).toBe(true);
+    expect(regex.test('/exact/path/more')).toBe(false);
+    expect(regex.test('/exact/pat')).toBe(false);
   });
 });
