@@ -1,6 +1,6 @@
 # Cloudflare Deployment
 
-Deploy EreoJS applications to Cloudflare Workers or Cloudflare Pages.
+Deploy EreoJS applications to Cloudflare Workers.
 
 ## Installation
 
@@ -10,151 +10,196 @@ bun add @ereo/deploy-cloudflare
 
 ## Overview
 
-The Cloudflare adapter configures your EreoJS application for deployment to Cloudflare's edge network. It supports both:
+The `@ereo/deploy-cloudflare` package provides:
 
-- **Cloudflare Workers** - Serverless functions at the edge
-- **Cloudflare Pages** - Full-stack applications with static assets
+1. **Build configuration** - Sets the EreoJS build target to `'cloudflare'`
+2. **wrangler.toml generation** - Creates a basic Wrangler configuration file
 
-## Setup
+## API Reference
 
-### Basic Configuration
+### `cloudflare(config?)`
 
-```ts
-// ereo.config.ts
-import { defineConfig } from '@ereo/core'
-import { cloudflare } from '@ereo/deploy-cloudflare'
+Generates EreoJS build configuration for Cloudflare deployment.
 
-export default defineConfig({
-  ...cloudflare({
-    target: 'pages'
-  })
-})
+**Signature:**
+```typescript
+function cloudflare(config?: CloudflareConfig): Partial<FrameworkConfig>
 ```
 
-### Workers Configuration
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config` | `CloudflareConfig` | No | Configuration options (currently unused) |
 
-```ts
-import { defineConfig } from '@ereo/core'
-import { cloudflare } from '@ereo/deploy-cloudflare'
-
-export default defineConfig({
-  ...cloudflare({
-    target: 'workers',
-    accountId: process.env.CF_ACCOUNT_ID,
-    routes: ['example.com/*', 'api.example.com/*']
-  })
-})
-```
-
-## Configuration Options
-
-```ts
-interface CloudflareConfig {
-  /** Deployment target: 'pages' or 'workers' */
-  target?: 'pages' | 'workers'
-
-  /** Cloudflare account ID */
-  accountId?: string
-
-  /** Custom domain routes (Workers only) */
-  routes?: string[]
-
-  /** KV namespace bindings */
-  kvNamespaces?: string[]
-
-  /** Durable Object bindings */
-  durableObjects?: string[]
+**Returns:**
+```typescript
+{
+  build: {
+    target: 'cloudflare'
+  }
 }
 ```
 
-| Option | Type | Description | Default |
-|--------|------|-------------|---------|
-| `target` | `'pages' \| 'workers'` | Deployment target | `'pages'` |
-| `accountId` | `string` | Cloudflare account ID | - |
-| `routes` | `string[]` | Custom domain routes | - |
-| `kvNamespaces` | `string[]` | KV namespace bindings | - |
-| `durableObjects` | `string[]` | Durable Object bindings | - |
+**Note:** The return value is constant regardless of the config parameter. Config options are accepted for API compatibility but do not affect the output.
 
-## Wrangler Configuration
+**Example:**
+```typescript
+// ereo.config.ts
+import { defineConfig } from '@ereo/core';
+import { cloudflare } from '@ereo/deploy-cloudflare';
 
-### Generate wrangler.toml
-
-The adapter can generate a `wrangler.toml` configuration file:
-
-```ts
-import { generateWranglerToml } from '@ereo/deploy-cloudflare'
-
-const config = generateWranglerToml({
-  target: 'workers',
-  routes: ['example.com/*'],
-  kvNamespaces: ['CACHE', 'SESSIONS']
-})
-
-console.log(config)
+export default defineConfig({
+  ...cloudflare(),
+});
 ```
 
-Output:
+### `generateWranglerToml(config)`
 
+Generates wrangler.toml configuration content as a string.
+
+**Signature:**
+```typescript
+function generateWranglerToml(config: CloudflareConfig): string
+```
+
+**Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config` | `CloudflareConfig` | Yes | Configuration options |
+
+**Returns:** `string` - wrangler.toml file content
+
+**Supported Config Properties:**
+
+| Property | Effect |
+|----------|--------|
+| `routes` | Added as `routes = [...]` in output |
+| `kvNamespaces` | Generates `[[kv_namespaces]]` blocks for each binding |
+| `target` | Accepted but not used |
+| `accountId` | Accepted but not used |
+| `durableObjects` | Accepted but not used |
+
+**Generated Output Structure:**
 ```toml
 name = "ereo-app"
 compatibility_date = "2024-01-01"
 main = "dist/server.js"
 
-routes = ["example.com/*"]
+routes = ["..."]  # Only if routes provided
 
-[[kv_namespaces]]
-binding = "CACHE"
-id = "your-namespace-id"
-
-[[kv_namespaces]]
-binding = "SESSIONS"
-id = "your-namespace-id"
+[[kv_namespaces]]  # One block per kvNamespace entry
+binding = "BINDING_NAME"
+id = "your-namespace-id"  # Placeholder - must be replaced manually
 ```
 
-### Manual wrangler.toml
+**Example:**
+```typescript
+import { generateWranglerToml } from '@ereo/deploy-cloudflare';
 
-Create `wrangler.toml` in your project root:
+const config = generateWranglerToml({
+  routes: ['example.com/*'],
+  kvNamespaces: ['CACHE', 'SESSIONS'],
+});
 
+// Write to file
+await Bun.write('wrangler.toml', config);
+```
+
+### `CloudflareConfig` Interface
+
+```typescript
+interface CloudflareConfig {
+  /** Deployment target (accepted but not currently used) */
+  target?: 'pages' | 'workers';
+
+  /** Cloudflare account ID (accepted but not currently used) */
+  accountId?: string;
+
+  /** Custom domain routes - output to wrangler.toml */
+  routes?: string[];
+
+  /** KV namespace binding names - output to wrangler.toml */
+  kvNamespaces?: string[];
+
+  /** Durable Object bindings (accepted but not currently used) */
+  durableObjects?: string[];
+}
+```
+
+### Default Export
+
+The `cloudflare` function is also available as the default export:
+
+```typescript
+import cloudflare from '@ereo/deploy-cloudflare';
+```
+
+## Usage
+
+### Basic Setup
+
+```typescript
+// ereo.config.ts
+import { defineConfig } from '@ereo/core';
+import { cloudflare } from '@ereo/deploy-cloudflare';
+
+export default defineConfig({
+  ...cloudflare(),
+});
+```
+
+### Generating wrangler.toml
+
+```typescript
+// scripts/setup-cloudflare.ts
+import { generateWranglerToml } from '@ereo/deploy-cloudflare';
+
+const toml = generateWranglerToml({
+  routes: ['api.example.com/*'],
+  kvNamespaces: ['CACHE'],
+});
+
+await Bun.write('wrangler.toml', toml);
+```
+
+**Output:**
 ```toml
-name = "my-ereo-app"
+name = "ereo-app"
 compatibility_date = "2024-01-01"
 main = "dist/server.js"
 
-[site]
-bucket = "./dist/static"
+routes = ["api.example.com/*"]
 
-# KV Namespaces
 [[kv_namespaces]]
 binding = "CACHE"
-id = "abc123"
-
-# Durable Objects
-[[durable_objects.bindings]]
-name = "COUNTER"
-class_name = "Counter"
-
-# Environment Variables
-[vars]
-API_URL = "https://api.example.com"
+id = "your-namespace-id"
 ```
 
-## Build Commands
+### Post-Generation Steps
 
-### Development
+After generating wrangler.toml, you must:
 
-```bash
-# Local development with Wrangler
-wrangler dev
-```
+1. **Replace KV namespace IDs** - Change `"your-namespace-id"` to actual IDs from Cloudflare dashboard
+2. **Add account ID** (if needed) - Add `account_id = "your-account-id"` manually
+3. **Configure additional bindings** - Add Durable Objects, R2, D1, etc. manually
 
-### Production Build
+## Build and Deploy
+
+### Build
 
 ```bash
 # Build for Cloudflare
-bun ereo build
+bun run build
+```
 
-# Deploy to Cloudflare
+### Deploy with Wrangler
+
+```bash
+# Deploy to Cloudflare Workers
 wrangler deploy
+
+# Local development
+wrangler dev
 ```
 
 ### Package Scripts
@@ -163,11 +208,45 @@ wrangler deploy
 {
   "scripts": {
     "dev": "wrangler dev",
-    "build": "ereo build",
-    "deploy": "ereo build && wrangler deploy",
-    "preview": "wrangler pages dev dist"
+    "build": "bun run build",
+    "deploy": "bun run build && wrangler deploy"
   }
 }
+```
+
+## Manual wrangler.toml Configuration
+
+For features not supported by `generateWranglerToml()`, create or extend wrangler.toml manually:
+
+```toml
+name = "my-ereo-app"
+compatibility_date = "2024-01-01"
+main = "dist/server.js"
+account_id = "your-account-id"
+
+# Routes
+routes = ["example.com/*"]
+
+# Static assets
+[site]
+bucket = "./dist/static"
+
+# KV Namespaces (with real IDs)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "abc123def456"
+
+# Durable Objects (manual configuration required)
+[[durable_objects.bindings]]
+name = "COUNTER"
+class_name = "Counter"
+
+# Environment Variables
+[vars]
+API_URL = "https://api.example.com"
+
+# Compatibility flags
+compatibility_flags = ["nodejs_compat"]
 ```
 
 ## Environment Variables
@@ -181,205 +260,27 @@ DATABASE_URL=postgres://localhost/mydb
 API_KEY=secret123
 ```
 
-### Production
-
-Set environment variables in Cloudflare Dashboard or via Wrangler:
+### Production Secrets
 
 ```bash
-# Set a secret
+# Set a secret via Wrangler CLI
 wrangler secret put API_KEY
-
-# Set a variable
-wrangler vars set API_URL https://api.example.com
 ```
 
-### Accessing in Code
+## Current Limitations
 
-```ts
-// routes/api/data.ts
-export const loader = createLoader(async ({ request, context }) => {
-  // Access environment bindings
-  const env = context.get('env')
+The following are **not implemented** in this package:
 
-  const apiKey = env.API_KEY
-  const cache = env.CACHE // KV namespace
+| Feature | Status |
+|---------|--------|
+| `target` option (pages vs workers) | Defined but ignored |
+| `accountId` in config | Defined but ignored |
+| `durableObjects` bindings | Defined but not generated |
+| Dynamic KV namespace IDs | Outputs placeholder only |
+| Cloudflare Pages-specific config | Not implemented |
+| R2, D1, Queues bindings | Not implemented |
 
-  return { data: 'example' }
-})
-```
-
-## Edge Functions
-
-EreoJS routes run as edge functions on Cloudflare Workers.
-
-### Request Handling
-
-```ts
-// routes/api/hello.ts
-export const loader = createLoader(async ({ request }) => {
-  // Access Cloudflare-specific properties
-  const cf = request.cf
-
-  return {
-    country: cf?.country,
-    city: cf?.city,
-    timezone: cf?.timezone
-  }
-})
-```
-
-### KV Storage
-
-```ts
-export const loader = createLoader(async ({ context }) => {
-  const env = context.get('env')
-  const cache = env.CACHE // KV namespace
-
-  // Read from KV
-  const value = await cache.get('key')
-
-  // Write to KV
-  await cache.put('key', 'value', {
-    expirationTtl: 3600
-  })
-
-  return { value }
-})
-```
-
-### Durable Objects
-
-```ts
-export const loader = createLoader(async ({ context }) => {
-  const env = context.get('env')
-
-  // Get Durable Object stub
-  const id = env.COUNTER.idFromName('my-counter')
-  const counter = env.COUNTER.get(id)
-
-  // Call Durable Object
-  const response = await counter.fetch('/increment')
-  const count = await response.json()
-
-  return { count }
-})
-```
-
-## Cloudflare Pages
-
-### Pages Configuration
-
-For Pages deployment, create `_routes.json` or configure in `wrangler.toml`:
-
-```json
-{
-  "version": 1,
-  "include": ["/*"],
-  "exclude": ["/static/*", "/assets/*"]
-}
-```
-
-### Static Assets
-
-Static files are served from `dist/static`:
-
-```
-dist/
-├── server.js        # Worker entry
-└── static/
-    ├── index.html
-    ├── styles.css
-    └── assets/
-```
-
-### Functions Directory
-
-For Pages Functions, place handlers in `functions/`:
-
-```
-functions/
-├── api/
-│   └── [[path]].ts  # Catch-all API handler
-└── _middleware.ts   # Global middleware
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Module Not Found
-
-```
-Error: Cannot find module '@ereo/core'
-```
-
-Ensure all dependencies are bundled:
-
-```ts
-// ereo.config.ts
-export default defineConfig({
-  build: {
-    external: [] // Bundle all dependencies
-  }
-})
-```
-
-#### Compatibility Flags
-
-Add required compatibility flags in `wrangler.toml`:
-
-```toml
-compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
-```
-
-#### Request Size Limits
-
-Cloudflare Workers have request size limits:
-
-- Request body: 100 MB (paid plans)
-- Response body: Unlimited (streaming)
-
-For large uploads, use Cloudflare R2 with presigned URLs.
-
-#### Cold Start Performance
-
-Optimize bundle size for faster cold starts:
-
-```ts
-export default defineConfig({
-  build: {
-    minify: true,
-    splitting: false, // Single bundle for Workers
-    external: ['sharp'] // Exclude large packages
-  }
-})
-```
-
-### Debug Mode
-
-Enable verbose logging:
-
-```bash
-# Local debugging
-WRANGLER_LOG=debug wrangler dev
-
-# Check deployment logs
-wrangler tail
-```
-
-### Bundle Size
-
-Check your bundle size (Workers limit: 1 MB compressed):
-
-```bash
-# Build and check size
-bun ereo build
-ls -lh dist/server.js
-
-# Analyze bundle
-bun ereo build --analyze
-```
+For full Cloudflare Workers/Pages features, refer to the [Wrangler documentation](https://developers.cloudflare.com/workers/wrangler/configuration/).
 
 ## CI/CD Deployment
 
@@ -410,8 +311,34 @@ jobs:
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
 ```
 
+## Troubleshooting
+
+### "your-namespace-id" Error
+
+If Wrangler reports an invalid namespace ID:
+
+```
+Error: KV namespace with id "your-namespace-id" not found
+```
+
+**Solution:** Replace the placeholder ID in wrangler.toml with your actual KV namespace ID from the Cloudflare dashboard.
+
+### Missing Account ID
+
+If deployment fails with account ID errors:
+
+**Solution:** Add `account_id = "your-account-id"` to wrangler.toml manually, or set the `CLOUDFLARE_ACCOUNT_ID` environment variable.
+
+### Bundle Size Limits
+
+Cloudflare Workers have a 1 MB compressed bundle limit. If exceeded:
+
+1. Check bundle size: `ls -lh dist/server.js`
+2. Exclude large dependencies in your build configuration
+3. Consider using Cloudflare Pages for larger applications
+
 ## Related
 
 - [Vercel Deployment](/api/deploy/vercel)
 - [Build CLI](/api/cli/build)
-- [Environment Variables](/api/core/env)
+- [Core Configuration](/api/core/create-app)

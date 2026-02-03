@@ -11,11 +11,12 @@ import {
   isDeferred,
   resolveDeferred,
   fetchData,
+  FetchError,
   serializeLoaderData,
   parseLoaderData,
   combineLoaders,
-  clientLoader
-} from '@ereo/data'
+  clientLoader,
+} from '@ereo/data';
 ```
 
 ## createLoader
@@ -25,34 +26,19 @@ Creates a type-safe loader function.
 ### Signature
 
 ```ts
-function createLoader<T, P = Record<string, string>>(
-  options: LoaderOptions<T, P> | LoaderHandler<T, P>
+function createLoader<T, P extends RouteParams = RouteParams>(
+  options: LoaderOptions<T, P>
 ): LoaderFunction<T, P>
 ```
 
-### Parameters
+### LoaderOptions
 
 ```ts
-interface LoaderOptions<T, P> {
-  // The loader handler function
-  handler: LoaderHandler<T, P>
-
-  // Cache configuration
-  cache?: {
-    ttl?: number
-    tags?: string[]
-  }
-
-  // Validation for params
-  validate?: (params: P) => boolean
-}
-
-type LoaderHandler<T, P> = (args: LoaderArgs<P>) => T | Promise<T>
-
-interface LoaderArgs<P> {
-  request: Request
-  params: P
-  context: RequestContext
+interface LoaderOptions<T, P extends RouteParams = RouteParams> {
+  load: (args: LoaderArgs<P>) => T | Promise<T>;
+  cache?: CacheOptions;
+  transform?: (data: Awaited<T>, args: LoaderArgs<P>) => Awaited<T> | Promise<Awaited<T>>;
+  onError?: (error: Error, args: LoaderArgs<P>) => T | Response | Promise<T | Response>;
 }
 ```
 
@@ -61,43 +47,145 @@ interface LoaderArgs<P> {
 #### Basic Loader
 
 ```ts
-export const loader = createLoader(async ({ params }) => {
-  const post = await db.posts.find(params.id)
-  return { post }
-})
+export const loader = createLoader({
+  load: async ({ params }) => {
+    const post = await db.posts.findUnique({ where: { slug: params.slug } });
+    return { post };
+  },
+});
 ```
 
-#### With Options
+#### With Caching
 
 ```ts
 export const loader = createLoader({
-  handler: async ({ params }) => {
-    const post = await db.posts.find(params.id)
-    return { post }
+  load: async ({ params }) => {
+    return db.posts.findMany({ where: { authorId: params.userId } });
   },
   cache: {
-    ttl: 3600,
-    tags: ['posts']
+    maxAge: 60,
+    staleWhileRevalidate: 300,
+    tags: ['posts'],
   },
-  validate: (params) => /^\d+$/.test(params.id)
-})
+});
 ```
 
-#### With Request Context
+#### With Transform
 
 ```ts
-export const loader = createLoader(async ({ request, context }) => {
-  // Access cookies
-  const sessionId = request.headers.get('Cookie')?.match(/session=([^;]+)/)?.[1]
+export const loader = createLoader({
+  load: async () => {
+    return db.posts.findMany();
+  },
+  transform: (posts) => ({
+    posts,
+    count: posts.length,
+  }),
+});
+```
 
-  // Access context data (set by middleware)
-  const user = context.get('user')
+#### With Error Handling
 
-  // Set cache headers
-  context.cache.set({ maxAge: 60 })
+```ts
+export const loader = createLoader({
+  load: async ({ params }) => {
+    return externalApi.getUser(params.id);
+  },
+  onError: (error, { params }) => {
+    console.error(`Failed to fetch user ${params.id}:`, error);
+    return { user: null, error: 'Failed to load user' };
+  },
+});
+```
 
-  return { user, posts: await getPosts(user.id) }
-})
+## defer
+
+Defers data loading for streaming responses.
+
+```ts
+function defer<T>(promise: Promise<T>): DeferredData<T>
+```
+
+### Example
+
+```ts
+export const loader = createLoader({
+  load: async ({ params }) => {
+    const post = await db.posts.find(params.id);
+    const comments = defer(db.comments.findByPost(params.id));
+    return { post, comments };
+  },
+});
+```
+
+## isDeferred
+
+Type guard for deferred data.
+
+```ts
+function isDeferred<T>(value: unknown): value is DeferredData<T>
+```
+
+## resolveDeferred
+
+Resolves deferred data.
+
+```ts
+function resolveDeferred<T>(deferred: DeferredData<T>): Promise<T>
+```
+
+## fetchData
+
+Fetches JSON data with error handling.
+
+```ts
+function fetchData<T>(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<T>
+```
+
+Throws `FetchError` on non-OK responses.
+
+## FetchError
+
+Error thrown when fetch fails:
+
+```ts
+class FetchError extends Error {
+  response: Response;
+  get status(): number;
+  get statusText(): string;
+}
+```
+
+## serializeLoaderData / parseLoaderData
+
+Serializes and deserializes loader data for transport:
+
+```ts
+const serialized = serializeLoaderData(data);
+const data = parseLoaderData<T>(serialized);
+```
+
+## combineLoaders
+
+Combines multiple loaders into one.
+
+```ts
+function combineLoaders<T extends Record<string, LoaderFunction<unknown>>>(
+  loaders: T
+): LoaderFunction<{ [K in keyof T]: Awaited<ReturnType<T[K]>> }>
+```
+
+## clientLoader
+
+Creates a client-side loader.
+
+```ts
+function clientLoader<T, P extends RouteParams = RouteParams>(
+  load: (params: P) => T | Promise<T>
+): LoaderFunction<T, P>
 ```
 
 ## defer

@@ -5,12 +5,40 @@ Visual development tools and route inspector for EreoJS applications. Provides r
 ## Import
 
 ```ts
+// Core functions
 import {
   createDevInspector,
   createDevToolsPlugin,
   generateInspectorHTML,
   createRouteInfo,
-  formatRouteTree
+  formatRouteTree,
+} from '@ereo/dev-inspector'
+
+// DevTools tab components and generators
+import {
+  DevToolsPanel,
+  generateDevToolsPanelHTML,
+  DataPipelineTab,
+  generateDataPipelineHTML,
+  RoutesTab,
+  generateRoutesTabHTML,
+  IslandsTab,
+  generateIslandsTabHTML,
+  CacheTab,
+  generateCacheTabHTML,
+} from '@ereo/dev-inspector'
+
+// Types
+import type {
+  InspectorConfig,
+  RouteInfo,
+  DevToolsConfig,
+  DataPipelineVisualization,
+  IslandVisualization,
+  CacheVisualization,
+  HMREvent,
+  LoaderTiming,
+  CacheEntry,
 } from '@ereo/dev-inspector'
 ```
 
@@ -18,12 +46,12 @@ import {
 
 The `@ereo/dev-inspector` package provides two main features:
 
-1. **Route Inspector** - A simple route visualization tool mounted at a configurable path
-2. **DevTools Panel** - A comprehensive browser-based developer panel with tabs for routes, data pipeline, islands, and cache visualization
+1. **Route Inspector** - A simple route visualization tool mounted at a configurable path (default: `/__ereo`)
+2. **DevTools Panel** - A comprehensive browser-based developer panel with five tabs for routes, data pipeline, islands, cache, and HMR visualization (default: `/__devtools`)
 
 ## Enabling the Inspector
 
-### Basic Setup
+### Route Inspector Setup
 
 ```ts
 import { createApp } from '@ereo/core'
@@ -31,23 +59,22 @@ import { createDevInspector } from '@ereo/dev-inspector'
 
 const app = createApp()
 
-// Only enable in development
 if (process.env.NODE_ENV === 'development') {
   app.use(createDevInspector())
 }
 ```
 
-### With Custom Mount Path
+Access at `http://localhost:3000/__ereo`
+
+### Custom Mount Path
 
 ```ts
 app.use(createDevInspector({
-  mountPath: '/__routes'  // Default: '/__ereo'
+  mountPath: '/__routes'
 }))
 ```
 
 ### Full DevTools Panel
-
-For the complete development experience with all visualization features:
 
 ```ts
 import { createApp } from '@ereo/core'
@@ -57,6 +84,7 @@ const app = createApp()
 
 if (process.env.NODE_ENV === 'development') {
   app.use(createDevToolsPlugin({
+    mountPath: '/__devtools',
     dataPipeline: true,
     routes: true,
     islands: true,
@@ -82,16 +110,26 @@ function createDevInspector(config?: InspectorConfig): Plugin
 
 ```ts
 interface InspectorConfig {
-  // Path to mount inspector (default: '/__ereo')
+  /** Path to mount inspector (default: '/__ereo') */
   mountPath?: string
 
-  // Enable route testing
+  /** Enable route testing (reserved - not currently implemented) */
   enableTesting?: boolean
 
-  // Show loader data
+  /** Show loader data (reserved - not currently implemented) */
   showLoaderData?: boolean
 }
 ```
+
+**Note**: Only `mountPath` is currently functional. The `enableTesting` and `showLoaderData` options are defined for future implementation.
+
+#### Plugin Behavior
+
+The plugin:
+1. Registers a server middleware
+2. Serves HTML UI at the mount path
+3. Exposes a JSON API at `{mountPath}/api/routes`
+4. Logs the mount path to console on startup
 
 ### createDevToolsPlugin
 
@@ -107,22 +145,22 @@ function createDevToolsPlugin(config?: DevToolsConfig): Plugin
 
 ```ts
 interface DevToolsConfig {
-  // Mount path for DevTools panel (default: '/__devtools')
+  /** Mount path for DevTools panel (default: '/__devtools') */
   mountPath?: string
 
-  // Enable data pipeline visualization
+  /** Enable data pipeline visualization (default: true) */
   dataPipeline?: boolean
 
-  // Enable routes visualization
+  /** Enable routes visualization (default: true) */
   routes?: boolean
 
-  // Enable islands visualization
+  /** Enable islands visualization (default: true) */
   islands?: boolean
 
-  // Enable cache visualization
+  /** Enable cache visualization (default: true) */
   cache?: boolean
 
-  // Position of overlay toggle button
+  /** Position of overlay toggle button (default: 'bottom-right') */
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
 }
 ```
@@ -142,132 +180,216 @@ const devTools = createDevToolsPlugin({
 })
 ```
 
+#### Plugin Behavior
+
+The plugin:
+1. Uses `transformRoutes` hook to collect route information
+2. Registers server middleware for DevTools endpoints
+3. Injects an overlay script into HTML responses
+4. Stores up to 100 pipeline metrics and HMR events
+5. Provides real-time metrics collection from route context
+
 ## Features and Capabilities
 
-### Route Inspector
+### Route Inspector (/__ereo)
 
-The route inspector displays all registered routes with their configuration:
+The route inspector displays all registered routes with:
 
-- **Route path** - The URL pattern
-- **Render mode** - SSR, SSG, CSR, API, or RSC
-- **File location** - Source file for the route
-- **Features** - Loaders, actions, islands, auth requirements
-- **Search** - Filter routes by path
+| Feature | Description |
+|---------|-------------|
+| Route path | The URL pattern |
+| Render mode | Badge showing SSR, SSG, CSR, API, or RSC |
+| File location | Source file for the route |
+| Feature tags | Loaders, actions, island counts, auth |
+| Statistics | Total routes, SSR count, SSG count, API count |
+| Search | Filter routes by path (case-insensitive) |
 
-Access the inspector by navigating to the mount path (default: `/__ereo`).
+### DevTools Panel Tabs
 
-### Data Pipeline Tab
+#### 1. Data Pipeline Tab
 
-Visualizes data loading performance:
+The flagship feature for visualizing data loading performance:
 
-- **Loader timeline** - See when each loader starts and completes
-- **Parallel efficiency** - Score indicating how well loaders are parallelized
-- **Waterfall detection** - Identifies sequential loading patterns that could be optimized
-- **Cache hits** - Shows which data came from cache vs fresh loads
-- **Request history** - Browse previous requests and their metrics
+| Feature | Description |
+|---------|-------------|
+| Loader timeline | Visual bars showing when each loader runs |
+| Parallel efficiency | Score (0-100%) indicating parallelization |
+| Waterfall detection | Identifies unnecessary sequential patterns |
+| Cache indicators | Shows cache hits vs fresh loads |
+| Source icons | Database, API, Cache, or Compute sources |
+| Total time | Combined request duration |
 
-### Routes Tab
+**Efficiency Score Thresholds:**
+- Excellent (green): >= 80%
+- Good (blue): >= 50%
+- Fair (yellow): >= 30%
+- Poor (red): < 30%
 
-Comprehensive route information:
+**Source Type Icons:**
+- Database: Storage icon
+- API: Globe icon
+- Cache: Lightning bolt
+- Compute: Gear icon
 
-- **Route tree** - Hierarchical view of all routes
-- **Configuration** - Render mode, middleware, auth requirements
-- **Timing data** - Last request timing for each route
-- **Quick navigation** - Click to navigate to any route
+#### 2. Routes Tab
 
-### Islands Tab
+Interactive route exploration:
 
-Interactive component visualization:
+| Feature | Description |
+|---------|-------------|
+| Route list | All routes sorted alphabetically |
+| Search input | Filter routes by path |
+| Filter buttons | Quick filter by render mode (All, SSR, SSG, API) |
+| Feature tags | Loader, action, islands, auth, middleware counts |
+| Timing display | Last request timing per route |
 
-- **Island list** - All hydrated islands on the current page
-- **Hydration status** - Whether each island is hydrated
-- **Strategy** - Load, idle, visible, or media query
-- **Props size** - Data size passed to each island
-- **Highlight** - Visually highlight islands on the page
-- **Scroll to** - Navigate to specific islands
+#### 3. Islands Tab
 
-### Cache Tab
+Component hydration visualization:
 
-Cache state and performance:
+| Feature | Description |
+|---------|-------------|
+| Island list | All hydrated islands on the page |
+| Hydration status | Hydrated or Pending indicator |
+| Strategy breakdown | Count by strategy (load, idle, visible, media) |
+| Props size | Data size passed to each island |
+| Hydration time | Time to hydrate (when available) |
+| Actions | Inspect, Scroll to island |
 
-- **Cache entries** - All cached data with keys and tags
-- **TTL remaining** - Time until cache expiration
-- **Hit rate** - Overall cache effectiveness
-- **Tag statistics** - Performance by cache tag
-- **Size metrics** - Total cache memory usage
+**Hydration Strategies:**
+- **load** - Hydrate immediately on page load
+- **idle** - Hydrate during browser idle time
+- **visible** - Hydrate when scrolled into view
+- **media** - Hydrate based on media query match
+- **none** - Do not hydrate (static)
 
-## Usage Guide
+#### 4. Cache Tab
 
-### Opening DevTools
+Cache state and performance metrics:
 
-When the DevTools plugin is enabled, a floating button appears in the configured position (default: bottom-right corner). Click the button to open the DevTools panel.
+| Feature | Description |
+|---------|-------------|
+| Entry count | Total cached items |
+| Total size | Memory usage (formatted as B/KB/MB) |
+| Hit rate | Overall cache effectiveness (0-100%) |
+| Entries view | List of cache keys with tags, size, TTL, hits |
+| Tags view | Statistics grouped by cache tag |
+| Actions | Invalidate by key, Invalidate by tag |
 
-Keyboard shortcut: Press `Ctrl+Shift+D` (or `Cmd+Shift+D` on Mac) to toggle DevTools.
+**Hit Rate Color Coding:**
+- Excellent (green): >= 80%
+- Good (blue): >= 50%
+- Fair (yellow): >= 20%
+- Poor (red): < 20%
 
-### Using the Route Inspector
+**TTL Status Indicators:**
+- Expired: Red
+- Expiring Soon (< 60 seconds): Yellow
+- Healthy: Green
 
-1. Navigate to `/__ereo` (or your configured mount path)
-2. View the route tree showing all registered routes
-3. Use the search box to filter routes
-4. Click on a route to see detailed information
+#### 5. HMR Tab
 
-### Interpreting Data Pipeline Metrics
+Hot Module Replacement event history:
 
-The data pipeline visualization shows:
+| Feature | Description |
+|---------|-------------|
+| Event list | Last 50 HMR events (stores up to 100) |
+| Connection status | Shows if HMR is connected |
+| Event types | full-reload, css-update, island-update, loader-update, component-update |
+| File path | Which file triggered the update |
+| Duration | Time to apply the update |
+| Timestamp | When the event occurred |
 
-```
-Route: /posts/[id]
-Total Time: 45ms
-Efficiency: 0.85
-
-Loaders:
-|-- getPost --------|  (20ms, cache miss)
-     |-- getAuthor -|  (15ms, cache hit)
-     |-- getComments|  (25ms, cache miss)
-
-Waterfalls Detected: 1
-  - getAuthor depends on getPost
-```
-
-A high efficiency score (close to 1.0) indicates good parallelization. Waterfalls show opportunities for optimization.
-
-### Highlighting Islands
-
-In the Islands tab:
-
-1. Click "Highlight All" to outline all islands on the page
-2. Click on a specific island to scroll to it and highlight it
-3. View hydration timing to identify slow-loading components
+**Event Type Indicators:**
+- Full Reload: Orange border
+- CSS Update: Green border
+- Island Update: Blue border
+- Loader Update: Purple border
+- Component Update: Pink border
 
 ## API Endpoints
 
-The DevTools plugin exposes several API endpoints:
+The DevTools plugin exposes the following HTTP endpoints:
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /__devtools` | DevTools panel HTML |
-| `GET /__devtools/api/routes` | JSON route data |
-| `GET /__devtools/api/pipeline` | Pipeline metrics history |
-| `GET /__devtools/api/hmr` | HMR event history |
-| `POST /__devtools/api/pipeline/record` | Record pipeline metrics |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/__devtools` | GET | DevTools panel HTML |
+| `/__devtools/api/routes` | GET | JSON array of route data |
+| `/__devtools/api/pipeline` | GET | JSON array of pipeline metrics history |
+| `/__devtools/api/hmr` | GET | JSON array of HMR events |
+| `/__devtools/api/pipeline/record` | POST | Record custom pipeline metrics |
+
+The Route Inspector exposes:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/__ereo` | GET | Route inspector HTML |
+| `/__ereo/api/routes` | GET | JSON array of routes |
+
+### Recording Pipeline Metrics
+
+```ts
+// POST to /__devtools/api/pipeline/record
+fetch('/__devtools/api/pipeline/record', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    route: '/posts/123',
+    totalTime: 45.2,
+    loaders: [
+      {
+        key: 'getPost',
+        start: 0,
+        end: 20,
+        duration: 20,
+        cacheHit: false,
+        source: 'db',
+        waitingFor: []
+      }
+    ],
+    efficiency: 0.85,
+    waterfalls: [],
+    timestamp: Date.now()
+  })
+})
+```
 
 ## Utility Functions
 
 ### generateInspectorHTML
 
-Generates the route inspector HTML.
+Generates the standalone route inspector HTML page.
 
 ```ts
-import { generateInspectorHTML, createRouteInfo } from '@ereo/dev-inspector'
+import { generateInspectorHTML } from '@ereo/dev-inspector'
 
-const routes = router.getRoutes()
-const routeInfo = createRouteInfo(routes)
-const html = generateInspectorHTML(routeInfo)
+const html = generateInspectorHTML([
+  {
+    id: 'home',
+    path: '/',
+    file: 'src/routes/index.tsx',
+    renderMode: 'ssr',
+    islandCount: 2,
+    hasLoader: true,
+    hasAction: false,
+    middlewareCount: 0,
+    authRequired: false
+  }
+])
 ```
 
 ### createRouteInfo
 
-Transforms routes into inspector-friendly format.
+Transforms framework routes into inspector-friendly format.
+
+```ts
+import { createRouteInfo } from '@ereo/dev-inspector'
+
+const routes = router.getRoutes()
+const routeInfo = createRouteInfo(routes)
+```
+
+#### RouteInfo Interface
 
 ```ts
 interface RouteInfo {
@@ -286,7 +408,7 @@ interface RouteInfo {
 
 ### formatRouteTree
 
-Formats routes for CLI display.
+Formats routes for CLI display with icons.
 
 ```ts
 import { formatRouteTree, createRouteInfo } from '@ereo/dev-inspector'
@@ -294,66 +416,150 @@ import { formatRouteTree, createRouteInfo } from '@ereo/dev-inspector'
 const routes = router.getRoutes()
 const routeInfo = createRouteInfo(routes)
 console.log(formatRouteTree(routeInfo))
-
-// Output:
-// Route Tree:
-//
-//   ⚡ /                 [loader]
-//      → src/routes/index.tsx
-//   📄 /about
-//      → src/routes/about.ssg.tsx
-//   🔌 /api/posts       [loader, action]
-//      → src/routes/api/posts.api.tsx
 ```
 
-## Customization
+**Output:**
+```
+Route Tree:
 
-### Custom Panel Styling
-
-The DevTools panel uses CSS custom properties for styling:
-
-```css
-:root {
-  --ereo-devtools-bg: #0f172a;
-  --ereo-devtools-text: #e2e8f0;
-  --ereo-devtools-border: #334155;
-  --ereo-devtools-primary: #3b82f6;
-  --ereo-devtools-accent: #8b5cf6;
-}
+  ⚡ / [loader]
+     → src/routes/index.tsx
+  📄 /about
+     → src/routes/about.ssg.tsx
+  🔌 /api/posts [loader, action]
+     → src/routes/api/posts.api.ts
+  🚀 /dashboard [auth, 3 islands]
+     → src/routes/dashboard.tsx
 ```
 
-### Extending DevTools
+**Render Mode Icons:**
+| Icon | Mode |
+|------|------|
+| ⚡ | SSR |
+| 📄 | SSG |
+| 💻 | CSR |
+| 🔌 | API |
+| 🚀 | RSC |
+| • | Unknown |
 
-You can add custom data to the DevTools panel by using the context:
+### generateDevToolsPanelHTML
+
+Generates the complete DevTools panel HTML.
 
 ```ts
-// In a loader or middleware
-export async function loader({ context }) {
-  const startTime = performance.now()
-  const data = await fetchData()
+import { generateDevToolsPanelHTML } from '@ereo/dev-inspector'
+import type { DevToolsPanelData } from '@ereo/dev-inspector'
 
-  // Add custom metrics
-  context.set('__custom_metrics', {
-    fetchTime: performance.now() - startTime,
-    dataSize: JSON.stringify(data).length
-  })
-
-  return data
+const data: DevToolsPanelData = {
+  pipeline: { /* DataPipelineVisualization */ },
+  routes: [/* RouteVisualization[] */],
+  islands: [/* IslandVisualization[] */],
+  cache: { /* CacheVisualization */ },
+  hmrEvents: [/* HMREvent[] */]
 }
+
+const html = generateDevToolsPanelHTML(data)
+```
+
+### Tab-Specific HTML Generators
+
+For generating individual tab content:
+
+```ts
+import {
+  generateDataPipelineHTML,
+  generateRoutesTabHTML,
+  generateIslandsTabHTML,
+  generateCacheTabHTML
+} from '@ereo/dev-inspector'
+
+// Each returns HTML string for that specific tab
+const pipelineHtml = generateDataPipelineHTML(pipelineData)
+const routesHtml = generateRoutesTabHTML(routesList)
+const islandsHtml = generateIslandsTabHTML(islandsList)
+const cacheHtml = generateCacheTabHTML(cacheData)
 ```
 
 ## Type Definitions
+
+### DevToolsPanelData
+
+```ts
+interface DevToolsPanelData {
+  pipeline?: DataPipelineVisualization
+  routes: RouteVisualization[]
+  islands: IslandVisualization[]
+  cache: CacheVisualization
+  hmrEvents: HMREvent[]
+}
+```
 
 ### DataPipelineVisualization
 
 ```ts
 interface DataPipelineVisualization {
+  /** Route path */
   route: string
+  /** Total execution time (ms) */
   totalTime: number
+  /** Individual loader timings */
   loaders: LoaderTiming[]
+  /** Parallel efficiency score (0-1) */
   efficiency: number
+  /** Detected waterfalls */
   waterfalls: WaterfallInfo[]
+  /** Timestamp of request */
   timestamp: number
+}
+```
+
+### LoaderTiming
+
+```ts
+interface LoaderTiming {
+  /** Loader key/name */
+  key: string
+  /** Start time relative to request start (ms) */
+  start: number
+  /** End time relative to request start (ms) */
+  end: number
+  /** Duration (ms) */
+  duration: number
+  /** Whether result came from cache */
+  cacheHit: boolean
+  /** Data source type */
+  source: 'db' | 'api' | 'cache' | 'compute' | 'unknown'
+  /** Loaders this was waiting for */
+  waitingFor: string[]
+  /** Data size in bytes (if available) */
+  size?: number
+}
+```
+
+### RouteVisualization
+
+```ts
+interface RouteVisualization {
+  /** Route path */
+  path: string
+  /** Route file */
+  file: string
+  /** Render mode */
+  renderMode: 'ssr' | 'ssg' | 'csr' | 'api' | 'rsc'
+  /** Has loader */
+  hasLoader: boolean
+  /** Has action */
+  hasAction: boolean
+  /** Middleware chain */
+  middleware: string[]
+  /** Island count */
+  islandCount: number
+  /** Cache tags */
+  cacheTags: string[]
+  /** Auth required */
+  authRequired: boolean
+  /** Last request timing (ms) */
+  lastTiming?: number
 }
 ```
 
@@ -361,13 +567,21 @@ interface DataPipelineVisualization {
 
 ```ts
 interface IslandVisualization {
+  /** Island ID */
   id: string
+  /** Component name */
   component: string
+  /** Hydration strategy */
   strategy: 'load' | 'idle' | 'visible' | 'media' | 'none'
+  /** Media query (if strategy is 'media') */
   mediaQuery?: string
+  /** Whether island is currently hydrated */
   hydrated: boolean
+  /** Time to hydration (ms) */
   hydrationTime?: number
+  /** Props size in bytes */
   propsSize: number
+  /** DOM element selector */
   selector: string
 }
 ```
@@ -376,23 +590,127 @@ interface IslandVisualization {
 
 ```ts
 interface CacheVisualization {
+  /** Cache entries */
   entries: CacheEntry[]
+  /** Total cache size (bytes) */
   totalSize: number
+  /** Hit rate (0-1) */
   hitRate: number
+  /** Cache stats by tag */
   tagStats: Map<string, { count: number; hits: number; misses: number }>
 }
 ```
+
+### CacheEntry
+
+```ts
+interface CacheEntry {
+  /** Cache key */
+  key: string
+  /** Associated tags */
+  tags: string[]
+  /** Entry size in bytes */
+  size: number
+  /** Time to live remaining (ms) */
+  ttl: number
+  /** Created timestamp */
+  created: number
+  /** Last accessed timestamp */
+  lastAccessed: number
+  /** Access count */
+  accessCount: number
+}
+```
+
+### HMREvent
+
+```ts
+interface HMREvent {
+  /** Event type */
+  type: 'full-reload' | 'css-update' | 'island-update' | 'loader-update' | 'component-update'
+  /** File path */
+  path: string
+  /** Reason for update type */
+  reason?: string
+  /** Timestamp */
+  timestamp: number
+  /** Duration (ms) */
+  duration?: number
+}
+```
+
+## Client-Side API
+
+When the DevTools panel is open, it exposes a global API:
+
+```ts
+window.__EREO_DEVTOOLS__ = {
+  refresh(): void           // Reload DevTools panel
+  togglePosition(): void    // Toggle panel position
+  close(): void             // Close DevTools panel
+  highlightIslands(): void  // Highlight all islands on page
+  hydrateAll(): void        // Force hydrate all islands (reserved)
+  scrollToIsland(id): void  // Scroll to specific island
+  inspectIsland(id): void   // Inspect island details (reserved)
+  inspectEntry(key): void   // Inspect cache entry (reserved)
+  clearCache(): void        // Clear all cache (reserved)
+  refreshCache(): void      // Refresh cache view (reserved)
+  invalidateKey(key): void  // Invalidate cache by key (reserved)
+  invalidateTag(tag): void  // Invalidate cache by tag (reserved)
+}
+```
+
+**Note**: Functions marked as "reserved" send messages but handlers are not fully implemented. They are reserved for future functionality.
+
+## Overlay Functionality
+
+The DevTools overlay supports these interactive features via `postMessage`:
+
+| Message Type | Description |
+|--------------|-------------|
+| `ereo-devtools-close` | Close the DevTools panel |
+| `ereo-devtools-toggle-position` | Toggle panel position |
+| `ereo-devtools-highlight-islands` | Highlight all `[data-island]` elements for 3 seconds |
+| `ereo-devtools-scroll-to-island` | Scroll to and highlight a specific island |
+
+## Integration Details
+
+### Pipeline Metrics Collection
+
+The DevTools plugin automatically collects pipeline metrics when available in the request context:
+
+```ts
+// The plugin reads from context:
+const metrics = context.get<PipelineMetrics>('__pipeline_metrics')
+```
+
+This integrates with `@ereo/data` package which sets these metrics during loader execution.
+
+### History Limits
+
+- Pipeline metrics: Stores last 100 requests
+- HMR events: Stores last 100 events
+- Cache entries display: Shows top 50 by last accessed time
+- HMR events display: Shows last 50 events
+
+### Overlay Specifications
+
+- Button size: 48x48 pixels
+- Panel height: 400px (fixed)
+- Panel position: Docked to bottom of viewport
+- Z-index: Button 99998, Panel 99999
 
 ## Performance Considerations
 
 The DevTools plugin adds minimal overhead in development:
 
-- Route transformation is done once at startup
-- Pipeline metrics are collected passively
-- The overlay script is lightweight (~2KB)
-- API endpoints are only called when DevTools is open
+- Route transformation runs once at startup via `transformRoutes` hook
+- Pipeline metrics are collected passively from context
+- The overlay script is approximately 2KB
+- API endpoints only process data when called
+- HTML responses are only modified when `dataPipeline`, `islands`, or `cache` options are enabled
 
-In production, the plugin should not be included:
+**Production Recommendation:**
 
 ```ts
 import { createApp } from '@ereo/core'
@@ -407,9 +725,36 @@ if (process.env.NODE_ENV === 'development') {
 const app = createApp({ plugins })
 ```
 
-## Related
+## Troubleshooting
 
-- [Route Inspector CLI](/api/cli/dev)
-- [Data Loaders](/api/data/loaders)
-- [Islands](/api/client/islands)
-- [Cache](/api/core/cache)
+### DevTools Panel Not Appearing
+
+1. Verify the plugin is added to your config
+2. Check the console for the mount path message: `DevTools available at /__devtools`
+3. Ensure you're not in production mode
+4. Check if another middleware is intercepting the route
+
+### No Pipeline Data Showing
+
+1. Navigate to a route that has loaders
+2. Verify `@ereo/data` package is configured
+3. Check that loaders are setting `__pipeline_metrics` in context
+
+### Islands Not Detected
+
+1. Ensure islands use `data-island` attribute
+2. Check that the islands configuration is in route config
+3. Verify the page has completed loading
+
+### Routes Not Updating
+
+1. The plugin collects routes via `transformRoutes` which runs at startup
+2. Restart the dev server after adding new routes
+3. Check that routes are properly registered with the router
+
+## Related Packages
+
+- [@ereo/core](/api/core) - Core framework
+- [@ereo/data](/api/data) - Data loading and pipeline metrics
+- [@ereo/client](/api/client) - Client-side islands hydration
+- [@ereo/cache](/api/core/cache) - Caching system

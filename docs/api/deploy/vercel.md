@@ -10,84 +10,171 @@ bun add @ereo/deploy-vercel
 
 ## Overview
 
-The Vercel adapter configures your EreoJS application for deployment to Vercel. It supports:
+The `@ereo/deploy-vercel` package provides utilities to configure EreoJS applications for Vercel deployment. It supports:
 
-- **Node.js Runtime** - Traditional serverless functions
-- **Edge Runtime** - Lightweight functions running at the edge
-- **Static Generation** - Pre-rendered pages at build time
+- **Node.js Runtime** - Traditional serverless functions using `@vercel/node`
+- **Edge Runtime** - Lightweight functions running at the edge using `@vercel/edge`
 
-## Setup
+## API Reference
 
-### Basic Configuration
+### Exports
 
-```ts
-// ereo.config.ts
-import { defineConfig } from '@ereo/core'
-import { vercel } from '@ereo/deploy-vercel'
+The package exports the following:
 
-export default defineConfig({
-  ...vercel()
-})
+| Export | Type | Description |
+|--------|------|-------------|
+| `vercel` | Function | Generate EreoJS framework configuration |
+| `generateVercelJson` | Function | Generate vercel.json content |
+| `generateBuildScript` | Function | Generate bash build script |
+| `VercelConfig` | Interface | Configuration type definition |
+| `default` | Function | Default export (same as `vercel`) |
+
+---
+
+## `vercel(config?)`
+
+Generates EreoJS framework configuration for Vercel deployment.
+
+### Signature
+
+```typescript
+function vercel(config?: VercelConfig): Partial<FrameworkConfig>
 ```
 
-### Edge Runtime Configuration
+### Parameters
 
-```ts
-import { defineConfig } from '@ereo/core'
-import { vercel } from '@ereo/deploy-vercel'
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config` | `VercelConfig` | No | Configuration options |
 
-export default defineConfig({
-  ...vercel({
-    edge: true,
-    regions: ['iad1', 'sfo1', 'fra1']
-  })
-})
-```
+### Returns
 
-## Configuration Options
+Returns a partial `FrameworkConfig` object with the build target set:
 
-```ts
-interface VercelConfig {
-  /** Use Vercel Edge runtime (default: false = Node.js) */
-  edge?: boolean
-
-  /** Deployment regions */
-  regions?: string[]
-
-  /** Function timeout in seconds */
-  timeout?: number
-
-  /** Memory allocation in MB */
-  memory?: number
-
-  /** Environment variables to set */
-  env?: Record<string, string>
+```typescript
+{
+  build: {
+    target: 'node' | 'edge'
+  }
 }
 ```
 
-| Option | Type | Description | Default |
-|--------|------|-------------|---------|
-| `edge` | `boolean` | Use Edge runtime | `false` |
-| `regions` | `string[]` | Deployment regions | `['iad1']` |
-| `timeout` | `number` | Function timeout (seconds) | `10` (Edge: `30`, Node: `900` max) |
-| `memory` | `number` | Memory in MB | `1024` (Edge: `1024-4096`, Node: `128-3008`) |
-| `env` | `Record<string, string>` | Environment variables | - |
+### Examples
 
-## Vercel Configuration
+#### Default Configuration (Node.js)
 
-### Generate vercel.json
+```typescript
+import { defineConfig } from '@ereo/core';
+import { vercel } from '@ereo/deploy-vercel';
 
-The adapter can generate a `vercel.json` configuration file:
+export default defineConfig({
+  ...vercel()
+});
 
-```ts
-import { generateVercelJson } from '@ereo/deploy-vercel'
+// Equivalent to:
+// { build: { target: 'node' } }
+```
 
-const config = generateVercelJson({
+#### Edge Runtime
+
+```typescript
+import { defineConfig } from '@ereo/core';
+import { vercel } from '@ereo/deploy-vercel';
+
+export default defineConfig({
+  ...vercel({ edge: true })
+});
+
+// Equivalent to:
+// { build: { target: 'edge' } }
+```
+
+#### Using Default Export
+
+```typescript
+import vercel from '@ereo/deploy-vercel';
+
+export default defineConfig({
+  ...vercel({ edge: true })
+});
+```
+
+---
+
+## `generateVercelJson(config)`
+
+Generates a `vercel.json` configuration file as a formatted JSON string.
+
+### Signature
+
+```typescript
+function generateVercelJson(config: VercelConfig): string
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config` | `VercelConfig` | Yes | Configuration options |
+
+### Returns
+
+Returns a formatted JSON string suitable for writing to `vercel.json`.
+
+### Generated Structure
+
+The function generates a Vercel configuration with:
+
+- **version**: Always `2`
+- **builds**: Single build entry for `dist/server.js`
+- **routes**: Catch-all route directing to the server
+- **regions**: Included if specified in config
+- **functions**: Added for Edge runtime only
+
+### Examples
+
+#### Node.js Runtime
+
+```typescript
+import { generateVercelJson } from '@ereo/deploy-vercel';
+
+const json = generateVercelJson({});
+console.log(json);
+```
+
+Output:
+
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/server.js"
+    }
+  ]
+}
+```
+
+#### Edge Runtime with Regions
+
+```typescript
+import { generateVercelJson } from '@ereo/deploy-vercel';
+
+const json = generateVercelJson({
   edge: true,
-  regions: ['iad1', 'sfo1']
-})
-
-console.log(config)
+  regions: ['iad1', 'sfo1', 'fra1']
+});
+console.log(json);
 ```
 
 Output:
@@ -110,420 +197,283 @@ Output:
       "dest": "dist/server.js"
     }
   ],
-  "regions": ["iad1", "sfo1"],
+  "regions": ["iad1", "sfo1", "fra1"],
   "functions": {
     "dist/server.js": {
       "runtime": "edge",
-      "regions": ["iad1", "sfo1"]
+      "regions": ["iad1", "sfo1", "fra1"]
     }
   }
 }
 ```
 
-### Manual vercel.json
+#### Writing to File
 
-Create `vercel.json` in your project root:
+```typescript
+import { generateVercelJson } from '@ereo/deploy-vercel';
 
-```json
-{
-  "version": 2,
-  "buildCommand": "bun run build",
-  "outputDirectory": "dist",
-  "framework": null,
-  "functions": {
-    "dist/server.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
-  "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/server.js"
-    }
-  ]
+const config = generateVercelJson({
+  edge: true,
+  regions: ['iad1']
+});
+
+await Bun.write('vercel.json', config);
+```
+
+---
+
+## `generateBuildScript()`
+
+Generates a bash build script for Vercel deployment.
+
+### Signature
+
+```typescript
+function generateBuildScript(): string
+```
+
+### Parameters
+
+None.
+
+### Returns
+
+Returns a bash script string that:
+
+1. Sets strict error handling (`set -e`)
+2. Installs dependencies with `bun install`
+3. Builds the application with `bun run build`
+4. Copies static assets from `public/` to `dist/public/`
+
+### Generated Script
+
+```bash
+#!/bin/bash
+# Vercel build script for EreoJS framework
+
+set -e
+
+echo "Building for Vercel..."
+
+# Install dependencies
+bun install
+
+# Build the application
+bun run build
+
+# Copy static assets to dist
+mkdir -p dist/public
+cp -r public/* dist/public/ 2>/dev/null || true
+
+echo "Build complete!"
+```
+
+### Example
+
+```typescript
+import { generateBuildScript } from '@ereo/deploy-vercel';
+
+const script = generateBuildScript();
+await Bun.write('build.sh', script);
+
+// Make executable (via CLI)
+// chmod +x build.sh
+```
+
+---
+
+## `VercelConfig` Interface
+
+Configuration options for Vercel deployment.
+
+### Definition
+
+```typescript
+interface VercelConfig {
+  /** Use Vercel Edge runtime (default: false = Node.js) */
+  edge?: boolean;
+
+  /** Deployment regions */
+  regions?: string[];
+
+  /** Function timeout in seconds (reserved - not yet implemented) */
+  timeout?: number;
+
+  /** Memory allocation in MB (reserved - not yet implemented) */
+  memory?: number;
+
+  /** Environment variables (reserved - not yet implemented) */
+  env?: Record<string, string>;
 }
 ```
 
-## Build Commands
+### Properties
 
-### Development
+| Property | Type | Default | Used By | Description |
+|----------|------|---------|---------|-------------|
+| `edge` | `boolean` | `false` | `vercel()`, `generateVercelJson()` | When `true`, configures for Edge runtime |
+| `regions` | `string[]` | `undefined` | `generateVercelJson()` | Array of Vercel region codes |
+| `timeout` | `number` | - | Not yet implemented | Reserved for function timeout |
+| `memory` | `number` | - | Not yet implemented | Reserved for memory allocation |
+| `env` | `Record<string, string>` | - | Not yet implemented | Reserved for environment variables |
 
-```bash
-# Local development
-bun ereo dev
+> **Note:** The `timeout`, `memory`, and `env` options are defined in the interface for future compatibility but are not currently used by any functions.
 
-# With Vercel CLI
-vercel dev
-```
+### Vercel Regions
 
-### Production Build
+Common Vercel region codes:
 
-```bash
-# Build for Vercel
-bun ereo build
+| Code | Location |
+|------|----------|
+| `iad1` | Washington, D.C., USA |
+| `sfo1` | San Francisco, USA |
+| `fra1` | Frankfurt, Germany |
+| `hnd1` | Tokyo, Japan |
+| `syd1` | Sydney, Australia |
 
-# Deploy to Vercel
-vercel deploy
-```
+See [Vercel Regions documentation](https://vercel.com/docs/edge-network/regions) for full list.
 
-### Build Script
+---
 
-The adapter generates a build script for Vercel:
+## Deployment Guide
 
-```ts
-import { generateBuildScript } from '@ereo/deploy-vercel'
-
-const script = generateBuildScript()
-// Outputs bash script for Vercel builds
-```
-
-### Package Scripts
-
-```json
-{
-  "scripts": {
-    "dev": "ereo dev",
-    "build": "ereo build",
-    "deploy": "vercel deploy",
-    "deploy:prod": "vercel deploy --prod"
-  }
-}
-```
-
-## Environment Variables
-
-### Local Development
-
-Create `.env.local`:
-
-```
-DATABASE_URL=postgres://localhost/mydb
-API_KEY=secret123
-```
-
-### Production
-
-Set environment variables via Vercel Dashboard or CLI:
+### Step 1: Install the Package
 
 ```bash
-# Set a secret
-vercel env add API_KEY production
-
-# Pull environment variables
-vercel env pull .env.local
+bun add @ereo/deploy-vercel
 ```
 
-### Accessing in Code
+### Step 2: Configure EreoJS
 
-```ts
-// routes/api/data.ts
-export const loader = createLoader(async ({ request }) => {
-  // Access environment variables
-  const apiKey = process.env.API_KEY
-  const dbUrl = process.env.DATABASE_URL
-
-  return { data: 'example' }
-})
-```
-
-### Environment File Priority
-
-Files loaded in order (later overrides earlier):
-
-1. `.env`
-2. `.env.local`
-3. `.env.production` (production builds)
-4. `.env.production.local`
-
-## Serverless Functions
-
-### Node.js Runtime
-
-Default runtime with full Node.js API support:
-
-```ts
+```typescript
 // ereo.config.ts
-import { vercel } from '@ereo/deploy-vercel'
+import { defineConfig } from '@ereo/core';
+import { vercel } from '@ereo/deploy-vercel';
 
 export default defineConfig({
   ...vercel({
-    edge: false, // Use Node.js runtime
-    timeout: 60,
-    memory: 1024
+    edge: false  // or true for Edge runtime
   })
-})
+});
 ```
 
-### Function Configuration
+### Step 3: Generate vercel.json
 
-Per-route function configuration:
+```typescript
+// scripts/generate-vercel-config.ts
+import { generateVercelJson } from '@ereo/deploy-vercel';
 
-```ts
-// routes/api/heavy-task.ts
-export const config = {
-  runtime: 'nodejs',
-  maxDuration: 300 // 5 minutes
-}
+const config = generateVercelJson({
+  edge: false,
+  regions: ['iad1']
+});
 
-export const loader = createLoader(async () => {
-  // Long-running task
-  const result = await processLargeDataset()
-  return { result }
-})
+await Bun.write('vercel.json', config);
+console.log('Generated vercel.json');
 ```
 
-### Streaming Responses
-
-```ts
-export const loader = createLoader(async () => {
-  const stream = new ReadableStream({
-    async start(controller) {
-      for (let i = 0; i < 10; i++) {
-        controller.enqueue(`data: ${i}\n\n`)
-        await new Promise(r => setTimeout(r, 100))
-      }
-      controller.close()
-    }
-  })
-
-  return new Response(stream, {
-    headers: { 'Content-Type': 'text/event-stream' }
-  })
-})
-```
-
-## Edge Middleware
-
-### Global Middleware
-
-Create edge middleware that runs before all requests:
-
-```ts
-// middleware.ts (project root)
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-
-export function middleware(request: NextRequest) {
-  // Add custom headers
-  const response = NextResponse.next()
-  response.headers.set('X-Custom-Header', 'value')
-  return response
-}
-
-export const config = {
-  matcher: ['/((?!static|_next|favicon.ico).*)']
-}
-```
-
-### Route-Level Edge Functions
-
-```ts
-// routes/api/geo.ts
-export const config = {
-  runtime: 'edge',
-  regions: ['iad1', 'sfo1', 'fra1']
-}
-
-export const loader = createLoader(async ({ request }) => {
-  // Access geo information
-  const geo = request.headers.get('x-vercel-ip-country')
-  const city = request.headers.get('x-vercel-ip-city')
-
-  return { country: geo, city }
-})
-```
-
-### Edge Runtime Limitations
-
-Edge runtime has some limitations compared to Node.js:
-
-- No native Node.js modules
-- Limited file system access
-- 30-second timeout maximum
-- 4 MB function size limit
-
-```ts
-// Use edge-compatible packages
-import { createHash } from '@noble/hashes/sha256'
-
-export const loader = createLoader(async () => {
-  const hash = createHash().update('data').digest('hex')
-  return { hash }
-})
-```
-
-## Static Generation
-
-### Pre-render Pages
-
-```ts
-// routes/posts/[slug].tsx
-export const config = {
-  render: 'ssg'
-}
-
-export async function getStaticPaths() {
-  const posts = await fetchPosts()
-  return posts.map(post => ({
-    params: { slug: post.slug }
-  }))
-}
-
-export const loader = createLoader(async ({ params }) => {
-  const post = await fetchPost(params.slug)
-  return { post }
-})
-```
-
-### Incremental Static Regeneration
-
-```ts
-// routes/posts/[slug].tsx
-export const config = {
-  render: 'isr',
-  revalidate: 60 // Revalidate every 60 seconds
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Function Size Limit
-
-```
-Error: Function size limit exceeded
-```
-
-Reduce bundle size:
-
-```ts
-export default defineConfig({
-  build: {
-    minify: true,
-    external: ['sharp', 'canvas'] // Exclude large packages
-  }
-})
-```
-
-#### Timeout Errors
-
-Increase function timeout:
-
-```json
-{
-  "functions": {
-    "dist/server.js": {
-      "maxDuration": 60
-    }
-  }
-}
-```
-
-#### Missing Environment Variables
-
-Ensure variables are set for the correct environment:
+Run:
 
 ```bash
-# List all environment variables
-vercel env ls
-
-# Pull to local
-vercel env pull .env.local
+bun run scripts/generate-vercel-config.ts
 ```
 
-#### Cold Start Performance
-
-Optimize for faster cold starts:
-
-```ts
-// Lazy load heavy dependencies
-export const loader = createLoader(async () => {
-  const { processImage } = await import('./heavy-module')
-  return processImage()
-})
-```
-
-### Debug Mode
-
-Enable verbose logging:
+### Step 4: Build and Deploy
 
 ```bash
-# Local debugging
-vercel dev --debug
+# Build the application
+bun run build
 
-# Check deployment logs
-vercel logs <deployment-url>
-```
-
-### Build Analysis
-
-```bash
-# Build with analysis
-bun ereo build --analyze
-
-# Check function sizes
-vercel inspect <deployment-url>
-```
-
-## CI/CD Deployment
-
-### GitHub Integration
-
-Connect your repository to Vercel for automatic deployments:
-
-1. Import project at vercel.com/new
-2. Configure build settings
-3. Push to deploy
-
-### GitHub Actions
-
-```yaml
-name: Deploy to Vercel
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v1
-
-      - run: bun install
-
-      - run: bun run build
-
-      - uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-```
-
-### Preview Deployments
-
-Vercel automatically creates preview deployments for pull requests:
-
-```bash
-# Deploy preview manually
+# Deploy to Vercel (preview)
 vercel deploy
 
 # Deploy to production
 vercel deploy --prod
 ```
 
+---
+
+## Runtime Comparison
+
+| Feature | Node.js (`edge: false`) | Edge (`edge: true`) |
+|---------|------------------------|---------------------|
+| Vercel Builder | `@vercel/node` | `@vercel/edge` |
+| Maximum Timeout | 900 seconds | 30 seconds |
+| Memory Range | 128 MB - 3008 MB | 1024 MB - 4096 MB |
+| Node.js APIs | Full support | Limited (Web APIs) |
+| File System | Available | Not available |
+| Cold Start | Slower | Faster |
+| Global Deployment | Per-region | Edge network |
+
+### When to Use Node.js Runtime
+
+- Need full Node.js API support
+- Long-running operations (up to 15 minutes)
+- File system operations
+- Heavy computation
+
+### When to Use Edge Runtime
+
+- Low-latency requirements
+- Simple request/response handling
+- Geolocation-based logic
+- Authentication/authorization middleware
+
+---
+
+## Package Scripts
+
+Recommended `package.json` scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun run build",
+    "deploy": "vercel deploy",
+    "deploy:prod": "vercel deploy --prod",
+    "generate:vercel": "bun run scripts/generate-vercel-config.ts"
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### Build Output Location
+
+The generated configuration expects your build output at `dist/server.js`. Ensure your build process outputs to this location.
+
+### Missing Regions
+
+If `regions` is not specified, Vercel uses its default region selection. For explicit control:
+
+```typescript
+generateVercelJson({
+  regions: ['iad1']  // Explicitly set regions
+});
+```
+
+### Edge Runtime Functions Block
+
+The `functions` block in `vercel.json` is only added when `edge: true`. For Node.js runtime, configure function settings directly in Vercel's dashboard or manually add to `vercel.json`.
+
+### Static Assets
+
+The generated build script copies files from `public/` to `dist/public/`. Ensure your static assets are in the `public/` directory.
+
+---
+
+## Dependencies
+
+This package depends on:
+
+- `@ereo/core` - For the `FrameworkConfig` type
+
+---
+
 ## Related
 
 - [Cloudflare Deployment](/api/deploy/cloudflare)
-- [Build CLI](/api/cli/build)
-- [Environment Variables](/api/core/env)
+- [EreoJS Core](/api/core)
