@@ -331,7 +331,7 @@ export interface ImagePluginConfig {
 
   /**
    * Path prefix for optimized images.
-   * @default '/_areo/image'
+   * @default '/_ereo/image'
    */
   path?: string;
 

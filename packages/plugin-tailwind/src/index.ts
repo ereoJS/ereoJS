@@ -51,7 +51,7 @@ export default function tailwind(options: TailwindPluginOptions = {}): Plugin {
   let configLoaded = false;
 
   return {
-    name: 'areo:tailwind',
+    name: 'ereo:tailwind',
 
     async setup(context) {
       const root = context.root;

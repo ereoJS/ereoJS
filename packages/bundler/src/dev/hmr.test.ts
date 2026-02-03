@@ -810,8 +810,8 @@ describe('@ereo/bundler - HMR', () => {
       expect(HMR_CLIENT_CODE).toContain('fetchAndRehydrate');
     });
 
-    test('contains AREO_HMR registry', () => {
-      expect(HMR_CLIENT_CODE).toContain('__AREO_HMR__');
+    test('contains EREO_HMR registry', () => {
+      expect(HMR_CLIENT_CODE).toContain('__EREO_HMR__');
       expect(HMR_CLIENT_CODE).toContain('modules');
       expect(HMR_CLIENT_CODE).toContain('islands');
       expect(HMR_CLIENT_CODE).toContain('acceptedModules');

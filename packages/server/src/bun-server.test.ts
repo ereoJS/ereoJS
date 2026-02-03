@@ -1014,7 +1014,7 @@ describe('@ereo/server - BunServer', () => {
   describe('Bun-native API usage (no Node.js Buffer/stream)', () => {
     test('TextEncoder is used for string encoding', () => {
       const encoder = new TextEncoder();
-      const text = 'Hello, Areo!';
+      const text = 'Hello, Ereo!';
       const encoded = encoder.encode(text);
 
       expect(encoded).toBeInstanceOf(Uint8Array);

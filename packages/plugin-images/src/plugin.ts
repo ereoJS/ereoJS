@@ -57,7 +57,7 @@ export function imagesPlugin(options: ImagePluginConfig = {}): Plugin {
   let state: PluginState | null = null;
 
   return {
-    name: 'areo:images',
+    name: 'ereo:images',
 
     async setup(context: PluginContext) {
       const { root, mode } = context;
