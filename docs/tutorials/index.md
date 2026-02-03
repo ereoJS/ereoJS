@@ -34,6 +34,16 @@ Learn advanced patterns by building an authenticated dashboard with interactive 
 
 **Time:** ~3 hours
 
+### Dashboard Tutorial Chapters
+
+| Chapter | Topic | Duration |
+|---------|-------|----------|
+| [1. Setup](/tutorials/dashboard-tutorial/01-setup) | Project and database setup | 20 min |
+| [2. Authentication](/tutorials/dashboard-tutorial/02-authentication) | Login, registration, sessions | 30 min |
+| [3. Islands](/tutorials/dashboard-tutorial/03-islands) | Interactive widgets | 35 min |
+| [4. Analytics](/tutorials/dashboard-tutorial/04-analytics) | Shared state between islands | 30 min |
+| [5. Deployment](/tutorials/dashboard-tutorial/05-deployment) | Production deployment | 25 min |
+
 ## Tutorial Structure
 
 Each tutorial is broken into manageable sections:
