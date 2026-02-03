@@ -296,7 +296,7 @@ describe('@ereo/plugin-tailwind', () => {
   });
 
   describe('generateConfig', () => {
-    test('generates config with Oreo preset by default', () => {
+    test('generates config with EreoJS preset by default', () => {
       const config = generateConfig();
 
       expect(config).toContain('getEreoTailwindConfig');

@@ -876,7 +876,7 @@ class SQLiteTableModel<T extends Record<string, unknown>> implements TableModel<
 // ============================================================================
 
 /** Create SQLite database client */
-function createSQLiteClient(config: DatabaseConfig): DBClientWithTables {
+export function createSQLiteClient(config: DatabaseConfig): DBClientWithTables {
   const database = new Database(config.url, { create: true });
   const tableModels = new Map<string, SQLiteTableModel<any>>();
 

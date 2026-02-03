@@ -9,7 +9,7 @@ import type { DataPipelineVisualization, LoaderTiming } from './types';
 
 /**
  * Generate HTML for the Data Pipeline visualization.
- * This is the flagship feature of Oreo DevTools.
+ * This is the flagship feature of EreoJS DevTools.
  */
 export function generateDataPipelineHTML(data: DataPipelineVisualization): string {
   const { route, totalTime, loaders, efficiency, waterfalls, timestamp } = data;

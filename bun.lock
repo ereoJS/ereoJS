@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "oreo-monorepo",
+      "name": "ereo-monorepo",
       "dependencies": {
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
