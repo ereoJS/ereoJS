@@ -178,6 +178,22 @@ export default defineConfig({
           ]
         },
         {
+          text: '@ereo/rpc',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/api/rpc/' },
+            { text: 'Procedure Builder', link: '/api/rpc/procedure' },
+            { text: 'Router', link: '/api/rpc/router' },
+            { text: 'Client', link: '/api/rpc/client' },
+            { text: 'Middleware', link: '/api/rpc/middleware' },
+            { text: 'React Hooks', link: '/api/rpc/hooks' },
+            { text: 'Plugin', link: '/api/rpc/plugin' },
+            { text: 'Context Bridge', link: '/api/rpc/context-bridge' },
+            { text: 'Types', link: '/api/rpc/types' },
+            { text: 'Protocol', link: '/api/rpc/protocol' }
+          ]
+        },
+        {
           text: '@ereo/cli',
           collapsed: false,
           items: [
