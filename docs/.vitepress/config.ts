@@ -126,6 +126,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: 'FileRouter', link: '/api/router/file-router' },
+            { text: 'Route Config', link: '/api/router/route-config' },
             { text: 'Route Matching', link: '/api/router/matching' },
             { text: 'Middleware', link: '/api/router/middleware' },
             { text: 'Validation', link: '/api/router/validation' }
