@@ -1,0 +1,46 @@
+{
+  "name": "@ereo/db-surrealdb",
+  "version": "0.1.0",
+  "description": "SurrealDB adapter for EreoJS database abstraction",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ereo/db": "workspace:*"
+  },
+  "peerDependencies": {
+    "surrealdb": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "surrealdb": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "surrealdb": "^1.0.0",
+    "typescript": "^5.4.0"
+  },
+  "keywords": [
+    "ereo",
+    "database",
+    "surrealdb",
+    "adapter"
+  ]
+}
