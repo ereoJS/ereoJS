@@ -88,7 +88,8 @@ export function batch<T>(fn: () => T): T {
 
 /** Store for global state */
 export class Store<T extends Record<string, unknown>> {
-  private _state: Map<keyof T, Signal<T[keyof T]>> = new Map();
+  // Use Map<string, Signal<any>> internally to avoid complex type juggling
+  private _state: Map<string, Signal<any>> = new Map();
 
   constructor(initialState: T) {
     for (const [key, value] of Object.entries(initialState)) {
@@ -98,16 +99,16 @@ export class Store<T extends Record<string, unknown>> {
 
   /** Get signal for key */
   get<K extends keyof T>(key: K): Signal<T[K]> {
-    return this._state.get(key) as Signal<T[K]>;
+    return this._state.get(key as string) as Signal<T[K]>;
   }
 
   /** Set value for key */
   set<K extends keyof T>(key: K, value: T[K]): void {
-    const s = this._state.get(key);
+    const s = this._state.get(key as string);
     if (s) {
       s.set(value);
     } else {
-      this._state.set(key, signal(value));
+      this._state.set(key as string, signal(value));
     }
   }
 
@@ -115,7 +116,7 @@ export class Store<T extends Record<string, unknown>> {
   getSnapshot(): T {
     const snapshot = {} as T;
     for (const [key, sig] of this._state) {
-      snapshot[key] = sig.get() as T[keyof T];
+      (snapshot as Record<string, unknown>)[key] = sig.get();
     }
     return snapshot;
   }

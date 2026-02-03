@@ -439,10 +439,11 @@ function buildClearCookieHeader(
 /** Create the auth plugin */
 export function createAuthPlugin(config: AuthConfig): Plugin {
   // Normalize configuration (support both old and new config formats)
-  const secret = config.session?.secret || config.secret;
-  if (!secret) {
+  const secretValue = config.session?.secret || config.secret;
+  if (!secretValue) {
     throw new Error('[auth] Session secret is required');
   }
+  const secret: string = secretValue;
 
   const sessionMaxAge = config.session?.maxAge ?? config.sessionDuration ?? 7 * 24 * 60 * 60; // 7 days
   const sessionStrategy: SessionStrategy = config.session?.strategy ?? 'jwt';

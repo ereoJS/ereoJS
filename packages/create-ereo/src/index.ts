@@ -137,6 +137,7 @@ async function generateMinimalProject(
     },
     devDependencies: typescript
       ? {
+          '@types/bun': '^1.1.0',
           '@types/react': '^18.2.0',
           '@types/react-dom': '^18.2.0',
           typescript: '^5.4.0',
@@ -269,6 +270,7 @@ async function generateTailwindProject(
       '@ereo/dev-inspector': '^0.1.0',
       ...(ts
         ? {
+            '@types/bun': '^1.1.0',
             '@types/react': '^18.2.0',
             '@types/react-dom': '^18.2.0',
             typescript: '^5.4.0',

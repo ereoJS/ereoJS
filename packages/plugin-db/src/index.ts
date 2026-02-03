@@ -291,7 +291,7 @@ export interface TableSchema {
 /** Transaction client interface - provides table access only */
 export interface TransactionClient {
   /** Get table model by name */
-  getTable<T = Record<string, unknown>>(tableName: string): TableModel<T>;
+  getTable<T extends Record<string, unknown> = Record<string, unknown>>(tableName: string): TableModel<T>;
 }
 
 /** Database client interface */
@@ -321,7 +321,7 @@ export interface DBClient {
   tableExists(tableName: string): Promise<boolean>;
 
   /** Get table model by name */
-  getTable<T = Record<string, unknown>>(tableName: string): TableModel<T>;
+  getTable<T extends Record<string, unknown> = Record<string, unknown>>(tableName: string): TableModel<T>;
 }
 
 /** Extended DB client with dynamic table access via proxy */
@@ -914,8 +914,8 @@ function createSQLiteClient(config: DatabaseConfig): DBClientWithTables {
     async transaction<T>(fn: (tx: TransactionClient) => Promise<T>): Promise<T> {
       // Create a transaction-scoped client
       const txClient: TransactionClient = {
-        getTable<T = Record<string, unknown>>(tableName: string): TableModel<T> {
-          return getTableModel<T>(tableName);
+        getTable<U extends Record<string, unknown> = Record<string, unknown>>(tableName: string): TableModel<U> {
+          return getTableModel<U>(tableName);
         },
       };
 
@@ -998,7 +998,7 @@ function createSQLiteClient(config: DatabaseConfig): DBClientWithTables {
       return result !== null;
     },
 
-    getTable<T = Record<string, unknown>>(tableName: string): TableModel<T> {
+    getTable<T extends Record<string, unknown> = Record<string, unknown>>(tableName: string): TableModel<T> {
       return getTableModel<T>(tableName);
     },
   };

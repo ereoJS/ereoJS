@@ -317,14 +317,14 @@ export function api<Path extends ApiPaths>(path: Path) {
 
   return {
     get: (options?: { params?: Record<string, string>; query?: Record<string, unknown>; headers?: Record<string, string>; signal?: AbortSignal }) =>
-      client.get(path, options),
+      client.get(path, options as any),
     post: (options?: { params?: Record<string, string>; body?: unknown; headers?: Record<string, string>; signal?: AbortSignal }) =>
-      client.post(path, options),
+      client.post(path, options as any),
     put: (options?: { params?: Record<string, string>; body?: unknown; headers?: Record<string, string>; signal?: AbortSignal }) =>
-      client.put(path, options),
+      client.put(path, options as any),
     patch: (options?: { params?: Record<string, string>; body?: unknown; headers?: Record<string, string>; signal?: AbortSignal }) =>
-      client.patch(path, options),
+      client.patch(path, options as any),
     delete: (options?: { params?: Record<string, string>; headers?: Record<string, string>; signal?: AbortSignal }) =>
-      client.delete(path, options),
+      client.delete(path, options as any),
   };
 }

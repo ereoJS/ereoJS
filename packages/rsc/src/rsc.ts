@@ -199,7 +199,7 @@ function extractClientReferences(component: React.ReactElement): string[] {
       const children = Array.isArray(props.children)
         ? props.children
         : [props.children];
-      children.forEach((child) => {
+      children.forEach((child: unknown) => {
         if (React.isValidElement(child)) {
           traverse(child as React.ReactElement);
         }

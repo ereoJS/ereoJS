@@ -22,6 +22,57 @@ import { serializeLoaderData } from '@ereo/data';
 import { createElement, type ReactElement, type ComponentType } from 'react';
 
 /**
+ * Type for the streaming renderer result.
+ */
+type StreamingRenderer = {
+  renderToReadableStream?: (
+    element: ReactElement,
+    options?: { onError?: (error: unknown) => void }
+  ) => Promise<ReadableStream<Uint8Array> & { allReady: Promise<void> }>;
+  renderToString: (element: ReactElement) => string;
+};
+
+/**
+ * Helper to get renderToReadableStream from react-dom/server.
+ * React 18 exports this from different paths depending on the environment:
+ * - 'react-dom/server.browser' for Web Streams API (renderToReadableStream)
+ * - 'react-dom/server' for Node.js (renderToPipeableStream)
+ *
+ * Bun supports Web Streams natively, so we prefer renderToReadableStream.
+ */
+async function getStreamingRenderer(): Promise<StreamingRenderer> {
+  try {
+    // Try to import from react-dom/server.browser first (Web Streams API)
+    // This is the correct path for renderToReadableStream in React 18+
+    // @ts-expect-error - react-dom/server.browser may not have types
+    const browserServer = await import('react-dom/server.browser');
+    if (typeof browserServer.renderToReadableStream === 'function') {
+      return {
+        renderToReadableStream: browserServer.renderToReadableStream,
+        renderToString: browserServer.renderToString,
+      };
+    }
+  } catch {
+    // Browser build not available, try the main export
+  }
+
+  try {
+    // Fallback to react-dom/server
+    const server = await import('react-dom/server');
+    return {
+      renderToReadableStream: (server as any).renderToReadableStream,
+      renderToString: server.renderToString,
+    };
+  } catch {
+    // Last resort - return undefined for streaming, will fallback to string
+    return {
+      renderToReadableStream: undefined,
+      renderToString: (await import('react-dom/server')).renderToString,
+    };
+  }
+}
+
+/**
  * Server render mode options.
  *
  * This type is distinct from the route-level RenderMode in @ereo/core.
@@ -366,7 +417,12 @@ export class BunServer {
     loaderData: unknown
   ): Promise<Response> {
     try {
-      const { renderToReadableStream } = await import('react-dom/server');
+      const { renderToReadableStream } = await getStreamingRenderer();
+
+      // If renderToReadableStream is not available, fallback to string rendering
+      if (!renderToReadableStream) {
+        return this.renderStringPage(element, shell, loaderData);
+      }
 
       const scripts = [this.options.clientEntry!];
       const { head, tail } = createShell({ shell, scripts, loaderData });
@@ -462,7 +518,12 @@ export class BunServer {
     loaderData: unknown
   ): Promise<Response> {
     try {
-      const { renderToReadableStream } = await import('react-dom/server');
+      const { renderToReadableStream } = await getStreamingRenderer();
+
+      // If renderToReadableStream is not available, fallback to string rendering
+      if (!renderToReadableStream) {
+        return this.renderStringPageDirect(element, loaderData);
+      }
 
       // Render the element directly - layout provides html/head/body
       const reactStream = await renderToReadableStream(element, {
