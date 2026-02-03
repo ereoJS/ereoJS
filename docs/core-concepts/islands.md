@@ -278,7 +278,7 @@ export default function Dashboard({ data }) {
 
 ## Islands with Forms
 
-Combine islands with Ereo's form handling:
+Combine islands with EreoJS's form handling:
 
 ```tsx
 // islands/CommentForm.tsx
@@ -299,7 +299,7 @@ export default function CommentForm({ postId }) {
 }
 ```
 
-## Using Ereo State in Islands
+## Using EreoJS State in Islands
 
 For shared state across islands, use `@ereo/state`:
 

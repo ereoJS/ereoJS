@@ -1,11 +1,11 @@
 /**
  * @ereo/plugin-tailwind - Framework Preset
  *
- * Tailwind CSS preset with sensible defaults for Ereo apps.
+ * Tailwind CSS preset with sensible defaults for EreoJS apps.
  */
 
 /**
- * Ereo Tailwind preset.
+ * EreoJS Tailwind preset.
  */
 export const ereoPreset = {
   theme: {
@@ -107,7 +107,7 @@ export const ereoPreset = {
 };
 
 /**
- * Get Tailwind config with Ereo preset.
+ * Get Tailwind config with EreoJS preset.
  */
 export function getEreoTailwindConfig(overrides: Record<string, any> = {}) {
   return {

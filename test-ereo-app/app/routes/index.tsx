@@ -2,7 +2,7 @@ import type { LoaderArgs } from '@ereo/core';
 
 export async function loader({ request }: LoaderArgs) {
   return {
-    message: 'Welcome to Ereo!',
+    message: 'Welcome to EreoJS!',
     timestamp: new Date().toISOString(),
   };
 }

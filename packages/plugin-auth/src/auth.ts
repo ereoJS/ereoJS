@@ -1,5 +1,5 @@
 /**
- * @ereo/auth - Authentication plugin for Ereo framework
+ * @ereo/auth - Authentication plugin for EreoJS framework
  *
  * Provides authentication and authorization with multiple providers,
  * JWT-based sessions, and role-based access control.

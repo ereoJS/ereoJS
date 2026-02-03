@@ -1,6 +1,6 @@
 # Core Concepts
 
-Ereo is built on a few fundamental concepts that work together to create a cohesive full-stack development experience. Understanding these concepts will help you build applications effectively.
+EreoJS is built on a few fundamental concepts that work together to create a cohesive full-stack development experience. Understanding these concepts will help you build applications effectively.
 
 ## Architecture Overview
 
@@ -15,7 +15,7 @@ Ereo is built on a few fundamental concepts that work together to create a cohes
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│                     Ereo Server                         │
+│                     EreoJS Server                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
 │  │   Router    │  │   Loaders   │  │    Actions      │  │
 │  │  (File-based)│ │ (Data fetch)│  │  (Mutations)    │  │
@@ -31,7 +31,7 @@ Ereo is built on a few fundamental concepts that work together to create a cohes
 
 ### Web Standards First
 
-Ereo uses standard web APIs throughout:
+EreoJS uses standard web APIs throughout:
 
 - **Request/Response** - All data flows through standard HTTP primitives
 - **FormData** - Forms use the platform's native form handling
@@ -51,7 +51,7 @@ Applications work without JavaScript and enhance when it's available:
 
 ### Explicit Over Magic
 
-Ereo prefers explicit configuration over conventions that hide behavior:
+EreoJS prefers explicit configuration over conventions that hide behavior:
 
 - **Caching is opt-in** - You decide what gets cached
 - **Hydration is explicit** - You mark what needs JavaScript
@@ -244,7 +244,7 @@ export default function Counter() {
 
 ## Type Safety
 
-Ereo provides full TypeScript support:
+EreoJS provides full TypeScript support:
 
 ```tsx
 import type { LoaderFunction, ActionFunction } from '@ereo/core'

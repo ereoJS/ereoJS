@@ -38,7 +38,7 @@ const defaultConfig: FrameworkConfig = {
 };
 
 /**
- * Create a new Ereo application.
+ * Create a new EreoJS application.
  */
 export function createApp(options: ApplicationOptions = {}): EreoApp {
   return new EreoApp(options);
@@ -52,7 +52,7 @@ export function defineConfig(config: FrameworkConfig): FrameworkConfig {
 }
 
 /**
- * The main Ereo application class.
+ * The main EreoJS application class.
  */
 export class EreoApp implements Application {
   readonly config: FrameworkConfig;

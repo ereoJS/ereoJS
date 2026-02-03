@@ -1,7 +1,7 @@
 /**
  * @ereo/plugin-tailwind
  *
- * Zero-config Tailwind CSS integration for Ereo.
+ * Zero-config Tailwind CSS integration for EreoJS.
  */
 
 import { join } from 'node:path';
@@ -18,7 +18,7 @@ export interface TailwindPluginOptions {
   config?: string;
   /** Enable dark mode */
   darkMode?: 'class' | 'media' | false;
-  /** Use Ereo preset */
+  /** Use EreoJS preset */
   usePreset?: boolean;
 }
 
@@ -67,7 +67,7 @@ export default function tailwind(options: TailwindPluginOptions = {}): Plugin {
         } else {
           // Generate default config if using preset
           if (opts.usePreset) {
-            console.log('  Using Ereo Tailwind preset');
+            console.log('  Using EreoJS Tailwind preset');
           }
         }
       } catch (error) {

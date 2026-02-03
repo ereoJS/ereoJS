@@ -1,6 +1,6 @@
 # Your First App
 
-Let's build a simple task list application to learn Ereo's core features: routing, data loading, and form handling.
+Let's build a simple task list application to learn EreoJS's core features: routing, data loading, and form handling.
 
 ## Setup
 
@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <div>
       <h1>Task Manager</h1>
-      <p>A simple task list built with Ereo.</p>
+      <p>A simple task list built with EreoJS.</p>
       <Link href="/tasks">View Tasks</Link>
     </div>
   )
@@ -68,7 +68,7 @@ import { Link } from '@ereo/client'
 
 // Simulated database
 const tasks = [
-  { id: '1', title: 'Learn Ereo', completed: false },
+  { id: '1', title: 'Learn EreoJS', completed: false },
   { id: '2', title: 'Build an app', completed: false },
   { id: '3', title: 'Deploy to production', completed: false },
 ]
@@ -110,7 +110,7 @@ import { Form, Link } from '@ereo/client'
 
 // Same simulated database
 const tasks = [
-  { id: '1', title: 'Learn Ereo', completed: false },
+  { id: '1', title: 'Learn EreoJS', completed: false },
   { id: '2', title: 'Build an app', completed: false },
   { id: '3', title: 'Deploy to production', completed: false },
 ]
@@ -175,7 +175,7 @@ import { createAction, redirect } from '@ereo/data'
 import { Form, Link, useActionData } from '@ereo/client'
 
 const tasks = [
-  { id: '1', title: 'Learn Ereo', completed: false },
+  { id: '1', title: 'Learn EreoJS', completed: false },
   { id: '2', title: 'Build an app', completed: false },
   { id: '3', title: 'Deploy to production', completed: false },
 ]

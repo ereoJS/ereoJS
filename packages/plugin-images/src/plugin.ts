@@ -1,7 +1,7 @@
 /**
  * @ereo/plugin-images - Plugin Implementation
  *
- * Core plugin that integrates image optimization into the Ereo framework.
+ * Core plugin that integrates image optimization into the EreoJS framework.
  */
 
 import { join, relative, extname, dirname, basename } from 'node:path';
@@ -38,7 +38,7 @@ interface PluginState {
  * Create the image optimization plugin.
  *
  * @param options - Plugin configuration
- * @returns Ereo plugin
+ * @returns EreoJS plugin
  *
  * @example
  * import images from '@ereo/plugin-images';

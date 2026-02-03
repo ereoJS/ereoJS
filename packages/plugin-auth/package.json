@@ -1,7 +1,7 @@
 {
   "name": "@ereo/auth",
   "version": "0.1.0",
-  "description": "Authentication plugin for Ereo framework",
+  "description": "Authentication plugin for EreoJS framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useMemo, forwardRef } from 'react';
 import type { ImageProps, StaticImageData, ImageLoaderParams } from './types';
 
 /**
- * Default image loader that generates URLs for the Ereo image endpoint.
+ * Default image loader that generates URLs for the EreoJS image endpoint.
  */
 const defaultLoader = ({ src, width, quality }: ImageLoaderParams): string => {
   const params = new URLSearchParams({
@@ -99,7 +99,7 @@ function getBlurStyle(
 }
 
 /**
- * Ereo Image Component
+ * EreoJS Image Component
  *
  * A drop-in replacement for the HTML img element with automatic optimization.
  *

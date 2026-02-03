@@ -108,7 +108,7 @@ export function generateErrorOverlayHTML(error: ErrorInfo): string {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Error - Ereo Dev</title>
+  <title>Error - EreoJS Dev</title>
   <style>
     * { box-sizing: border-box; }
     body {

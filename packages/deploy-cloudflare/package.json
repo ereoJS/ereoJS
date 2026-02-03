@@ -1,7 +1,7 @@
 {
   "name": "@ereo/deploy-cloudflare",
   "version": "0.1.0",
-  "description": "Cloudflare Pages/Workers deployment adapter for Ereo framework",
+  "description": "Cloudflare Pages/Workers deployment adapter for EreoJS framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

@@ -2,7 +2,7 @@
 /**
  * @ereo/cli
  *
- * Command-line interface for the Ereo framework.
+ * Command-line interface for the EreoJS framework.
  */
 
 import { dev, type DevOptions } from './commands/dev';

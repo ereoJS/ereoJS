@@ -1,6 +1,6 @@
 # Forms
 
-Ereo provides progressive enhancement for forms - they work without JavaScript and enhance when it's available.
+EreoJS provides progressive enhancement for forms - they work without JavaScript and enhance when it's available.
 
 ## Basic Form
 

@@ -1,7 +1,7 @@
 /**
  * @ereo/cli - Create Command
  *
- * Create a new Ereo project with all essential features demonstrated.
+ * Create a new EreoJS project with all essential features demonstrated.
  */
 
 import { join } from 'node:path';
@@ -131,7 +131,7 @@ function generateTemplateFiles(
     );
   }
 
-  // Ereo config
+  // EreoJS config
   files[`ereo.config.${typescript ? 'ts' : 'js'}`] = generateEreoConfig(template);
 
   // Environment variables example
@@ -220,7 +220,7 @@ DATABASE_URL=postgresql://localhost:5432/mydb
 API_SECRET=your-secret-key
 
 # Public (available in client code)
-EREO_PUBLIC_APP_NAME=Ereo App
+EREO_PUBLIC_APP_NAME=EreoJS App
 EREO_PUBLIC_API_URL=http://localhost:3000/api
 `.trim();
 }
@@ -268,7 +268,7 @@ export default function RootLayout({ children }${propsType}) {
           <Link to="/contact"${linkClasses}>Contact</Link>
         </nav>
         {children}
-        {/* Client-side hydration script - bundled by Ereo */}
+        {/* Client-side hydration script - bundled by EreoJS */}
         <script type="module" src="/@ereo/client-entry.js" />
       </body>
     </html>
@@ -291,7 +291,7 @@ function generateClientEntry(typescript: boolean): string {
  */
 import { initClient } from '@ereo/client';
 
-// Initialize the Ereo client runtime
+// Initialize the EreoJS client runtime
 initClient();
 
 // You can also manually hydrate specific islands:
@@ -363,7 +363,7 @@ export const config${configType} = {
  */
 export async function loader({ request, params, context }${loaderType}) {
   // Access environment variables
-  const appName = context.env.EREO_PUBLIC_APP_NAME || 'Ereo App';
+  const appName = context.env.EREO_PUBLIC_APP_NAME || 'EreoJS App';
 
   return {
     message: \`Welcome to \${appName}!\`,
@@ -452,8 +452,8 @@ function generateAboutPage(template: string, typescript: boolean): string {
  */
 export const meta: MetaFunction = () => {
   return [
-    { title: 'About - Ereo App' },
-    { name: 'description', content: 'Learn about the Ereo framework' },
+    { title: 'About - EreoJS App' },
+    { name: 'description', content: 'Learn about the EreoJS framework' },
   ];
 };
 `
@@ -463,8 +463,8 @@ export const meta: MetaFunction = () => {
  */
 export function meta() {
   return [
-    { title: 'About - Ereo App' },
-    { name: 'description', content: 'Learn about the Ereo framework' },
+    { title: 'About - EreoJS App' },
+    { name: 'description', content: 'Learn about the EreoJS framework' },
   ];
 }
 `;
@@ -480,10 +480,10 @@ export default function AboutPage() {
   return (
     <main${mainClasses}>
       <h1${h1Classes}>
-        About Ereo
+        About EreoJS
       </h1>
       <p${pClasses}>
-        Ereo is a React fullstack framework built on Bun, designed for
+        EreoJS is a React fullstack framework built on Bun, designed for
         simplicity and performance. It features islands architecture for
         minimal JavaScript and explicit caching for predictable behavior.
       </p>
@@ -1057,15 +1057,15 @@ export async function loader({ params, context }${loaderType})${typescript ? ': 
     'hello-world': {
       slug: 'hello-world',
       title: 'Hello World',
-      content: 'This is the first blog post using Ereo framework. It demonstrates dynamic routing with [slug] parameters.',
-      author: 'Ereo Team',
+      content: 'This is the first blog post using EreoJS framework. It demonstrates dynamic routing with [slug] parameters.',
+      author: 'EreoJS Team',
       publishedAt: '2024-01-15',
     },
     'getting-started': {
       slug: 'getting-started',
-      title: 'Getting Started with Ereo',
-      content: 'Learn how to build blazing fast applications with Ereo and Bun. This guide covers loaders, actions, and islands architecture.',
-      author: 'Ereo Team',
+      title: 'Getting Started with EreoJS',
+      content: 'Learn how to build blazing fast applications with EreoJS and Bun. This guide covers loaders, actions, and islands architecture.',
+      author: 'EreoJS Team',
       publishedAt: '2024-01-20',
     },
   };
@@ -1169,7 +1169,7 @@ ${postType}
  */
 export function meta() {
   return [
-    { title: 'Blog - Ereo App' },
+    { title: 'Blog - EreoJS App' },
     { name: 'description', content: 'Read our latest blog posts' },
   ];
 }
@@ -1190,14 +1190,14 @@ export async function loader({ context }${loaderType})${typescript ? ': Promise<
   return [
     {
       slug: 'getting-started',
-      title: 'Getting Started with Ereo',
-      excerpt: 'Learn how to build blazing fast applications with Ereo and Bun.',
+      title: 'Getting Started with EreoJS',
+      excerpt: 'Learn how to build blazing fast applications with EreoJS and Bun.',
       publishedAt: '2024-01-20',
     },
     {
       slug: 'hello-world',
       title: 'Hello World',
-      excerpt: 'This is the first blog post using Ereo framework.',
+      excerpt: 'This is the first blog post using EreoJS framework.',
       publishedAt: '2024-01-15',
     },
   ];

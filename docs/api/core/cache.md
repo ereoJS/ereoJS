@@ -1,6 +1,6 @@
 # Cache
 
-Ereo provides a flexible caching system with support for tag-based invalidation.
+EreoJS provides a flexible caching system with support for tag-based invalidation.
 
 ## Import
 

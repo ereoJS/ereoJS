@@ -1,6 +1,6 @@
 # Blog Tutorial: Setup
 
-In this tutorial, you'll build a full-featured blog application with Ereo. By the end, you'll have a working blog with posts, comments, and user authentication.
+In this tutorial, you'll build a full-featured blog application with EreoJS. By the end, you'll have a working blog with posts, comments, and user authentication.
 
 ## What We're Building
 
@@ -109,15 +109,15 @@ if (postCount.count === 0) {
   insertPost.run(
     'Welcome to My Blog',
     'welcome',
-    'This is my first blog post. I built this blog with Ereo, a React fullstack framework powered by Bun.',
-    'My first blog post built with Ereo.'
+    'This is my first blog post. I built this blog with EreoJS, a React fullstack framework powered by Bun.',
+    'My first blog post built with EreoJS.'
   )
 
   insertPost.run(
-    'Getting Started with Ereo',
+    'Getting Started with EreoJS',
     'getting-started-ereo',
-    'Ereo makes it easy to build full-stack React applications. Let me show you how...',
-    'Learn the basics of building with Ereo.'
+    'EreoJS makes it easy to build full-stack React applications. Let me show you how...',
+    'Learn the basics of building with EreoJS.'
   )
 }
 
@@ -206,7 +206,7 @@ export default function RootLayout({ children }) {
           {children}
         </main>
         <footer>
-          <p>Built with Ereo</p>
+          <p>Built with EreoJS</p>
         </footer>
       </body>
     </html>
@@ -370,7 +370,7 @@ export default function Home({ loaderData }) {
     <div>
       <section className="hero">
         <h1>Welcome to My Blog</h1>
-        <p>Thoughts on web development, React, and building with Ereo.</p>
+        <p>Thoughts on web development, React, and building with EreoJS.</p>
       </section>
 
       <section>
@@ -404,7 +404,7 @@ Visit `http://localhost:3000` to see your blog's home page!
 
 ## What We've Done
 
-1. Created a new Ereo project
+1. Created a new EreoJS project
 2. Set up a SQLite database with posts and comments
 3. Created a root layout with navigation
 4. Added basic styling

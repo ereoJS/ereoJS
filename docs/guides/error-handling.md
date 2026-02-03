@@ -1,6 +1,6 @@
 # Error Handling
 
-Ereo provides multiple ways to handle errors gracefully.
+EreoJS provides multiple ways to handle errors gracefully.
 
 ## Throwing Errors in Loaders
 

@@ -1,6 +1,6 @@
 # createApp
 
-Creates a new Ereo application instance.
+Creates a new EreoJS application instance.
 
 ## Import
 

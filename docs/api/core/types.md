@@ -1,6 +1,6 @@
 # Types
 
-Core type definitions for the Ereo framework.
+Core type definitions for the EreoJS framework.
 
 ## Import
 

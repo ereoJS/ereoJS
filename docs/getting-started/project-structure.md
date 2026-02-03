@@ -1,6 +1,6 @@
 # Project Structure
 
-Ereo uses conventions to minimize configuration. Understanding the project structure helps you organize your code effectively.
+EreoJS uses conventions to minimize configuration. Understanding the project structure helps you organize your code effectively.
 
 ## Directory Layout
 

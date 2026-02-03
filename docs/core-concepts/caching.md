@@ -1,10 +1,10 @@
 # Caching
 
-Ereo provides explicit, tag-based caching that gives you full control over what gets cached and when it's invalidated. Unlike implicit caching systems, you always know what's cached and why.
+EreoJS provides explicit, tag-based caching that gives you full control over what gets cached and when it's invalidated. Unlike implicit caching systems, you always know what's cached and why.
 
 ## Philosophy
 
-Ereo's caching is built on three principles:
+EreoJS's caching is built on three principles:
 
 1. **Explicit over implicit** - You opt into caching, not out
 2. **Tag-based invalidation** - Invalidate related content together
@@ -134,7 +134,7 @@ await revalidatePath(`/posts/${postId}`)
 
 ## Cache Adapters
 
-Ereo supports different cache backends:
+EreoJS supports different cache backends:
 
 ### Memory Cache (Default)
 
@@ -197,7 +197,7 @@ const customCache = wrapCacheAdapter({
 
 ## HTTP Cache Headers
 
-Ereo automatically sets cache headers based on your config:
+EreoJS automatically sets cache headers based on your config:
 
 ```tsx
 export const config = {

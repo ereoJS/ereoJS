@@ -171,7 +171,7 @@ export function github(config: GitHubConfig): AuthProvider {
       const userResponse = await fetch(userInfoUrl, {
         headers: {
           'Authorization': `token ${tokenData.access_token}`,
-          'User-Agent': 'Ereo-Auth',
+          'User-Agent': 'EreoJS-Auth',
           'Accept': 'application/json',
         },
       });
@@ -184,7 +184,7 @@ export function github(config: GitHubConfig): AuthProvider {
         const emailsResponse = await fetch(`${apiBaseUrl}/user/emails`, {
           headers: {
             'Authorization': `token ${tokenData.access_token}`,
-            'User-Agent': 'Ereo-Auth',
+            'User-Agent': 'EreoJS-Auth',
             'Accept': 'application/json',
           },
         });
@@ -236,7 +236,7 @@ export function github(config: GitHubConfig): AuthProvider {
       const userResponse = await fetch(userInfoUrl, {
         headers: {
           'Authorization': `token ${tokenData.access_token}`,
-          'User-Agent': 'Ereo-Auth',
+          'User-Agent': 'EreoJS-Auth',
           'Accept': 'application/json',
         },
       });
@@ -249,7 +249,7 @@ export function github(config: GitHubConfig): AuthProvider {
         const emailsResponse = await fetch(`${apiBaseUrl}/user/emails`, {
           headers: {
             'Authorization': `token ${tokenData.access_token}`,
-            'User-Agent': 'Ereo-Auth',
+            'User-Agent': 'EreoJS-Auth',
             'Accept': 'application/json',
           },
         });

@@ -1,7 +1,7 @@
 /**
  * @ereo/plugin-images
  *
- * Complete image optimization system for Ereo.
+ * Complete image optimization system for EreoJS.
  * Provides automatic image optimization, blur placeholders,
  * responsive srcset generation, and art direction support.
  *

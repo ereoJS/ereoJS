@@ -1,6 +1,6 @@
 # Tutorials
 
-Hands-on tutorials to learn Ereo by building real applications.
+Hands-on tutorials to learn EreoJS by building real applications.
 
 ## Available Tutorials
 
@@ -9,7 +9,7 @@ Hands-on tutorials to learn Ereo by building real applications.
 A comprehensive 6-part tutorial that covers all the fundamentals by building a full-featured blog application.
 
 **What you'll learn:**
-- Setting up an Ereo project
+- Setting up an EreoJS project
 - File-based routing
 - Data loading with loaders
 - Form handling with actions

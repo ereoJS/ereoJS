@@ -1,7 +1,7 @@
 {
   "name": "@ereo/client-sdk",
   "version": "0.1.0",
-  "description": "Type-safe client SDK for Ereo framework APIs",
+  "description": "Type-safe client SDK for EreoJS framework APIs",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

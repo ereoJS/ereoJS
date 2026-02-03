@@ -1,10 +1,10 @@
-# Ereo vs Next.js
+# EreoJS vs Next.js
 
-This comparison helps developers understand the differences between Ereo and Next.js, making it easier to choose the right framework or migrate between them.
+This comparison helps developers understand the differences between EreoJS and Next.js, making it easier to choose the right framework or migrate between them.
 
 ## Overview
 
-| Aspect | Ereo | Next.js |
+| Aspect | EreoJS | Next.js |
 |--------|------|---------|
 | Runtime | Bun | Node.js |
 | Bundler | Bun | Webpack/Turbopack |
@@ -31,7 +31,7 @@ app/
     └── pricing/page.tsx  # /pricing
 ```
 
-**Ereo:**
+**EreoJS:**
 ```
 routes/
 ├── index.tsx          # /
@@ -45,7 +45,7 @@ routes/
 
 Key differences:
 - Next.js requires `page.tsx` in directories
-- Ereo uses `index.tsx` or direct file names
+- EreoJS uses `index.tsx` or direct file names
 - Both support route groups with parentheses
 
 ### Layouts
@@ -62,7 +62,7 @@ export default function RootLayout({ children }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // routes/_layout.tsx
 export default function RootLayout({ children }) {
@@ -74,7 +74,7 @@ export default function RootLayout({ children }) {
 }
 ```
 
-Nearly identical, but Ereo uses `_layout.tsx` prefix.
+Nearly identical, but EreoJS uses `_layout.tsx` prefix.
 
 ## Data Fetching
 
@@ -95,7 +95,7 @@ export default async function Post({ params }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // routes/posts/[id].tsx
 import { createLoader } from '@ereo/data'
@@ -113,8 +113,8 @@ export default function Post({ loaderData }) {
 
 Key differences:
 - Next.js uses async Server Components
-- Ereo uses explicit loader functions
-- Ereo separates data fetching from rendering
+- EreoJS uses explicit loader functions
+- EreoJS separates data fetching from rendering
 
 ### Mutations
 
@@ -139,7 +139,7 @@ export default function NewPost() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // routes/posts/new.tsx
 import { createAction, redirect } from '@ereo/data'
@@ -165,7 +165,7 @@ export default function NewPost() {
 
 Key differences:
 - Next.js uses `'use server'` directive
-- Ereo uses explicit action exports
+- EreoJS uses explicit action exports
 - Both support progressive enhancement
 
 ## Client-Side Interactivity
@@ -182,7 +182,7 @@ export default function Counter() {
 }
 ```
 
-**Ereo (Islands):**
+**EreoJS (Islands):**
 ```tsx
 // islands/Counter.tsx
 import { useState } from 'react'
@@ -198,8 +198,8 @@ export default function Counter() {
 
 Key differences:
 - Next.js: `'use client'` marks entire component tree as client
-- Ereo: Islands are explicit, with hydration strategies
-- Ereo ships less JavaScript by default
+- EreoJS: Islands are explicit, with hydration strategies
+- EreoJS ships less JavaScript by default
 
 ## Caching
 
@@ -218,7 +218,7 @@ import { revalidateTag } from 'next/cache'
 revalidateTag('posts')
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // Route-level caching
 export const config = {
@@ -235,7 +235,7 @@ await revalidateTag('posts')
 
 Key differences:
 - Next.js has implicit fetch caching
-- Ereo requires explicit cache configuration
+- EreoJS requires explicit cache configuration
 - Both support tag-based invalidation
 
 ## Streaming
@@ -261,7 +261,7 @@ export default function Post({ params }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { Suspense } from 'react'
 import { defer } from '@ereo/data'
@@ -289,7 +289,7 @@ export default function Post({ loaderData }) {
 
 Key differences:
 - Next.js streams async Server Components
-- Ereo uses `defer()` with `<Await>` pattern
+- EreoJS uses `defer()` with `<Await>` pattern
 - Both support React Suspense
 
 ## Middleware
@@ -311,7 +311,7 @@ export const config = {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```ts
 // routes/dashboard/_middleware.ts
 export const middleware = async (request, next) => {
@@ -324,14 +324,14 @@ export const middleware = async (request, next) => {
 
 Key differences:
 - Next.js has single middleware file with matchers
-- Ereo has route-level middleware files
-- Ereo middleware is more composable
+- EreoJS has route-level middleware files
+- EreoJS middleware is more composable
 
 ## Performance
 
 ### Bundle Size
 
-| Metric | Ereo | Next.js |
+| Metric | EreoJS | Next.js |
 |--------|------|---------|
 | Framework Runtime | ~15KB | ~85KB |
 | Islands Overhead | ~2KB per island | Full component tree |
@@ -339,9 +339,9 @@ Key differences:
 
 ### Build Speed
 
-Ereo uses Bun's native bundler, which is significantly faster than Webpack:
+EreoJS uses Bun's native bundler, which is significantly faster than Webpack:
 
-| Project Size | Ereo | Next.js (Webpack) | Next.js (Turbopack) |
+| Project Size | EreoJS | Next.js (Webpack) | Next.js (Turbopack) |
 |--------------|------|-------------------|---------------------|
 | Small (10 routes) | ~0.5s | ~3s | ~1.5s |
 | Medium (50 routes) | ~2s | ~15s | ~5s |
@@ -349,7 +349,7 @@ Ereo uses Bun's native bundler, which is significantly faster than Webpack:
 
 ### Runtime Performance
 
-Both achieve similar runtime performance for SSR. Ereo's advantage comes from:
+Both achieve similar runtime performance for SSR. EreoJS's advantage comes from:
 - Bun's faster JavaScript execution
 - Smaller client bundles with islands
 - Less hydration overhead
@@ -363,12 +363,12 @@ Both have excellent TypeScript support. Main differences:
 - Server/Client boundary types
 - Complex configuration
 
-**Ereo:**
+**EreoJS:**
 - Simpler type inference
 - Explicit loader/action types
 - Manual type generation for routes
 
-## When to Choose Ereo
+## When to Choose EreoJS
 
 - You want explicit control over caching
 - You prefer islands architecture over full hydration
@@ -386,4 +386,4 @@ Both have excellent TypeScript support. Main differences:
 
 ## Migration Path
 
-See the [migration guide](/getting-started/migrating) for detailed instructions on migrating from Next.js to Ereo.
+See the [migration guide](/getting-started/migrating) for detailed instructions on migrating from Next.js to EreoJS.

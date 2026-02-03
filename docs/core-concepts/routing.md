@@ -1,6 +1,6 @@
 # Routing
 
-Ereo uses file-based routing where your file structure in the `routes/` directory maps directly to URL paths. This convention eliminates manual route configuration while providing powerful features like dynamic segments, layouts, and route groups.
+EreoJS uses file-based routing where your file structure in the `routes/` directory maps directly to URL paths. This convention eliminates manual route configuration while providing powerful features like dynamic segments, layouts, and route groups.
 
 ## Basic Routes
 
@@ -227,7 +227,7 @@ Supported methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`
 
 ## Route Priority
 
-When multiple routes could match, Ereo uses this priority:
+When multiple routes could match, EreoJS uses this priority:
 
 1. **Static routes** - Exact matches (`/about`)
 2. **Dynamic routes** - Parameter segments (`/posts/[id]`)
@@ -402,7 +402,7 @@ Prefetch strategies:
 
 ## Type-Safe Routes
 
-Ereo can generate types for your routes:
+EreoJS can generate types for your routes:
 
 ```bash
 bun ereo generate-types

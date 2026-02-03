@@ -5,7 +5,7 @@ export default function AboutPage() {
         About
       </h1>
       <p className="text-gray-600 dark:text-gray-400">
-        Built with Ereo Framework
+        Built with EreoJS Framework
       </p>
     </main>
   );

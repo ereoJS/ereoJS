@@ -124,7 +124,7 @@ pm2 start "bun ereo start" --name ereo-app
 ```ini
 # /etc/systemd/system/ereo-app.service
 [Unit]
-Description=Ereo Application
+Description=EreoJS Application
 After=network.target
 
 [Service]
@@ -177,7 +177,7 @@ export default defineConfig({
 
 ## Graceful Shutdown
 
-Ereo handles shutdown signals:
+EreoJS handles shutdown signals:
 
 ```ts
 // Handles SIGTERM and SIGINT

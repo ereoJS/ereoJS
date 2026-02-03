@@ -4,7 +4,7 @@ EreoJS is a React fullstack framework built on Bun. It combines file-based routi
 
 ## Prerequisites
 
-Ereo requires [Bun](https://bun.sh) v1.0.0 or later.
+EreoJS requires [Bun](https://bun.sh) v1.0.0 or later.
 
 ```bash
 # Install Bun (macOS, Linux, WSL)
@@ -71,7 +71,7 @@ Create your first route:
 ```tsx
 // src/routes/index.tsx
 export default function Home() {
-  return <h1>Welcome to Ereo</h1>
+  return <h1>Welcome to EreoJS</h1>
 }
 ```
 
@@ -109,7 +109,7 @@ bun start
 
 ## Project Structure
 
-A typical Ereo project looks like this:
+A typical EreoJS project looks like this:
 
 ```
 my-app/

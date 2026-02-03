@@ -1,10 +1,10 @@
-# Ereo vs Remix
+# EreoJS vs Remix
 
-Ereo and Remix share many philosophical similarities. Both emphasize web standards, progressive enhancement, and explicit data patterns. This comparison highlights the differences.
+EreoJS and Remix share many philosophical similarities. Both emphasize web standards, progressive enhancement, and explicit data patterns. This comparison highlights the differences.
 
 ## Overview
 
-| Aspect | Ereo | Remix |
+| Aspect | EreoJS | Remix |
 |--------|------|-------|
 | Runtime | Bun (native) | Node.js (adapters) |
 | Bundler | Bun | esbuild |
@@ -15,7 +15,7 @@ Ereo and Remix share many philosophical similarities. Both emphasize web standar
 
 ## Core Similarities
 
-Ereo and Remix share these core concepts:
+EreoJS and Remix share these core concepts:
 - **Loaders** for data fetching
 - **Actions** for mutations
 - **Progressive enhancement** for forms
@@ -42,7 +42,7 @@ export default function Post() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { createLoader } from '@ereo/data'
 import { useLoaderData } from '@ereo/client'
@@ -59,8 +59,8 @@ export default function Post() {
 ```
 
 Key differences:
-- Ereo uses `createLoader` wrapper for type safety
-- Remix uses `json()` helper (Ereo returns objects directly)
+- EreoJS uses `createLoader` wrapper for type safety
+- Remix uses `json()` helper (EreoJS returns objects directly)
 - APIs are otherwise nearly identical
 
 ## Actions
@@ -86,7 +86,7 @@ export default function NewPost() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { createAction, redirect } from '@ereo/data'
 import { Form } from '@ereo/client'
@@ -107,11 +107,11 @@ export default function NewPost() {
 }
 ```
 
-Nearly identical. The main difference is Ereo's `createAction` wrapper.
+Nearly identical. The main difference is EreoJS's `createAction` wrapper.
 
 ## Client-Side Interactivity
 
-This is where Ereo and Remix differ significantly:
+This is where EreoJS and Remix differ significantly:
 
 **Remix (full hydration):**
 ```tsx
@@ -134,7 +134,7 @@ function InteractiveCounter() {
 }
 ```
 
-**Ereo (islands):**
+**EreoJS (islands):**
 ```tsx
 // Only marked components hydrate
 import Counter from '../islands/Counter'
@@ -153,9 +153,9 @@ export default function Page() {
 
 Key differences:
 - Remix hydrates the entire page
-- Ereo only hydrates marked islands
-- Ereo ships less JavaScript
-- Ereo requires explicit island marking
+- EreoJS only hydrates marked islands
+- EreoJS ships less JavaScript
+- EreoJS requires explicit island marking
 
 ## Routing
 
@@ -169,7 +169,7 @@ app/routes/
 └── posts.$id_.edit.tsx  # /posts/:id/edit
 ```
 
-**Ereo:**
+**EreoJS:**
 ```
 routes/
 ├── index.tsx            # /
@@ -183,9 +183,9 @@ routes/
 
 Key differences:
 - Remix uses dot notation for nesting
-- Ereo uses directory structure
+- EreoJS uses directory structure
 - Both support dynamic segments
-- Ereo uses `[param]`, Remix uses `$param`
+- EreoJS uses `[param]`, Remix uses `$param`
 
 ## Error Handling
 
@@ -204,7 +204,7 @@ export function ErrorBoundary() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { useRouteError, isRouteErrorResponse } from '@ereo/client'
 
@@ -235,7 +235,7 @@ export async function loader() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // Route-level configuration
 export const config = {
@@ -251,8 +251,8 @@ await revalidateTag('posts')
 
 Key differences:
 - Remix uses manual Cache-Control headers
-- Ereo has built-in tag-based invalidation
-- Ereo caching is more declarative
+- EreoJS has built-in tag-based invalidation
+- EreoJS caching is more declarative
 
 ## Streaming
 
@@ -282,7 +282,7 @@ export default function Post() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { createLoader, defer } from '@ereo/data'
 import { Await } from '@ereo/client'
@@ -330,7 +330,7 @@ function LikeButton({ postId }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { useFetcher } from '@ereo/client'
 
@@ -356,30 +356,30 @@ Identical.
 - Adapters: Node, Cloudflare, Deno, Vercel, etc.
 - Each adapter has different APIs
 
-**Ereo:**
+**EreoJS:**
 - Native Bun deployment
 - Adapters for other runtimes
 - Simpler deployment story for Bun
 
 ## Build Performance
 
-| Metric | Ereo | Remix |
+| Metric | EreoJS | Remix |
 |--------|------|-------|
 | Cold Start | ~0.5s | ~2s |
 | Hot Reload | <50ms | ~200ms |
 | Production Build | ~2s | ~8s |
 
-Ereo is faster due to Bun's native bundler.
+EreoJS is faster due to Bun's native bundler.
 
 ## Bundle Size
 
-| Metric | Ereo | Remix |
+| Metric | EreoJS | Remix |
 |--------|------|-------|
 | Framework Runtime | ~15KB | ~45KB |
 | Per-Route JS | Varies (islands) | Full component |
 | Hydration | Selective | Full |
 
-Ereo ships less JavaScript when using islands.
+EreoJS ships less JavaScript when using islands.
 
 ## State Management
 
@@ -388,13 +388,13 @@ Ereo ships less JavaScript when using islands.
 - No built-in state management
 - Community solutions (Zustand, Jotai, etc.)
 
-**Ereo:**
+**EreoJS:**
 - Built-in signals (@ereo/state)
 - Works across islands
 - Also supports React state
 
 ```tsx
-// Ereo signals
+// EreoJS signals
 import { signal } from '@ereo/state'
 
 export const cartItems = signal([])
@@ -406,7 +406,7 @@ function CartButton() {
 }
 ```
 
-## When to Choose Ereo
+## When to Choose EreoJS
 
 - You want islands architecture for smaller bundles
 - You're using Bun or want faster builds
@@ -424,7 +424,7 @@ function CartButton() {
 
 ## Migration Path
 
-Migrating from Remix to Ereo is straightforward:
+Migrating from Remix to EreoJS is straightforward:
 
 1. Convert `$param` to `[param]` in routes
 2. Wrap loaders with `createLoader`

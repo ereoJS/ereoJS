@@ -172,7 +172,7 @@ export class BunServer {
   }
 
   /**
-   * Set the Ereo app instance.
+   * Set the EreoJS app instance.
    */
   setApp(app: EreoApp): void {
     this.app = app;
@@ -625,7 +625,7 @@ export class BunServer {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ereo App</title>
+  <title>EreoJS App</title>
 </head>
 <body>
   <div id="root"></div>
@@ -658,7 +658,7 @@ export class BunServer {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Error - Ereo</title>
+  <title>Error - EreoJS</title>
   <style>
     body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; }
     h1 { color: #dc2626; }

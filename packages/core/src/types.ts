@@ -1,7 +1,7 @@
 /**
  * @ereo/core - Core type definitions
  *
- * Central type definitions for the Ereo framework.
+ * Central type definitions for the EreoJS framework.
  * Uses Web Standards (Request/Response) throughout.
  */
 
@@ -507,7 +507,7 @@ export type ErrorBoundaryProps = RouteErrorComponentProps;
 export type NextFunction = () => Promise<Response>;
 
 /**
- * Core middleware handler signature used throughout the Ereo framework.
+ * Core middleware handler signature used throughout the EreoJS framework.
  *
  * This is the base type for all middleware. Both `@ereo/router`'s `TypedMiddlewareHandler`
  * and `@ereo/server`'s middleware chain use this signature.

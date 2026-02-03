@@ -306,7 +306,7 @@ export function ErrorBoundary() {
 
 ## Context Providers
 
-For testing or custom setups, Ereo exports context providers:
+For testing or custom setups, EreoJS exports context providers:
 
 ```ts
 import {

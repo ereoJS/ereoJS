@@ -2,7 +2,7 @@
 /**
  * create-ereo
  *
- * Scaffold a new Ereo project.
+ * Scaffold a new EreoJS project.
  * Usage: bunx create-ereo my-app
  */
 
@@ -39,7 +39,7 @@ const defaultOptions: CreateOptions = {
  */
 function printBanner(): void {
   console.log(`
-  \x1b[36m⬡\x1b[0m \x1b[1mCreate Ereo App\x1b[0m
+  \x1b[36m⬡\x1b[0m \x1b[1mCreate EreoJS App\x1b[0m
 
   A React fullstack framework built on Bun.
 `);
@@ -185,7 +185,7 @@ export default function RootLayout({ children }${typescript ? ': { children: Rea
 export default function HomePage() {
   return (
     <main>
-      <h1>Welcome to Ereo!</h1>
+      <h1>Welcome to EreoJS!</h1>
       <p>Edit app/routes/index.${ext} to get started.</p>
     </main>
   );
@@ -453,12 +453,12 @@ ${ts ? "import type { Post } from './types';\n" : ''}
 export const posts${ts ? ': Post[]' : ''} = [
   {
     slug: 'getting-started-with-ereo',
-    title: 'Getting Started with Ereo',
-    excerpt: 'Learn how to build modern web applications with Ereo, the React fullstack framework powered by Bun.',
+    title: 'Getting Started with EreoJS',
+    excerpt: 'Learn how to build modern web applications with EreoJS, the React fullstack framework powered by Bun.',
     content: \`
-# Getting Started with Ereo
+# Getting Started with EreoJS
 
-Ereo is a modern React fullstack framework that runs on Bun, offering exceptional performance and developer experience.
+EreoJS is a modern React fullstack framework that runs on Bun, offering exceptional performance and developer experience.
 
 ## Key Features
 
@@ -478,7 +478,7 @@ bun run dev
 
 You're now ready to build amazing applications!
     \`.trim(),
-    author: 'Ereo Team',
+    author: 'EreoJS Team',
     date: '2024-01-15',
     readTime: '5 min read',
     tags: ['ereo', 'react', 'tutorial'],
@@ -486,11 +486,11 @@ You're now ready to build amazing applications!
   {
     slug: 'understanding-loaders-and-actions',
     title: 'Understanding Loaders and Actions',
-    excerpt: 'Deep dive into Ereo\\'s data loading and mutation patterns for building robust applications.',
+    excerpt: 'Deep dive into EreoJS\\'s data loading and mutation patterns for building robust applications.',
     content: \`
 # Understanding Loaders and Actions
 
-Loaders and actions are the core data primitives in Ereo.
+Loaders and actions are the core data primitives in EreoJS.
 
 ## Loaders
 
@@ -519,7 +519,7 @@ export async function action({ request }) {
 }
 \\\`\\\`\\\`
     \`.trim(),
-    author: 'Ereo Team',
+    author: 'EreoJS Team',
     date: '2024-01-20',
     readTime: '8 min read',
     tags: ['ereo', 'data', 'tutorial'],
@@ -527,11 +527,11 @@ export async function action({ request }) {
   {
     slug: 'styling-with-tailwind',
     title: 'Styling with Tailwind CSS',
-    excerpt: 'How to use Tailwind CSS effectively in your Ereo applications for beautiful, responsive designs.',
+    excerpt: 'How to use Tailwind CSS effectively in your EreoJS applications for beautiful, responsive designs.',
     content: \`
 # Styling with Tailwind CSS
 
-Ereo comes with first-class Tailwind CSS support out of the box.
+EreoJS comes with first-class Tailwind CSS support out of the box.
 
 ## Setup
 
@@ -559,7 +559,7 @@ export default function Button({ children }) {
 }
 \\\`\\\`\\\`
     \`.trim(),
-    author: 'Ereo Team',
+    author: 'EreoJS Team',
     date: '2024-01-25',
     readTime: '4 min read',
     tags: ['ereo', 'tailwind', 'css'],
@@ -615,7 +615,7 @@ export function Navigation() {
           {/* Logo */}
           <a href="/" className="flex items-center space-x-2">
             <span className="text-2xl">⬡</span>
-            <span className="font-bold text-xl">Ereo</span>
+            <span className="font-bold text-xl">EreoJS</span>
           </a>
 
           {/* Desktop Navigation */}
@@ -681,7 +681,7 @@ import { useState } from 'react';
 ${ts ? 'interface CounterProps {\n  initialCount?: number;\n}\n' : ''}
 /**
  * Interactive counter component.
- * This demonstrates client-side interactivity with Ereo's islands architecture.
+ * This demonstrates client-side interactivity with EreoJS's islands architecture.
  * The 'use client' directive marks this component for hydration.
  */
 export function Counter({ initialCount = 0 }${ts ? ': CounterProps' : ''}) {
@@ -724,7 +724,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
             <span className="text-xl">⬡</span>
-            <span>Built with Ereo</span>
+            <span>Built with EreoJS</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-500">
             <a href="https://github.com/ereo-js/ereo" target="_blank" rel="noopener" className="hover:text-primary-600">
@@ -797,7 +797,7 @@ export default function RootLayout({ children }${ts ? ': RootLayoutProps' : ''})
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="A modern web application built with Ereo" />
+        <meta name="description" content="A modern web application built with EreoJS" />
         <title>${projectName}</title>
         <link rel="stylesheet" href="/app/styles.css" />
       </head>
@@ -863,7 +863,7 @@ export default function HomePage({ loaderData }${ts ? ': HomePageProps' : ''}) {
       <section className="py-20 px-4 bg-gradient-to-br from-primary-500 to-purple-600 text-white">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
-            Welcome to Ereo
+            Welcome to EreoJS
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-primary-100">
             A React fullstack framework built on Bun.
@@ -889,7 +889,7 @@ export default function HomePage({ loaderData }${ts ? ': HomePageProps' : ''}) {
       {/* Features Section */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Why Ereo?</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Why EreoJS?</h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="card text-center">
               <div className="text-4xl mb-4">⚡</div>
@@ -980,7 +980,7 @@ export default function BlogLayout({ children }${ts ? ': BlogLayoutProps' : ''})
       <div className="bg-gradient-to-r from-primary-600 to-purple-600 text-white py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold mb-2">Blog</h1>
-          <p className="text-primary-100">Tutorials, guides, and updates from the Ereo team</p>
+          <p className="text-primary-100">Tutorials, guides, and updates from the EreoJS team</p>
         </div>
       </div>
 
@@ -1305,7 +1305,7 @@ export default function AboutPage() {
 
         <div className="prose dark:prose-invert prose-lg max-w-none">
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
-            This project was created with Ereo, a modern React fullstack framework built on Bun.
+            This project was created with EreoJS, a modern React fullstack framework built on Bun.
           </p>
 
           <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -1376,7 +1376,7 @@ export default function AboutPage() {
           <div className="card">
             <h3 className="text-xl font-bold mb-3">Learn More</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Check out the documentation and resources to learn how to build with Ereo:
+              Check out the documentation and resources to learn how to build with EreoJS:
             </p>
             <div className="flex flex-wrap gap-4">
               <a
@@ -1504,7 +1504,7 @@ NODE_ENV=development
   // ============================================================================
   const readme = `# ${projectName}
 
-A modern web application built with [Ereo](https://github.com/ereo-js/ereo) - a React fullstack framework powered by Bun.
+A modern web application built with [EreoJS](https://github.com/ereo-js/ereo) - a React fullstack framework powered by Bun.
 
 ## Features
 
@@ -1568,7 +1568,7 @@ app/
 
 ## Learn More
 
-- [Ereo Documentation](https://ereo.dev/docs)
+- [EreoJS Documentation](https://ereo.dev/docs)
 - [Bun Documentation](https://bun.sh/docs)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 `;

@@ -1,10 +1,10 @@
-# Ereo vs Astro
+# EreoJS vs Astro
 
-Ereo and Astro both embrace islands architecture, but with different approaches. Astro is content-focused with multi-framework support, while Ereo is React-focused with full-stack capabilities.
+EreoJS and Astro both embrace islands architecture, but with different approaches. Astro is content-focused with multi-framework support, while EreoJS is React-focused with full-stack capabilities.
 
 ## Overview
 
-| Aspect | Ereo | Astro |
+| Aspect | EreoJS | Astro |
 |--------|------|-------|
 | Focus | Full-stack apps | Content sites |
 | Framework | React only | Multi-framework |
@@ -22,7 +22,7 @@ Ereo and Astro both embrace islands architecture, but with different approaches.
 - Static-first with SSR as opt-in
 - `.astro` component format
 
-**Ereo:**
+**EreoJS:**
 - Application-first design
 - React throughout
 - Progressive enhancement
@@ -53,7 +53,7 @@ const posts = await getPosts()
 </style>
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { createLoader } from '@ereo/data'
 
@@ -78,7 +78,7 @@ export default function Posts({ loaderData }) {
 
 Key differences:
 - Astro has its own `.astro` format
-- Ereo uses standard React/TSX
+- EreoJS uses standard React/TSX
 - Both separate data from rendering
 
 ## Islands Architecture
@@ -98,7 +98,7 @@ import Counter from '../components/Counter.jsx'
 <Counter client:media="(max-width: 768px)" />
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import Counter from '../islands/Counter'
 
@@ -141,7 +141,7 @@ const posts = await fetch('https://api.example.com/posts')
 </ul>
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 export const loader = createLoader(async () => {
   const posts = await fetch('https://api.example.com/posts')
@@ -183,9 +183,9 @@ const posts = await getCollection('blog')
 ---
 ```
 
-**Ereo:**
+**EreoJS:**
 
-Ereo doesn't have built-in content collections. Use file-based content:
+EreoJS doesn't have built-in content collections. Use file-based content:
 
 ```tsx
 // lib/content.ts
@@ -226,7 +226,7 @@ export async function POST({ request }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { createAction, redirect } from '@ereo/data'
 import { Form, useActionData } from '@ereo/client'
@@ -256,7 +256,7 @@ export default function Subscribe() {
 }
 ```
 
-Ereo has first-class form support with progressive enhancement.
+EreoJS has first-class form support with progressive enhancement.
 
 ## Routing
 
@@ -272,7 +272,7 @@ src/pages/
     └── users.ts       # /api/users
 ```
 
-**Ereo:**
+**EreoJS:**
 ```
 routes/
 ├── index.tsx          # /
@@ -299,7 +299,7 @@ export const prerender = false
 ---
 ```
 
-**Ereo (SSR-first):**
+**EreoJS (SSR-first):**
 ```tsx
 export const config = {
   render: 'ssr'  // Default
@@ -323,9 +323,9 @@ import SvelteCounter from '../components/SvelteCounter.svelte'
 <SvelteCounter client:load />
 ```
 
-**Ereo:**
+**EreoJS:**
 
-Ereo is React-only. This is by design for simplicity and consistency.
+EreoJS is React-only. This is by design for simplicity and consistency.
 
 ## Middleware
 
@@ -338,7 +338,7 @@ export function onRequest({ request }, next) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```ts
 // routes/_middleware.ts
 export const middleware = async (request, next) => {
@@ -347,7 +347,7 @@ export const middleware = async (request, next) => {
 }
 ```
 
-Similar patterns, but Ereo supports route-level middleware files.
+Similar patterns, but EreoJS supports route-level middleware files.
 
 ## Build Output
 
@@ -356,14 +356,14 @@ Similar patterns, but Ereo supports route-level middleware files.
 - Partial hydration chunks
 - Adapter-based SSR output
 
-**Ereo:**
+**EreoJS:**
 - Server bundle
 - Client bundles per island
 - Static assets
 
 ## Performance Comparison
 
-| Metric | Ereo | Astro |
+| Metric | EreoJS | Astro |
 |--------|------|-------|
 | Build Speed | Faster (Bun) | Fast (esbuild) |
 | JS Shipped | Islands only | Islands only |
@@ -382,7 +382,7 @@ Both ship minimal JavaScript through islands.
 - Content-heavy sites
 - Multi-framework teams
 
-**Choose Ereo for:**
+**Choose EreoJS for:**
 - Full-stack applications
 - Forms and mutations
 - React-only teams
@@ -391,7 +391,7 @@ Both ship minimal JavaScript through islands.
 
 ## Migration Considerations
 
-### Astro to Ereo
+### Astro to EreoJS
 
 1. Convert `.astro` files to React components
 2. Move data fetching to loaders
@@ -399,7 +399,7 @@ Both ship minimal JavaScript through islands.
 4. Add actions for form handling
 5. Update build configuration
 
-### Ereo to Astro
+### EreoJS to Astro
 
 1. Convert React components to `.astro` (for static) or keep React (for islands)
 2. Move loaders to frontmatter or API routes
@@ -411,6 +411,6 @@ Both ship minimal JavaScript through islands.
 Both frameworks embrace the islands architecture concept but serve different purposes:
 
 - **Astro** is ideal for content-focused sites where you want to use multiple frameworks and ship minimal JavaScript
-- **Ereo** is ideal for full-stack React applications where you need forms, mutations, and complex server-side logic
+- **EreoJS** is ideal for full-stack React applications where you need forms, mutations, and complex server-side logic
 
 The choice depends on your use case: content site vs. full-stack application.

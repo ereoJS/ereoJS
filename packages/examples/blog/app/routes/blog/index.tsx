@@ -10,8 +10,8 @@ interface Post {
 const posts: Post[] = [
   {
     slug: 'getting-started-with-ereo',
-    title: 'Getting Started with Ereo',
-    excerpt: 'Learn how to build modern web apps with the Ereo framework.',
+    title: 'Getting Started with EreoJS',
+    excerpt: 'Learn how to build modern web apps with the EreoJS framework.',
     date: '2024-01-15',
   },
   {
@@ -22,7 +22,7 @@ const posts: Post[] = [
   },
   {
     slug: 'bun-performance',
-    title: 'Why Bun Makes Ereo Fast',
+    title: 'Why Bun Makes EreoJS Fast',
     excerpt: 'Explore the performance benefits of building on Bun.',
     date: '2024-01-05',
   },

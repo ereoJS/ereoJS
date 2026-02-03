@@ -1,6 +1,6 @@
 # Plugins
 
-Ereo's plugin system allows extending the framework with custom functionality. Plugins can hook into the build process, add middleware, transform code, and more.
+EreoJS's plugin system allows extending the framework with custom functionality. Plugins can hook into the build process, add middleware, transform code, and more.
 
 ## Import
 

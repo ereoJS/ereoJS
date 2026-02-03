@@ -1,7 +1,7 @@
 {
   "name": "@ereo/state",
   "version": "0.1.0",
-  "description": "Signals and reactivity system for Ereo framework",
+  "description": "Signals and reactivity system for EreoJS framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

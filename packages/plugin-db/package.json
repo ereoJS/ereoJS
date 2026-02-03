@@ -1,7 +1,7 @@
 {
   "name": "@ereo/db",
   "version": "0.1.0",
-  "description": "Database integration plugin for Ereo framework",
+  "description": "Database integration plugin for EreoJS framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

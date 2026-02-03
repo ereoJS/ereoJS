@@ -1,7 +1,7 @@
 {
   "name": "@ereo/router-conventions",
   "version": "0.1.0",
-  "description": "File-based routing conventions for Ereo framework",
+  "description": "File-based routing conventions for EreoJS framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

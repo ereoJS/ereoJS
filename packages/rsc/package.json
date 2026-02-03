@@ -1,7 +1,7 @@
 {
   "name": "@ereo/rsc",
   "version": "0.1.0",
-  "description": "React Server Components support for Ereo framework",
+  "description": "React Server Components support for EreoJS framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

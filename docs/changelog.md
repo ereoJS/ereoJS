@@ -1,12 +1,12 @@
 # Changelog
 
-All notable changes to Ereo will be documented here.
+All notable changes to EreoJS will be documented here.
 
 ## [Unreleased]
 
 ### Added
 
-- Initial release of Ereo framework
+- Initial release of EreoJS framework
 - File-based routing with dynamic routes
 - Loaders and actions for data loading
 - Islands architecture for selective hydration
@@ -29,7 +29,7 @@ All notable changes to Ereo will be documented here.
 
 ## Versioning
 
-Ereo follows [Semantic Versioning](https://semver.org/):
+EreoJS follows [Semantic Versioning](https://semver.org/):
 
 - **MAJOR** - Incompatible API changes
 - **MINOR** - New features, backwards compatible
@@ -37,4 +37,4 @@ Ereo follows [Semantic Versioning](https://semver.org/):
 
 ## Contributing
 
-See the [contributing guide](https://github.com/ereo-framework/ereo/blob/main/CONTRIBUTING.md) for how to contribute to Ereo.
+See the [contributing guide](https://github.com/ereo-framework/ereo/blob/main/CONTRIBUTING.md) for how to contribute to EreoJS.

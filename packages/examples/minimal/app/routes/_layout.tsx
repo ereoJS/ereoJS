@@ -6,7 +6,7 @@ export default function RootLayout({ children }: RouteComponentProps) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Ereo Minimal</title>
+        <title>EreoJS Minimal</title>
       </head>
       <body>
         {children}

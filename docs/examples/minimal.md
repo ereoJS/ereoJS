@@ -1,6 +1,6 @@
 # Minimal Example
 
-The minimal example demonstrates the simplest possible Ereo application.
+The minimal example demonstrates the simplest possible EreoJS application.
 
 ## Source
 
@@ -53,7 +53,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Ereo App</title>
+        <title>EreoJS App</title>
       </head>
       <body>{children}</body>
     </html>
@@ -68,7 +68,7 @@ export default function RootLayout({ children }) {
 export default function Home() {
   return (
     <div>
-      <h1>Welcome to Ereo</h1>
+      <h1>Welcome to EreoJS</h1>
       <p>A React fullstack framework built on Bun.</p>
     </div>
   )

@@ -176,7 +176,7 @@ describe('@ereo/plugin-tailwind', () => {
       // The test passes as long as it doesn't throw
     });
 
-    test('uses Ereo preset when config does not exist and usePreset is true', async () => {
+    test('uses EreoJS preset when config does not exist and usePreset is true', async () => {
       const plugin = tailwind({ usePreset: true });
       const mockContext = {
         root: '/nonexistent/path',
@@ -194,7 +194,7 @@ describe('@ereo/plugin-tailwind', () => {
 
       console.log = originalLog;
 
-      expect(logs.some((log) => log.includes('Using Ereo Tailwind preset'))).toBe(true);
+      expect(logs.some((log) => log.includes('Using EreoJS Tailwind preset'))).toBe(true);
     });
 
     test('does not log preset message when usePreset is false', async () => {
@@ -215,7 +215,7 @@ describe('@ereo/plugin-tailwind', () => {
 
       console.log = originalLog;
 
-      expect(logs.some((log) => log.includes('Using Ereo Tailwind preset'))).toBe(false);
+      expect(logs.some((log) => log.includes('Using EreoJS Tailwind preset'))).toBe(false);
     });
 
     test('handles error when Bun.file throws', async () => {

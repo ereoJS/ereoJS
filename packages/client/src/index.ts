@@ -1,7 +1,7 @@
 /**
  * @ereo/client
  *
- * Client-side runtime for the Ereo framework.
+ * Client-side runtime for the EreoJS framework.
  * Includes islands architecture, navigation, and prefetching.
  */
 

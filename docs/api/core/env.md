@@ -1,6 +1,6 @@
 # Environment Variables
 
-Ereo provides type-safe environment variable handling with validation and schema support.
+EreoJS provides type-safe environment variable handling with validation and schema support.
 
 ## Import
 

@@ -18,7 +18,7 @@ import { createContext, RequestContext } from '@ereo/core';
  * Middleware definition with optional path matching.
  *
  * This interface uses `MiddlewareHandler` from `@ereo/core`, ensuring
- * compatibility across all Ereo packages. The handler signature is:
+ * compatibility across all EreoJS packages. The handler signature is:
  * `(request: Request, context: AppContext, next: NextFunction) => Response | Promise<Response>`
  *
  * Note: The `path` property here supports both single strings and arrays,

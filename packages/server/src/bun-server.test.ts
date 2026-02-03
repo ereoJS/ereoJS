@@ -879,7 +879,7 @@ describe('@ereo/server - BunServer', () => {
       expect(response.status).toBe(200);
       const html = await response.text();
       expect(html).toContain('<!DOCTYPE html>');
-      expect(html).toContain('<title>Ereo App</title>');
+      expect(html).toContain('<title>EreoJS App</title>');
       expect(html).toContain('<div id="root"></div>');
       expect(html).toContain('window.__EREO_DATA__');
     });
@@ -1014,7 +1014,7 @@ describe('@ereo/server - BunServer', () => {
   describe('Bun-native API usage (no Node.js Buffer/stream)', () => {
     test('TextEncoder is used for string encoding', () => {
       const encoder = new TextEncoder();
-      const text = 'Hello, Ereo!';
+      const text = 'Hello, EreoJS!';
       const encoded = encoder.encode(text);
 
       expect(encoded).toBeInstanceOf(Uint8Array);

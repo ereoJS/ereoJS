@@ -52,7 +52,7 @@ describe('@ereo/plugin-tailwind - Preset', () => {
       expect((config.content as string[]).length).toBeGreaterThan(0);
     });
 
-    test('includes Ereo preset in presets', () => {
+    test('includes EreoJS preset in presets', () => {
       const config = getEreoTailwindConfig();
 
       expect(config.presets).toBeDefined();

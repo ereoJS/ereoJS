@@ -1,7 +1,7 @@
 /**
  * @ereo/dev-inspector - DevTools Plugin
  *
- * Plugin that adds DevTools to the Ereo dev server.
+ * Plugin that adds DevTools to the EreoJS dev server.
  */
 
 import type { Plugin, Route } from '@ereo/core';
@@ -242,7 +242,7 @@ function generateOverlayScript(mountPath: string, position: string): string {
   const button = document.createElement('button');
   button.id = 'ereo-devtools-toggle';
   button.innerHTML = '⬡';
-  button.title = 'Open Ereo DevTools';
+  button.title = 'Open EreoJS DevTools';
   button.style.cssText = \`
     position: fixed;
     ${position.includes('bottom') ? 'bottom: 16px;' : 'top: 16px;'}

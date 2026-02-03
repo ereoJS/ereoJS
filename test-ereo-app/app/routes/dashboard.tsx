@@ -14,7 +14,7 @@ const fetchUser = async () => {
 const fetchPosts = async () => {
   await sleep(80); // Simulate API call
   return [
-    { id: 1, title: 'Getting Started with Ereo', views: 120 },
+    { id: 1, title: 'Getting Started with EreoJS', views: 120 },
     { id: 2, title: 'Data Pipeline Tutorial', views: 85 },
   ];
 };
@@ -90,7 +90,7 @@ export default function DashboardPage({ loaderData }: { loaderData: Awaited<Retu
             Dashboard
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Testing the Ereo Data Pipeline
+            Testing the EreoJS Data Pipeline
           </p>
         </div>
 

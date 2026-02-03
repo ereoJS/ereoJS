@@ -1,6 +1,6 @@
 # Blog Tutorial: Routes
 
-In this chapter, we'll create the posts listing page and individual post pages using Ereo's file-based routing.
+In this chapter, we'll create the posts listing page and individual post pages using EreoJS's file-based routing.
 
 ## Posts Listing Page
 

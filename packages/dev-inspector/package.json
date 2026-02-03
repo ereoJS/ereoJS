@@ -1,7 +1,7 @@
 {
   "name": "@ereo/dev-inspector",
   "version": "0.1.0",
-  "description": "Visual route inspector for Ereo framework development",
+  "description": "Visual route inspector for EreoJS framework development",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

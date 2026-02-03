@@ -1,6 +1,6 @@
-# Migrating to Ereo
+# Migrating to EreoJS
 
-This guide helps you migrate from other React frameworks to Ereo. We cover the most common patterns and their Ereo equivalents.
+This guide helps you migrate from other React frameworks to EreoJS. We cover the most common patterns and their EreoJS equivalents.
 
 ## From Next.js
 
@@ -26,7 +26,7 @@ export default async function Post({ params }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // routes/posts/[id].tsx
 import { createLoader } from '@ereo/data'
@@ -66,7 +66,7 @@ export default function Post({ post }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // routes/posts/[id].tsx
 import { createLoader } from '@ereo/data'
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```ts
 // routes/api/users.ts
 export async function GET() {
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
 }
 ```
 
-API routes work the same way in Ereo.
+API routes work the same way in EreoJS.
 
 ### Layouts
 
@@ -130,7 +130,7 @@ export default function RootLayout({ children }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // routes/_layout.tsx
 export default function RootLayout({ children }) {
@@ -152,7 +152,7 @@ export async function getStaticProps() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 export const config = {
   render: 'ssg',
@@ -182,7 +182,7 @@ export default function Counter() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 // islands/Counter.tsx
 import { useState } from 'react'
@@ -196,7 +196,7 @@ export default function Counter() {
 <Counter data-island="Counter" data-hydrate="load" />
 ```
 
-Ereo uses explicit islands instead of the 'use client' directive.
+EreoJS uses explicit islands instead of the 'use client' directive.
 
 ### Link Component
 
@@ -207,7 +207,7 @@ import Link from 'next/link'
 <Link href="/posts">Posts</Link>
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { Link } from '@ereo/client'
 
@@ -225,7 +225,7 @@ router.push('/posts')
 router.back()
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { navigate, goBack } from '@ereo/client'
 
@@ -237,7 +237,7 @@ goBack()
 
 ## From Remix
 
-Remix and Ereo share many concepts, making migration straightforward.
+Remix and EreoJS share many concepts, making migration straightforward.
 
 ### Loaders
 
@@ -257,7 +257,7 @@ export default function Post() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { createLoader } from '@ereo/data'
 import { useLoaderData } from '@ereo/client'
@@ -296,7 +296,7 @@ export default function NewPost() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { createAction, redirect } from '@ereo/data'
 import { Form } from '@ereo/client'
@@ -334,7 +334,7 @@ function LikeButton({ postId }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { useFetcher } from '@ereo/client'
 
@@ -362,7 +362,7 @@ function SubmitButton() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { useNavigation } from '@ereo/client'
 
@@ -390,7 +390,7 @@ export function ErrorBoundary() {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 import { useRouteError, isRouteErrorResponse } from '@ereo/client'
 
@@ -417,7 +417,7 @@ export function meta({ data }) {
 }
 ```
 
-**Ereo:**
+**EreoJS:**
 ```tsx
 export function meta({ data }) {
   return [
@@ -433,7 +433,7 @@ export function meta({ data }) {
 
 ### From Next.js
 
-| Feature | Next.js | Ereo |
+| Feature | Next.js | EreoJS |
 |---------|---------|------|
 | Runtime | Node.js | Bun |
 | Client Components | `'use client'` directive | Islands with `data-island` |
@@ -443,7 +443,7 @@ export function meta({ data }) {
 
 ### From Remix
 
-| Feature | Remix | Ereo |
+| Feature | Remix | EreoJS |
 |---------|-------|------|
 | Runtime | Node.js (adapters) | Bun (native) |
 | Client Interactivity | Full hydration | Islands (selective) |
@@ -455,7 +455,7 @@ export function meta({ data }) {
 ## Migration Checklist
 
 1. **Install Bun** if not already installed
-2. **Create new Ereo project** and copy routes
+2. **Create new EreoJS project** and copy routes
 3. **Update imports** from framework-specific to `@ereo/*`
 4. **Convert data fetching** to loaders
 5. **Convert mutations** to actions

@@ -39,7 +39,7 @@ export function generateDevToolsPanelHTML(data: DevToolsPanelData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ereo DevTools</title>
+  <title>EreoJS DevTools</title>
   <style>
     ${DEVTOOLS_BASE_STYLES}
     ${DATA_PIPELINE_STYLES}
@@ -53,7 +53,7 @@ export function generateDevToolsPanelHTML(data: DevToolsPanelData): string {
     <header class="devtools-header">
       <div class="logo">
         <span class="logo-icon">⬡</span>
-        <span class="logo-text">Ereo DevTools</span>
+        <span class="logo-text">EreoJS DevTools</span>
       </div>
       <nav class="devtools-nav">
         <button class="nav-btn active" data-tab="data">Data Pipeline</button>

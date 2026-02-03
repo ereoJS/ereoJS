@@ -151,7 +151,7 @@ export const conditionalMiddleware = when(
 
 ## Built-In Middleware
 
-Ereo provides common middleware out of the box:
+EreoJS provides common middleware out of the box:
 
 ### CORS
 

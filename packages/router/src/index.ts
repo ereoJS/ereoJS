@@ -1,7 +1,7 @@
 /**
  * @ereo/router
  *
- * File-based routing for the Ereo framework.
+ * File-based routing for the EreoJS framework.
  * Supports dynamic routes, catch-all routes, layouts, and route groups.
  */
 

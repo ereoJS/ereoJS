@@ -11,8 +11,8 @@ interface Post {
 const posts: Post[] = [
   {
     slug: 'getting-started-with-ereo',
-    title: 'Getting Started with Ereo',
-    excerpt: 'Learn how to build modern web apps with the Ereo framework.',
+    title: 'Getting Started with EreoJS',
+    excerpt: 'Learn how to build modern web apps with the EreoJS framework.',
     date: '2024-01-15',
   },
   {
@@ -23,7 +23,7 @@ const posts: Post[] = [
   },
   {
     slug: 'bun-performance',
-    title: 'Why Bun Makes Ereo Fast',
+    title: 'Why Bun Makes EreoJS Fast',
     excerpt: 'Explore the performance benefits of building on Bun.',
     date: '2024-01-05',
   },
@@ -45,10 +45,10 @@ export default function HomePage({ loaderData }: { loaderData: { posts: Post[] }
     <div>
       <section className="text-center py-12">
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          Welcome to Ereo Blog
+          Welcome to EreoJS Blog
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-300">
-          A blog built with Ereo - the React fullstack framework.
+          A blog built with EreoJS - the React fullstack framework.
         </p>
       </section>
 

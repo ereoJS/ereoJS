@@ -1,6 +1,6 @@
 # Deploying with Bun
 
-Deploy your Ereo application natively with Bun.
+Deploy your EreoJS application natively with Bun.
 
 ## Build for Production
 
@@ -80,7 +80,7 @@ Create `/etc/systemd/system/ereo-app.service`:
 
 ```ini
 [Unit]
-Description=Ereo Application
+Description=EreoJS Application
 After=network.target
 
 [Service]

@@ -2,7 +2,7 @@ import type { LoaderArgs } from '@ereo/core';
 
 export async function loader({ request }: LoaderArgs) {
   return {
-    message: 'Hello from Ereo!',
+    message: 'Hello from EreoJS!',
   };
 }
 

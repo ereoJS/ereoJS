@@ -1,7 +1,7 @@
 /**
  * @ereo/server
  *
- * High-performance Bun HTTP server for the Ereo framework.
+ * High-performance Bun HTTP server for the EreoJS framework.
  */
 
 // Server

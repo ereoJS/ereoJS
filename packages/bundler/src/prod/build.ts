@@ -825,12 +825,12 @@ async function initClient() {
   const dataScript = document.getElementById('__EREO_DATA__');
   const serverData = dataScript ? JSON.parse(dataScript.textContent || '{}') : {};
 
-  console.log('[Ereo] Client hydration initialized');
+  console.log('[EreoJS] Client hydration initialized');
 
   // Initialize islands
   const islands = document.querySelectorAll('[data-island]');
   if (islands.length > 0) {
-    console.log(\`[Ereo] Found \${islands.length} island(s) to hydrate\`);
+    console.log(\`[EreoJS] Found \${islands.length} island(s) to hydrate\`);
   }
 }
 

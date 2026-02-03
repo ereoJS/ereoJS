@@ -191,7 +191,7 @@ Opens interactive bundle visualization in browser.
 
 ### Code Splitting
 
-Ereo automatically splits:
+EreoJS automatically splits:
 
 - Each route into separate chunks
 - Each island into separate bundles

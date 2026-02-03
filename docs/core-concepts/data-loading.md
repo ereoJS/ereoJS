@@ -1,6 +1,6 @@
 # Data Loading
 
-Ereo provides a unified data loading pattern with loaders and actions. Loaders fetch data for rendering, while actions handle mutations. This pattern works consistently across all rendering modes.
+EreoJS provides a unified data loading pattern with loaders and actions. Loaders fetch data for rendering, while actions handle mutations. This pattern works consistently across all rendering modes.
 
 ## Loaders
 
@@ -386,7 +386,7 @@ export const action = createAction(async ({ request }) => {
 
 ## Response Helpers
 
-Ereo provides helpers for common response types:
+EreoJS provides helpers for common response types:
 
 ```tsx
 import { json, redirect, error } from '@ereo/data'

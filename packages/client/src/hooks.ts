@@ -418,7 +418,7 @@ export interface EreoProviderProps {
 }
 
 /**
- * Combined provider that wraps the application with all Ereo contexts.
+ * Combined provider that wraps the application with all EreoJS contexts.
  *
  * @example
  * ```tsx

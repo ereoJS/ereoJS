@@ -1,6 +1,6 @@
 # Rendering Modes
 
-Ereo supports multiple rendering modes, allowing you to choose the best approach for each route based on your requirements for performance, SEO, and interactivity.
+EreoJS supports multiple rendering modes, allowing you to choose the best approach for each route based on your requirements for performance, SEO, and interactivity.
 
 ## Overview
 
@@ -86,7 +86,7 @@ export const config = {
   render: 'ssg'
 }
 
-// Tell Ereo which paths to generate
+// Tell EreoJS which paths to generate
 export async function getStaticPaths() {
   const posts = await db.posts.findMany()
   return posts.map(post => ({

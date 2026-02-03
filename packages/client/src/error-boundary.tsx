@@ -1,7 +1,7 @@
 /**
  * @ereo/client - Error Boundary Context and Recovery System
  *
- * Provides error boundaries, context, and recovery utilities for the Ereo framework.
+ * Provides error boundaries, context, and recovery utilities for the EreoJS framework.
  */
 
 import React, {

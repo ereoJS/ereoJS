@@ -1,7 +1,7 @@
 /**
  * @ereo/runtime-bun
  *
- * Bun runtime adapter for the Ereo framework.
+ * Bun runtime adapter for the EreoJS framework.
  * This is the default runtime, optimized for Bun's performance.
  */
 
@@ -35,7 +35,7 @@ export class BunRuntime {
   }
 
   /**
-   * Get the Ereo app instance.
+   * Get the EreoJS app instance.
    */
   getApp(): EreoApp {
     return this.app;

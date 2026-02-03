@@ -10,7 +10,7 @@ import React, { forwardRef, useState, useMemo } from 'react';
 import type { PictureProps, PictureSource, StaticImageData, ImageLoaderParams } from './types';
 
 /**
- * Default image loader for the Ereo image endpoint.
+ * Default image loader for the EreoJS image endpoint.
  */
 const defaultLoader = ({ src, width, quality }: ImageLoaderParams): string => {
   const params = new URLSearchParams({
@@ -89,7 +89,7 @@ function getBlurDataURL(source: string | StaticImageData): string | undefined {
 }
 
 /**
- * Ereo Picture Component
+ * EreoJS Picture Component
  *
  * Provides art direction for responsive images, allowing different images
  * to be served at different breakpoints.

@@ -11,9 +11,9 @@ interface Post {
 const postsData: Record<string, Post> = {
   'getting-started-with-ereo': {
     slug: 'getting-started-with-ereo',
-    title: 'Getting Started with Ereo',
+    title: 'Getting Started with EreoJS',
     content: `
-Ereo is a React fullstack framework built on Bun that prioritizes simplicity,
+EreoJS is a React fullstack framework built on Bun that prioritizes simplicity,
 performance, and developer experience.
 
 ## Installation
@@ -34,7 +34,7 @@ bun run dev
 Get started today!
     `.trim(),
     date: '2024-01-15',
-    author: 'Ereo Team',
+    author: 'EreoJS Team',
   },
   'islands-architecture': {
     slug: 'islands-architecture',
@@ -59,11 +59,11 @@ By default, components render as static HTML. Add hydration directives to make t
 - **SEO friendly** - Static HTML for search engines
     `.trim(),
     date: '2024-01-10',
-    author: 'Ereo Team',
+    author: 'EreoJS Team',
   },
   'bun-performance': {
     slug: 'bun-performance',
-    title: 'Why Bun Makes Ereo Fast',
+    title: 'Why Bun Makes EreoJS Fast',
     content: `
 Bun is a new JavaScript runtime that's significantly faster than Node.js.
 
@@ -76,7 +76,7 @@ Bun is a new JavaScript runtime that's significantly faster than Node.js.
 
 ## Real-World Impact
 
-With Ereo on Bun, you get:
+With EreoJS on Bun, you get:
 
 - Sub-100ms HMR updates
 - Fast production builds
@@ -84,7 +84,7 @@ With Ereo on Bun, you get:
 - Better developer experience
     `.trim(),
     date: '2024-01-05',
-    author: 'Ereo Team',
+    author: 'EreoJS Team',
   },
 };
 

@@ -1,7 +1,7 @@
 /**
  * @ereo/bundler
  *
- * Build system for the Ereo framework.
+ * Build system for the EreoJS framework.
  * Includes HMR, production builds, and plugin system.
  */
 
