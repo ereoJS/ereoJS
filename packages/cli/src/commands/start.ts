@@ -1,13 +1,13 @@
 /**
- * @areo/cli - Start Command
+ * @ereo/cli - Start Command
  *
  * Start the production server.
  */
 
 import { join } from 'node:path';
-import { createApp, type FrameworkConfig } from '@areo/core';
-import { initFileRouter } from '@areo/router';
-import { createServer } from '@areo/server';
+import { createApp, type FrameworkConfig } from '@ereo/core';
+import { initFileRouter } from '@ereo/router';
+import { createServer } from '@ereo/server';
 
 /**
  * Start command options.
@@ -22,14 +22,14 @@ export interface StartOptions {
  */
 export async function start(options: StartOptions = {}): Promise<void> {
   const root = process.cwd();
-  const buildDir = join(root, '.areo');
+  const buildDir = join(root, '.ereo');
 
-  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m Production Server\n');
+  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Production Server\n');
 
   // Check if build exists
   const manifestPath = join(buildDir, 'manifest.json');
   if (!(await Bun.file(manifestPath).exists())) {
-    console.error('  \x1b[31m✗\x1b[0m No build found. Run `areo build` first.\n');
+    console.error('  \x1b[31m✗\x1b[0m No build found. Run `ereo build` first.\n');
     process.exit(1);
   }
 
@@ -38,7 +38,7 @@ export async function start(options: StartOptions = {}): Promise<void> {
 
   // Load config if exists
   let config: FrameworkConfig = {};
-  const configPath = join(root, 'areo.config.ts');
+  const configPath = join(root, 'ereo.config.ts');
 
   try {
     if (await Bun.file(configPath).exists()) {
@@ -81,7 +81,7 @@ export async function start(options: StartOptions = {}): Promise<void> {
     logging: true,
     static: {
       root: join(buildDir, 'client'),
-      prefix: '/_areo',
+      prefix: '/_ereo',
       maxAge: 31536000,
       immutable: true,
     },

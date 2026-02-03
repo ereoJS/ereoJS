@@ -1,7 +1,7 @@
 /**
- * @areo/cli - Create Command
+ * @ereo/cli - Create Command
  *
- * Create a new Areo project with all essential features demonstrated.
+ * Create a new Ereo project with all essential features demonstrated.
  */
 
 import { join } from 'node:path';
@@ -25,7 +25,7 @@ export async function create(
   const template = options.template || 'tailwind';
   const typescript = options.typescript !== false;
 
-  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m Create Project\n');
+  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Create Project\n');
   console.log(`  Creating ${projectName} with ${template} template...\n`);
 
   const projectDir = join(process.cwd(), projectName);
@@ -67,19 +67,19 @@ function generateTemplateFiles(
 
   // package.json - includes all necessary dependencies
   const dependencies: Record<string, string> = {
-    '@areo/core': '^0.1.0',
-    '@areo/router': '^0.1.0',
-    '@areo/server': '^0.1.0',
-    '@areo/client': '^0.1.0',
-    '@areo/data': '^0.1.0',
-    '@areo/cli': '^0.1.0',
+    '@ereo/core': '^0.1.0',
+    '@ereo/router': '^0.1.0',
+    '@ereo/server': '^0.1.0',
+    '@ereo/client': '^0.1.0',
+    '@ereo/data': '^0.1.0',
+    '@ereo/cli': '^0.1.0',
     'react': '^18.2.0',
     'react-dom': '^18.2.0',
   };
 
   // Add plugin-tailwind when using tailwind template
   if (template === 'tailwind') {
-    dependencies['@areo/plugin-tailwind'] = '^0.1.0';
+    dependencies['@ereo/plugin-tailwind'] = '^0.1.0';
   }
 
   files['package.json'] = JSON.stringify(
@@ -88,9 +88,9 @@ function generateTemplateFiles(
       version: '0.1.0',
       type: 'module',
       scripts: {
-        dev: 'areo dev',
-        build: 'areo build',
-        start: 'areo start',
+        dev: 'ereo dev',
+        build: 'ereo build',
+        start: 'ereo start',
       },
       dependencies,
       devDependencies: typescript
@@ -120,15 +120,15 @@ function generateTemplateFiles(
           forceConsistentCasingInFileNames: true,
           types: ['bun-types'],
         },
-        include: ['app/**/*', 'areo.config.ts'],
+        include: ['app/**/*', 'ereo.config.ts'],
       },
       null,
       2
     );
   }
 
-  // Areo config
-  files[`areo.config.${typescript ? 'ts' : 'js'}`] = generateAreoConfig(template);
+  // Ereo config
+  files[`ereo.config.${typescript ? 'ts' : 'js'}`] = generateEreoConfig(template);
 
   // Environment variables example
   files['.env'] = generateEnvFile();
@@ -171,15 +171,15 @@ function generateTemplateFiles(
 }
 
 /**
- * Generate areo.config.ts
+ * Generate ereo.config.ts
  */
-function generateAreoConfig(template: string): string {
+function generateEreoConfig(template: string): string {
   const tailwindImport = template === 'tailwind'
-    ? "import tailwind from '@areo/plugin-tailwind';\n"
+    ? "import tailwind from '@ereo/plugin-tailwind';\n"
     : '';
   const tailwindPlugin = template === 'tailwind' ? '    tailwind(),' : '';
 
-  return `import { defineConfig } from '@areo/core';
+  return `import { defineConfig } from '@ereo/core';
 ${tailwindImport}
 export default defineConfig({
   server: {
@@ -200,15 +200,15 @@ ${tailwindPlugin}
  */
 function generateEnvFile(): string {
   return `# Environment Variables
-# Prefix with AREO_PUBLIC_ to expose to the client
+# Prefix with EREO_PUBLIC_ to expose to the client
 
 # Server-only (never sent to browser)
 DATABASE_URL=postgresql://localhost:5432/mydb
 API_SECRET=your-secret-key
 
 # Public (available in client code)
-AREO_PUBLIC_APP_NAME=Areo App
-AREO_PUBLIC_API_URL=http://localhost:3000/api
+EREO_PUBLIC_APP_NAME=Ereo App
+EREO_PUBLIC_API_URL=http://localhost:3000/api
 `.trim();
 }
 
@@ -274,13 +274,13 @@ function generateClientEntry(typescript: boolean): string {
  * - Sets up client-side navigation
  * - Enables link prefetching
  */
-import { initClient } from '@areo/client';
+import { initClient } from '@ereo/client';
 
-// Initialize the Areo client runtime
+// Initialize the Ereo client runtime
 initClient();
 
 // You can also manually hydrate specific islands:
-// import { hydrateIslands } from '@areo/client';
+// import { hydrateIslands } from '@ereo/client';
 // hydrateIslands();
 `.trim();
 }
@@ -290,7 +290,7 @@ initClient();
  */
 function generateIndexPage(template: string, typescript: boolean): string {
   const imports = typescript
-    ? `import type { LoaderArgs, MetaArgs, RouteComponentProps } from '@areo/core';
+    ? `import type { LoaderArgs, MetaArgs, RouteComponentProps } from '@ereo/core';
 import { Counter } from '../components/Counter';`
     : `import { Counter } from '../components/Counter';`;
 
@@ -333,7 +333,7 @@ export async function loader({ request, params, context }${loaderType}) {
   });
 
   // Access environment variables
-  const appName = context.env.AREO_PUBLIC_APP_NAME || 'Areo App';
+  const appName = context.env.EREO_PUBLIC_APP_NAME || 'Ereo App';
 
   return {
     message: \`Welcome to \${appName}!\`,
@@ -395,7 +395,7 @@ export default function HomePage({ loaderData }${propsType}) {
  */
 function generateAboutPage(template: string, typescript: boolean): string {
   const imports = typescript
-    ? `import type { MetaFunction } from '@areo/core';`
+    ? `import type { MetaFunction } from '@ereo/core';`
     : '';
 
   const tailwindStyles = template === 'tailwind';
@@ -422,8 +422,8 @@ function generateAboutPage(template: string, typescript: boolean): string {
  */
 export const meta: MetaFunction = () => {
   return [
-    { title: 'About - Areo App' },
-    { name: 'description', content: 'Learn about the Areo framework' },
+    { title: 'About - Ereo App' },
+    { name: 'description', content: 'Learn about the Ereo framework' },
   ];
 };
 `
@@ -433,8 +433,8 @@ export const meta: MetaFunction = () => {
  */
 export function meta() {
   return [
-    { title: 'About - Areo App' },
-    { name: 'description', content: 'Learn about the Areo framework' },
+    { title: 'About - Ereo App' },
+    { name: 'description', content: 'Learn about the Ereo framework' },
   ];
 }
 `;
@@ -450,10 +450,10 @@ export default function AboutPage() {
   return (
     <main${mainClasses}>
       <h1${h1Classes}>
-        About Areo
+        About Ereo
       </h1>
       <p${pClasses}>
-        Areo is a React fullstack framework built on Bun, designed for
+        Ereo is a React fullstack framework built on Bun, designed for
         simplicity and performance. It features islands architecture for
         minimal JavaScript and explicit caching for predictable behavior.
       </p>
@@ -482,9 +482,9 @@ export default function AboutPage() {
  */
 function generateContactPage(template: string, typescript: boolean): string {
   const imports = typescript
-    ? `import type { ActionArgs, LoaderArgs, RouteComponentProps } from '@areo/core';
-import { json } from '@areo/data';`
-    : `import { json } from '@areo/data';`;
+    ? `import type { ActionArgs, LoaderArgs, RouteComponentProps } from '@ereo/core';
+import { json } from '@ereo/data';`
+    : `import { json } from '@ereo/data';`;
 
   const loaderType = typescript ? ': LoaderArgs' : '';
   const actionType = typescript ? ': ActionArgs' : '';
@@ -565,7 +565,7 @@ export async function action({ request, context }${actionType}) {
  *
  * This is a simple SSR-compatible form.
  * For enhanced client-side features (loading states, error display),
- * use an island component with the Form/useActionData hooks from @areo/client.
+ * use an island component with the Form/useActionData hooks from @ereo/client.
  */
 export default function ContactPage({ loaderData }${propsType}) {
   return (
@@ -673,7 +673,7 @@ export function Counter({ initialCount = 0 }${propsType}) {
  */
 function generateLoggerMiddleware(typescript: boolean): string {
   const imports = typescript
-    ? `import type { MiddlewareHandler } from '@areo/core';`
+    ? `import type { MiddlewareHandler } from '@ereo/core';`
     : '';
   const typeAnnotation = typescript ? ': MiddlewareHandler' : '';
 
@@ -683,7 +683,7 @@ function generateLoggerMiddleware(typescript: boolean): string {
  *
  * Logs request information and timing.
  *
- * Register in areo.config.ts or use the route config:
+ * Register in ereo.config.ts or use the route config:
  *
  * export const config = {
  *   middleware: ['logger'],
@@ -713,7 +713,7 @@ export default logger;
  */
 function generateErrorBoundary(template: string, typescript: boolean): string {
   const imports = typescript
-    ? `import type { RouteErrorComponentProps } from '@areo/core';`
+    ? `import type { RouteErrorComponentProps } from '@ereo/core';`
     : '';
 
   const propsType = typescript ? ': RouteErrorComponentProps' : '';
@@ -836,7 +836,7 @@ function generateGitignore(): string {
 node_modules
 
 # Build output
-.areo
+.ereo
 dist
 
 # Environment

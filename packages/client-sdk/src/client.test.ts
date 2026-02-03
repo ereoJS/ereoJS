@@ -1,5 +1,5 @@
 /**
- * @areo/client-sdk - Client tests
+ * @ereo/client-sdk - Client tests
  */
 
 import { describe, it, expect, beforeEach } from 'bun:test';

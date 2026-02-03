@@ -1,5 +1,5 @@
 {
-  "name": "@areo/testing",
+  "name": "@ereo/testing",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,9 +20,9 @@
     "typecheck": "tsc --noEmit --skipLibCheck"
   },
   "dependencies": {
-    "@areo/core": "workspace:*",
-    "@areo/router": "workspace:*",
-    "@areo/data": "workspace:*"
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/data": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

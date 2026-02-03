@@ -1,7 +1,7 @@
 /**
- * @areo/client
+ * @ereo/client
  *
- * Client-side runtime for the Areo framework.
+ * Client-side runtime for the Ereo framework.
  * Includes islands architecture, navigation, and prefetching.
  */
 
@@ -45,7 +45,7 @@ export {
   ActionDataProvider,
   NavigationProvider,
   ErrorProvider,
-  AreoProvider,
+  EreoProvider,
 } from './hooks';
 
 export type {
@@ -59,7 +59,7 @@ export type {
   ActionDataProviderProps,
   NavigationProviderProps,
   ErrorProviderProps,
-  AreoProviderProps,
+  EreoProviderProps,
 } from './hooks';
 
 // Islands

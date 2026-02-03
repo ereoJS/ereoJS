@@ -1,5 +1,5 @@
 /**
- * @areo/testing - Server Tests
+ * @ereo/testing - Server Tests
  */
 
 import { describe, expect, test, afterEach, beforeEach, mock } from 'bun:test';
@@ -351,15 +351,15 @@ describe('createTestServer', () => {
     };
 
     // Mock the dynamic imports
-    mock.module('@areo/core', () => ({
+    mock.module('@ereo/core', () => ({
       createApp: mock(() => mockApp),
     }));
 
-    mock.module('@areo/router', () => ({
+    mock.module('@ereo/router', () => ({
       initFileRouter: mock(async () => mockRouter),
     }));
 
-    mock.module('@areo/server', () => ({
+    mock.module('@ereo/server', () => ({
       createServer: mock(() => mockServerInstance),
     }));
   });

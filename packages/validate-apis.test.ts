@@ -12,31 +12,31 @@ import { describe, expect, test } from 'bun:test';
 // ============================================================================
 describe('RenderMode Type Fix', () => {
   test('core exports RenderMode with route-level values', async () => {
-    const { RenderMode } = await import('@areo/core') as any;
+    const { RenderMode } = await import('@ereo/core') as any;
     // RenderMode is a type, so we check the module has route config types
-    const core = await import('@areo/core');
+    const core = await import('@ereo/core');
     expect(core).toBeDefined();
 
     // Verify core types are exported
-    type CoreRenderMode = import('@areo/core').RenderMode;
+    type CoreRenderMode = import('@ereo/core').RenderMode;
     const validModes: CoreRenderMode[] = ['ssg', 'ssr', 'csr', 'json', 'xml', 'rsc'];
     expect(validModes).toHaveLength(6);
   });
 
   test('server exports ServerRenderMode (renamed from RenderMode)', async () => {
-    const server = await import('@areo/server');
+    const server = await import('@ereo/server');
     // ServerRenderMode should be exported, not RenderMode
     expect('ServerRenderMode' in server || server).toBeDefined();
 
-    type ServerRM = import('@areo/server').ServerRenderMode;
+    type ServerRM = import('@ereo/server').ServerRenderMode;
     const validModes: ServerRM[] = ['streaming', 'string'];
     expect(validModes).toHaveLength(2);
   });
 
   test('no type collision between core and server RenderMode', async () => {
     // This test ensures the types are distinct
-    type CoreRM = import('@areo/core').RenderMode;
-    type ServerRM = import('@areo/server').ServerRenderMode;
+    type CoreRM = import('@ereo/core').RenderMode;
+    type ServerRM = import('@ereo/server').ServerRenderMode;
 
     // These should be completely different unions
     const coreMode: CoreRM = 'ssr';
@@ -52,23 +52,23 @@ describe('RenderMode Type Fix', () => {
 // ============================================================================
 describe('Middleware Signature Unification', () => {
   test('core exports MiddlewareHandler', async () => {
-    const core = await import('@areo/core');
+    const core = await import('@ereo/core');
     expect(core.MiddlewareHandler).toBeUndefined(); // It's a type, not a value
 
     // Verify we can use the type
-    type MH = import('@areo/core').MiddlewareHandler;
+    type MH = import('@ereo/core').MiddlewareHandler;
     const handler: MH = async (req, ctx, next) => next();
     expect(typeof handler).toBe('function');
   });
 
   test('router re-exports core middleware types', async () => {
-    const router = await import('@areo/router');
+    const router = await import('@ereo/router');
     // Router should re-export core types for convenience
     expect(router).toBeDefined();
 
     // TypedMiddlewareHandler should be compatible with MiddlewareHandler
-    type TMH = import('@areo/router').TypedMiddlewareHandler<{}, {}>;
-    type MH = import('@areo/core').MiddlewareHandler;
+    type TMH = import('@ereo/router').TypedMiddlewareHandler<{}, {}>;
+    type MH = import('@ereo/core').MiddlewareHandler;
 
     // Both should accept same basic signature
     const typedHandler: TMH = async (req, ctx, next) => next();
@@ -76,7 +76,7 @@ describe('Middleware Signature Unification', () => {
   });
 
   test('server re-exports core middleware types', async () => {
-    const server = await import('@areo/server');
+    const server = await import('@ereo/server');
     expect(server).toBeDefined();
 
     // MiddlewareChain should work with core MiddlewareHandler
@@ -90,32 +90,32 @@ describe('Middleware Signature Unification', () => {
 // ============================================================================
 describe('Client React Hooks', () => {
   test('exports useLoaderData hook', async () => {
-    const { useLoaderData } = await import('@areo/client');
+    const { useLoaderData } = await import('@ereo/client');
     expect(typeof useLoaderData).toBe('function');
   });
 
   test('exports useActionData hook', async () => {
-    const { useActionData } = await import('@areo/client');
+    const { useActionData } = await import('@ereo/client');
     expect(typeof useActionData).toBe('function');
   });
 
   test('exports useNavigation hook', async () => {
-    const { useNavigation } = await import('@areo/client');
+    const { useNavigation } = await import('@ereo/client');
     expect(typeof useNavigation).toBe('function');
   });
 
   test('exports useError hook', async () => {
-    const { useError } = await import('@areo/client');
+    const { useError } = await import('@ereo/client');
     expect(typeof useError).toBe('function');
   });
 
-  test('exports AreoProvider', async () => {
-    const { AreoProvider } = await import('@areo/client');
-    expect(AreoProvider).toBeDefined();
+  test('exports EreoProvider', async () => {
+    const { EreoProvider } = await import('@ereo/client');
+    expect(EreoProvider).toBeDefined();
   });
 
   test('exports all context providers', async () => {
-    const client = await import('@areo/client');
+    const client = await import('@ereo/client');
     expect(client.LoaderDataProvider).toBeDefined();
     expect(client.ActionDataProvider).toBeDefined();
     expect(client.NavigationProvider).toBeDefined();
@@ -128,27 +128,27 @@ describe('Client React Hooks', () => {
 // ============================================================================
 describe('Form Component', () => {
   test('exports Form component', async () => {
-    const { Form } = await import('@areo/client');
+    const { Form } = await import('@ereo/client');
     expect(Form).toBeDefined();
   });
 
   test('exports useSubmit hook', async () => {
-    const { useSubmit } = await import('@areo/client');
+    const { useSubmit } = await import('@ereo/client');
     expect(typeof useSubmit).toBe('function');
   });
 
   test('exports useFetcher hook', async () => {
-    const { useFetcher } = await import('@areo/client');
+    const { useFetcher } = await import('@ereo/client');
     expect(typeof useFetcher).toBe('function');
   });
 
   test('exports FormProvider', async () => {
-    const { FormProvider } = await import('@areo/client');
+    const { FormProvider } = await import('@ereo/client');
     expect(FormProvider).toBeDefined();
   });
 
   test('exports form utility functions', async () => {
-    const client = await import('@areo/client');
+    const client = await import('@ereo/client');
     expect(typeof client.serializeFormData).toBe('function');
     expect(typeof client.parseFormData).toBe('function');
     expect(typeof client.formDataToObject).toBe('function');
@@ -161,25 +161,25 @@ describe('Form Component', () => {
 // ============================================================================
 describe('Link Component', () => {
   test('exports Link component', async () => {
-    const { Link } = await import('@areo/client');
+    const { Link } = await import('@ereo/client');
     expect(Link).toBeDefined();
   });
 
   test('exports NavLink component', async () => {
-    const { NavLink } = await import('@areo/client');
+    const { NavLink } = await import('@ereo/client');
     expect(NavLink).toBeDefined();
   });
 
   test('exports useIsActive hook', async () => {
-    const { useIsActive } = await import('@areo/client');
+    const { useIsActive } = await import('@ereo/client');
     expect(typeof useIsActive).toBe('function');
   });
 
   test('Link types are exported', async () => {
     // Verify types exist by importing them
-    type LP = import('@areo/client').LinkProps;
-    type NLP = import('@areo/client').NavLinkProps;
-    type PS = import('@areo/client').PrefetchStrategy;
+    type LP = import('@ereo/client').LinkProps;
+    type NLP = import('@ereo/client').NavLinkProps;
+    type PS = import('@ereo/client').PrefetchStrategy;
 
     const strategies: PS[] = ['none', 'intent', 'render', 'viewport'];
     expect(strategies).toHaveLength(4);
@@ -191,34 +191,34 @@ describe('Link Component', () => {
 // ============================================================================
 describe('Error Boundary System', () => {
   test('exports ErrorBoundary component', async () => {
-    const { ErrorBoundary } = await import('@areo/client');
+    const { ErrorBoundary } = await import('@ereo/client');
     expect(ErrorBoundary).toBeDefined();
   });
 
   test('exports RouteErrorBoundary component', async () => {
-    const { RouteErrorBoundary } = await import('@areo/client');
+    const { RouteErrorBoundary } = await import('@ereo/client');
     expect(RouteErrorBoundary).toBeDefined();
   });
 
   test('exports useErrorBoundary hook', async () => {
-    const { useErrorBoundary } = await import('@areo/client');
+    const { useErrorBoundary } = await import('@ereo/client');
     expect(typeof useErrorBoundary).toBe('function');
   });
 
   test('exports useRouteError hook', async () => {
-    const { useRouteError } = await import('@areo/client');
+    const { useRouteError } = await import('@ereo/client');
     expect(typeof useRouteError).toBe('function');
   });
 
   test('exports error utilities', async () => {
-    const client = await import('@areo/client');
+    const client = await import('@ereo/client');
     expect(typeof client.isRouteErrorResponse).toBe('function');
     expect(typeof client.createRouteErrorResponse).toBe('function');
     expect(typeof client.withErrorBoundary).toBe('function');
   });
 
   test('exports RouteError class', async () => {
-    const { RouteError } = await import('@areo/client');
+    const { RouteError } = await import('@ereo/client');
     expect(RouteError).toBeDefined();
 
     // Constructor: (status: number, statusText: string, data?: unknown)
@@ -233,7 +233,7 @@ describe('Error Boundary System', () => {
 // ============================================================================
 describe('Unified Cache Interface', () => {
   test('core exports CacheAdapter interface utilities', async () => {
-    const core = await import('@areo/core');
+    const core = await import('@ereo/core');
     expect(typeof core.createCache).toBe('function');
     expect(typeof core.createTaggedCache).toBe('function');
     expect(typeof core.wrapCacheAdapter).toBe('function');
@@ -241,7 +241,7 @@ describe('Unified Cache Interface', () => {
   });
 
   test('core exports MemoryCacheAdapter', async () => {
-    const { MemoryCacheAdapter } = await import('@areo/core');
+    const { MemoryCacheAdapter } = await import('@ereo/core');
     expect(MemoryCacheAdapter).toBeDefined();
 
     const cache = new MemoryCacheAdapter();
@@ -253,7 +253,7 @@ describe('Unified Cache Interface', () => {
   });
 
   test('createCache returns CacheAdapter', async () => {
-    const { createCache } = await import('@areo/core');
+    const { createCache } = await import('@ereo/core');
     const cache = createCache();
 
     await cache.set('key', 'value');
@@ -262,7 +262,7 @@ describe('Unified Cache Interface', () => {
   });
 
   test('createTaggedCache returns TaggedCache', async () => {
-    const { createTaggedCache, isTaggedCache } = await import('@areo/core');
+    const { createTaggedCache, isTaggedCache } = await import('@ereo/core');
     const cache = createTaggedCache();
 
     expect(isTaggedCache(cache)).toBe(true);
@@ -272,7 +272,7 @@ describe('Unified Cache Interface', () => {
   });
 
   test('data package MemoryCache has adapter compatibility', async () => {
-    const { MemoryCache, createDataCacheAdapter } = await import('@areo/data');
+    const { MemoryCache, createDataCacheAdapter } = await import('@ereo/data');
 
     // MemoryCache now uses CacheEntry format
     const cache = new MemoryCache<string>();
@@ -294,8 +294,8 @@ describe('Unified Cache Interface', () => {
 // 8. Integration Test - Full API Surface
 // ============================================================================
 describe('Full API Surface Integration', () => {
-  test('all major exports are available from @areo/client', async () => {
-    const client = await import('@areo/client');
+  test('all major exports are available from @ereo/client', async () => {
+    const client = await import('@ereo/client');
 
     // Hooks
     expect(client.useLoaderData).toBeDefined();
@@ -314,15 +314,15 @@ describe('Full API Surface Integration', () => {
     expect(client.NavLink).toBeDefined();
     expect(client.ErrorBoundary).toBeDefined();
     expect(client.RouteErrorBoundary).toBeDefined();
-    expect(client.AreoProvider).toBeDefined();
+    expect(client.EreoProvider).toBeDefined();
 
     // Navigation (existing)
     expect(client.navigate).toBeDefined();
     expect(client.prefetch).toBeDefined();
   });
 
-  test('all major exports are available from @areo/core', async () => {
-    const core = await import('@areo/core');
+  test('all major exports are available from @ereo/core', async () => {
+    const core = await import('@ereo/core');
 
     // Config
     expect(core.defineConfig).toBeDefined();
@@ -338,8 +338,8 @@ describe('Full API Surface Integration', () => {
     expect(core.getEnv).toBeDefined();
   });
 
-  test('all major exports are available from @areo/server', async () => {
-    const server = await import('@areo/server');
+  test('all major exports are available from @ereo/server', async () => {
+    const server = await import('@ereo/server');
 
     expect(server.createServer).toBeDefined();
     expect(server.createMiddlewareChain).toBeDefined();
@@ -348,8 +348,8 @@ describe('Full API Surface Integration', () => {
     expect(server.securityHeaders).toBeDefined();
   });
 
-  test('all major exports are available from @areo/data', async () => {
-    const data = await import('@areo/data');
+  test('all major exports are available from @ereo/data', async () => {
+    const data = await import('@ereo/data');
 
     expect(data.createLoader).toBeDefined();
     expect(data.createAction).toBeDefined();

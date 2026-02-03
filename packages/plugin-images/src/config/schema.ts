@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Configuration Validation
+ * @ereo/plugin-images - Configuration Validation
  *
  * Schema validation for plugin configuration.
  */
@@ -200,7 +200,7 @@ export function validateConfig(config: ImagePluginConfig = {}): Required<ImagePl
     }
     // Convert legacy domains to remote patterns
     console.warn(
-      '[@areo/plugin-images] The "domains" option is deprecated. Use "remotePatterns" instead.'
+      '[@ereo/plugin-images] The "domains" option is deprecated. Use "remotePatterns" instead.'
     );
   }
 

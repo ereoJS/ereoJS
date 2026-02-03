@@ -1,5 +1,5 @@
 /**
- * @areo/bundler - Error Overlay
+ * @ereo/bundler - Error Overlay
  *
  * Development error display with source mapping.
  */
@@ -108,7 +108,7 @@ export function generateErrorOverlayHTML(error: ErrorInfo): string {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Error - Areo Dev</title>
+  <title>Error - Ereo Dev</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -216,14 +216,14 @@ export const ERROR_OVERLAY_SCRIPT = `
   });
 
   function showOverlay(error) {
-    let overlay = document.getElementById('areo-error-overlay');
+    let overlay = document.getElementById('ereo-error-overlay');
     if (overlay) overlay.remove();
 
     overlay = document.createElement('div');
-    overlay.id = 'areo-error-overlay';
+    overlay.id = 'ereo-error-overlay';
     overlay.innerHTML = \`
       <style>
-        #areo-error-overlay {
+        #ereo-error-overlay {
           position: fixed;
           inset: 0;
           background: rgba(0,0,0,0.95);
@@ -233,7 +233,7 @@ export const ERROR_OVERLAY_SCRIPT = `
           overflow: auto;
           z-index: 99999;
         }
-        #areo-error-overlay .close {
+        #ereo-error-overlay .close {
           position: absolute;
           top: 1rem;
           right: 1rem;
@@ -244,14 +244,14 @@ export const ERROR_OVERLAY_SCRIPT = `
           cursor: pointer;
           border-radius: 4px;
         }
-        #areo-error-overlay .close:hover {
+        #ereo-error-overlay .close:hover {
           background: #333;
         }
-        #areo-error-overlay h2 {
+        #ereo-error-overlay h2 {
           color: #ff5555;
           margin: 0 0 1rem;
         }
-        #areo-error-overlay pre {
+        #ereo-error-overlay pre {
           background: #1a1a1a;
           padding: 1rem;
           border-radius: 4px;

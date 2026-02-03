@@ -1,7 +1,7 @@
 /**
- * @areo/router
+ * @ereo/router
  *
- * File-based routing for the Areo framework.
+ * File-based routing for the Ereo framework.
  * Supports dynamic routes, catch-all routes, layouts, and route groups.
  */
 
@@ -82,14 +82,14 @@ export type {
 } from './middleware-chain';
 
 // Re-export core middleware types for convenience
-// Users can import these from either @areo/core or @areo/router
+// Users can import these from either @ereo/core or @ereo/router
 export type {
   MiddlewareHandler,
   NextFunction,
   Middleware,
   MiddlewareReference,
   AppContext,
-} from '@areo/core';
+} from '@ereo/core';
 
 // Validation
 export {

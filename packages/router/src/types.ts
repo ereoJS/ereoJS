@@ -1,10 +1,10 @@
 /**
- * @areo/router - Route Type Definitions
+ * @ereo/router - Route Type Definitions
  *
  * Types for file-based routing system.
  */
 
-import type { Route, RouteParams, RouteModule } from '@areo/core';
+import type { Route, RouteParams, RouteModule } from '@ereo/core';
 
 /**
  * File system route (before processing).

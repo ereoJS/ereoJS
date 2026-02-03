@@ -1,9 +1,9 @@
 /**
- * @areo/testing - Snapshot Tests
+ * @ereo/testing - Snapshot Tests
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { LoaderFunction, ActionFunction } from '@areo/core';
+import type { LoaderFunction, ActionFunction } from '@ereo/core';
 import {
   snapshotLoader,
   snapshotAction,

@@ -1,5 +1,5 @@
 /**
- * @areo/core - Environment Variable Tests
+ * @ereo/core - Environment Variable Tests
  */
 
 import { describe, expect, test, beforeEach, afterEach, mock, spyOn } from 'bun:test';
@@ -238,17 +238,17 @@ describe('validateEnv', () => {
     expect(result.errors[0].message).toBe('Invalid URL');
   });
 
-  test('warns about unknown AREO_ prefixed variables', () => {
+  test('warns about unknown EREO_ prefixed variables', () => {
     const schema: EnvConfig = {
       KNOWN_VAR: env.string(),
     };
 
     const result = validateEnv(schema, {
       KNOWN_VAR: 'value',
-      AREO_UNKNOWN: 'something',
+      EREO_UNKNOWN: 'something',
     });
 
-    expect(result.warnings).toContain('Unknown environment variable with AREO_ prefix: AREO_UNKNOWN');
+    expect(result.warnings).toContain('Unknown environment variable with EREO_ prefix: EREO_UNKNOWN');
   });
 
   test('skips optional undefined values', () => {
@@ -380,7 +380,7 @@ describe('generateEnvTypes', () => {
 
     const types = generateEnvTypes(schema);
 
-    expect(types).toContain("declare module '@areo/core'");
+    expect(types).toContain("declare module '@ereo/core'");
     expect(types).toContain('interface EnvTypes');
     expect(types).toContain('DATABASE_URL: string;');
     expect(types).toContain('PORT: number;');
@@ -621,10 +621,10 @@ describe('setupEnv', () => {
     expect(result.env.SETUP_TEST_VAR).toBe('default_val');
   });
 
-  test('logs warnings for unknown AREO_ prefixed variables', async () => {
-    // Set an unknown AREO_ variable in process.env
-    const originalValue = process.env.AREO_UNKNOWN_TEST;
-    process.env.AREO_UNKNOWN_TEST = 'test';
+  test('logs warnings for unknown EREO_ prefixed variables', async () => {
+    // Set an unknown EREO_ variable in process.env
+    const originalValue = process.env.EREO_UNKNOWN_TEST;
+    process.env.EREO_UNKNOWN_TEST = 'test';
 
     const schema: EnvConfig = {
       KNOWN: env.string().default('value'),
@@ -634,7 +634,7 @@ describe('setupEnv', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalled();
 
-    process.env.AREO_UNKNOWN_TEST = originalValue;
+    process.env.EREO_UNKNOWN_TEST = originalValue;
   });
 
   test('logs errors for invalid environment', async () => {

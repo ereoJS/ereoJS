@@ -1,0 +1,28 @@
+{
+  "name": "ereo-app",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run ../packages/cli/src/index.ts dev",
+    "build": "bun run ../packages/cli/src/index.ts build",
+    "start": "bun run ../packages/cli/src/index.ts start",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/server": "workspace:*",
+    "@ereo/client": "workspace:*",
+    "@ereo/data": "workspace:*",
+    "@ereo/cli": "workspace:*",
+    "@ereo/testing": "workspace:*",
+    "@ereo/dev-inspector": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.4.0"
+  }
+}

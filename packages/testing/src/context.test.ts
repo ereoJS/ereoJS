@@ -1,5 +1,5 @@
 /**
- * @areo/testing - Context Tests
+ * @ereo/testing - Context Tests
  */
 
 import { describe, expect, test, beforeEach } from 'bun:test';

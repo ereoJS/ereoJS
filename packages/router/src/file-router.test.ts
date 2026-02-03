@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { mkdir, rm, writeFile, unlink, access } from 'node:fs/promises';
 // Import from source files directly to avoid module resolution conflicts with other tests
 import { FileRouter, createFileRouter, initFileRouter } from './file-router';
-import type { Route } from '@areo/core';
+import type { Route } from '@ereo/core';
 
 // Unique test directory per test run to avoid conflicts
 const TEST_RUN_ID = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -30,7 +30,7 @@ async function ensureDir(dir: string): Promise<boolean> {
   }
 }
 
-describe('@areo/router - FileRouter', () => {
+describe('@ereo/router - FileRouter', () => {
   // Clean up the entire test directory tree after all tests complete
   afterAll(async () => {
     try {

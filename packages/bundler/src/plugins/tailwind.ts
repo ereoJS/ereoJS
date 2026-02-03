@@ -1,5 +1,5 @@
 /**
- * @areo/bundler - Tailwind CSS Plugin
+ * @ereo/bundler - Tailwind CSS Plugin
  *
  * Full Tailwind CSS integration with PostCSS processing.
  * Supports @tailwind directives, @apply, custom config, and production minification.
@@ -7,7 +7,7 @@
 
 import { join, resolve, dirname } from 'node:path';
 import { readFileSync, existsSync, statSync } from 'node:fs';
-import type { Plugin, PluginContext, DevServer } from '@areo/core';
+import type { Plugin, PluginContext, DevServer } from '@ereo/core';
 
 // PostCSS and Tailwind types
 import postcss from 'postcss';
@@ -363,7 +363,7 @@ export function createTailwindPlugin(options: TailwindPluginOptions = {}): Plugi
   }
 
   return {
-    name: 'areo:tailwind',
+    name: 'ereo:tailwind',
 
     async setup(context: PluginContext) {
       root = context.root;
@@ -419,7 +419,7 @@ export function createTailwindPlugin(options: TailwindPluginOptions = {}): Plugi
 
     resolveId(id: string) {
       // Handle virtual tailwind module
-      if (id === 'virtual:tailwind.css' || id === '@areo/tailwind') {
+      if (id === 'virtual:tailwind.css' || id === '@ereo/tailwind') {
         return '\0virtual:tailwind.css';
       }
       return null;

@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Image Processing Orchestrator
+ * @ereo/plugin-images - Image Processing Orchestrator
  *
  * Coordinates image processing operations using the Sharp processor.
  */

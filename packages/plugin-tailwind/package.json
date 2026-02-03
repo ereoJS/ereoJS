@@ -1,5 +1,5 @@
 {
-  "name": "@areo/plugin-tailwind",
+  "name": "@ereo/plugin-tailwind",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@areo/core": "workspace:*"
+    "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

@@ -9,7 +9,7 @@ import {
   ActionDataProvider,
   NavigationProvider,
   ErrorProvider,
-  AreoProvider,
+  EreoProvider,
   LoaderDataContext,
   ActionDataContext,
   NavigationContext,
@@ -51,7 +51,7 @@ function renderHook<T>(
   return { result };
 }
 
-// Helper to create a wrapper with AreoProvider
+// Helper to create a wrapper with EreoProvider
 function createWrapper(props: {
   loaderData?: unknown;
   actionData?: unknown;
@@ -59,13 +59,13 @@ function createWrapper(props: {
   error?: Error;
 }) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(AreoProvider, { ...props, children });
+    return createElement(EreoProvider, { ...props, children });
   };
 }
 
-describe('@areo/client - Hooks', () => {
+describe('@ereo/client - Hooks', () => {
   describe('useLoaderData', () => {
-    test('throws error when used outside of AreoProvider', () => {
+    test('throws error when used outside of EreoProvider', () => {
       // Directly test the hook behavior without provider
       let error: Error | null = null;
 
@@ -74,8 +74,8 @@ describe('@areo/client - Hooks', () => {
         const context = LoaderDataContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useLoaderData must be used within an AreoProvider. ' +
-              'Make sure your component is wrapped with <AreoProvider>.'
+            'useLoaderData must be used within an EreoProvider. ' +
+              'Make sure your component is wrapped with <EreoProvider>.'
           );
         }
       } catch (e) {
@@ -83,7 +83,7 @@ describe('@areo/client - Hooks', () => {
       }
 
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
 
     test('returns correct data type', () => {
@@ -163,15 +163,15 @@ describe('@areo/client - Hooks', () => {
   });
 
   describe('useActionData', () => {
-    test('throws error when used outside of AreoProvider', () => {
+    test('throws error when used outside of EreoProvider', () => {
       let error: Error | null = null;
 
       try {
         const context = ActionDataContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useActionData must be used within an AreoProvider. ' +
-              'Make sure your component is wrapped with <AreoProvider>.'
+            'useActionData must be used within an EreoProvider. ' +
+              'Make sure your component is wrapped with <EreoProvider>.'
           );
         }
       } catch (e) {
@@ -179,7 +179,7 @@ describe('@areo/client - Hooks', () => {
       }
 
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
 
     test('returns undefined initially when no action submitted', () => {
@@ -270,15 +270,15 @@ describe('@areo/client - Hooks', () => {
   });
 
   describe('useNavigation', () => {
-    test('throws error when used outside of AreoProvider', () => {
+    test('throws error when used outside of EreoProvider', () => {
       let error: Error | null = null;
 
       try {
         const context = NavigationContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useNavigation must be used within an AreoProvider. ' +
-              'Make sure your component is wrapped with <AreoProvider>.'
+            'useNavigation must be used within an EreoProvider. ' +
+              'Make sure your component is wrapped with <EreoProvider>.'
           );
         }
       } catch (e) {
@@ -286,7 +286,7 @@ describe('@areo/client - Hooks', () => {
       }
 
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
 
     test('returns idle state initially', () => {
@@ -437,15 +437,15 @@ describe('@areo/client - Hooks', () => {
   });
 
   describe('useError', () => {
-    test('throws error when used outside of AreoProvider', () => {
+    test('throws error when used outside of EreoProvider', () => {
       let error: Error | null = null;
 
       try {
         const context = ErrorContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useError must be used within an AreoProvider. ' +
-              'Make sure your component is wrapped with <AreoProvider>.'
+            'useError must be used within an EreoProvider. ' +
+              'Make sure your component is wrapped with <EreoProvider>.'
           );
         }
       } catch (e) {
@@ -453,7 +453,7 @@ describe('@areo/client - Hooks', () => {
       }
 
       expect(error).not.toBeNull();
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
 
     test('returns undefined when no error', () => {
@@ -636,9 +636,9 @@ describe('@areo/client - Hooks', () => {
     });
   });
 
-  describe('AreoProvider', () => {
+  describe('EreoProvider', () => {
     test('combines all providers', () => {
-      // Verify that AreoProvider accepts all the expected props
+      // Verify that EreoProvider accepts all the expected props
       const props = {
         children: null,
         loaderData: { user: 'test' },
@@ -685,14 +685,14 @@ describe('@areo/client - Hooks', () => {
         const context = LoaderDataContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useLoaderDataContext must be used within an AreoProvider'
+            'useLoaderDataContext must be used within an EreoProvider'
           );
         }
       } catch (e) {
         error = e as Error;
       }
 
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
 
     test('useActionDataContext throws outside provider', () => {
@@ -702,14 +702,14 @@ describe('@areo/client - Hooks', () => {
         const context = ActionDataContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useActionDataContext must be used within an AreoProvider'
+            'useActionDataContext must be used within an EreoProvider'
           );
         }
       } catch (e) {
         error = e as Error;
       }
 
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
 
     test('useNavigationContext throws outside provider', () => {
@@ -719,14 +719,14 @@ describe('@areo/client - Hooks', () => {
         const context = NavigationContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useNavigationContext must be used within an AreoProvider'
+            'useNavigationContext must be used within an EreoProvider'
           );
         }
       } catch (e) {
         error = e as Error;
       }
 
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
 
     test('useErrorContext throws outside provider', () => {
@@ -736,14 +736,14 @@ describe('@areo/client - Hooks', () => {
         const context = ErrorContext._currentValue;
         if (context === null) {
           throw new Error(
-            'useErrorContext must be used within an AreoProvider'
+            'useErrorContext must be used within an EreoProvider'
           );
         }
       } catch (e) {
         error = e as Error;
       }
 
-      expect(error?.message).toContain('AreoProvider');
+      expect(error?.message).toContain('EreoProvider');
     });
   });
 

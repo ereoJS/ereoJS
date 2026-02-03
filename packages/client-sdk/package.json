@@ -1,14 +1,14 @@
 {
-  "name": "@areo/client-sdk",
+  "name": "@ereo/client-sdk",
   "version": "0.1.0",
-  "description": "Type-safe client SDK for Areo framework APIs",
+  "description": "Type-safe client SDK for Ereo framework APIs",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./types": "./src/types.ts"
   },
   "dependencies": {
-    "@areo/core": "workspace:*"
+    "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

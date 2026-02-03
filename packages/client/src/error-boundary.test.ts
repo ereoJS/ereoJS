@@ -16,7 +16,7 @@ import {
 } from './error-boundary';
 import { ErrorContext, type ErrorContextValue } from './hooks';
 
-describe('@areo/client - Error Boundary', () => {
+describe('@ereo/client - Error Boundary', () => {
   describe('ErrorBoundary Component', () => {
     test('ErrorBoundary class exists and is a React component', () => {
       expect(ErrorBoundary).toBeDefined();

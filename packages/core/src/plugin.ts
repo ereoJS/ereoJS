@@ -1,5 +1,5 @@
 /**
- * @areo/core - Plugin System
+ * @ereo/core - Plugin System
  *
  * A simple yet powerful plugin system inspired by Vite.
  * Plugins can hook into various lifecycle events and transform code.
@@ -229,7 +229,7 @@ export function composePlugins(name: string, plugins: Plugin[]): Plugin {
  * Adds sensible security defaults to all responses.
  */
 export const securityHeadersPlugin = definePlugin({
-  name: 'areo:security-headers',
+  name: 'ereo:security-headers',
   setup() {
     // No setup needed
   },

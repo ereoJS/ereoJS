@@ -1,5 +1,5 @@
 /**
- * @areo/state - Signals and reactivity system
+ * @ereo/state - Signals and reactivity system
  *
  * Fine-grained reactivity for state management.
  */

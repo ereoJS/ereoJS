@@ -1,7 +1,7 @@
 /**
- * @areo/client - Error Boundary Context and Recovery System
+ * @ereo/client - Error Boundary Context and Recovery System
  *
- * Provides error boundaries, context, and recovery utilities for the Areo framework.
+ * Provides error boundaries, context, and recovery utilities for the Ereo framework.
  */
 
 import React, {
@@ -11,7 +11,7 @@ import React, {
   type ErrorInfo,
   type ComponentType,
 } from 'react';
-import type { RouteParams, ErrorConfig } from '@areo/core';
+import type { RouteParams, ErrorConfig } from '@ereo/core';
 import { ErrorContext, type ErrorContextValue } from './hooks';
 
 // ============================================================================
@@ -180,7 +180,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
  * Provides error state, reset function, and ability to programmatically trigger errors.
  *
  * @returns Object with error state and control functions
- * @throws Error if used outside AreoProvider or ErrorProvider
+ * @throws Error if used outside EreoProvider or ErrorProvider
  *
  * @example
  * ```tsx
@@ -204,7 +204,7 @@ export function useErrorBoundary(): UseErrorBoundaryReturn {
 
   if (!context) {
     throw new Error(
-      'useErrorBoundary must be used within an AreoProvider or ErrorProvider. ' +
+      'useErrorBoundary must be used within an EreoProvider or ErrorProvider. ' +
         'Make sure your component is wrapped with the appropriate provider.'
     );
   }

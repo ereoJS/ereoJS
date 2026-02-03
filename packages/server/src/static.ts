@@ -1,5 +1,5 @@
 /**
- * @areo/server - Static File Serving
+ * @ereo/server - Static File Serving
  *
  * Efficient static file serving with caching support.
  */

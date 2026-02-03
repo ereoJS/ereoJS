@@ -1,13 +1,13 @@
 /**
- * @areo/plugin-images - Plugin Implementation
+ * @ereo/plugin-images - Plugin Implementation
  *
- * Core plugin that integrates image optimization into the Areo framework.
+ * Core plugin that integrates image optimization into the Ereo framework.
  */
 
 import { join, relative, extname, dirname, basename } from 'node:path';
 import { readFile, stat, mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import type { Plugin, PluginContext, DevServer } from '@areo/core';
+import type { Plugin, PluginContext, DevServer } from '@ereo/core';
 import type { ImagePluginConfig, StaticImageData } from './components/types';
 import { validateConfig } from './config/schema';
 import { SUPPORTED_INPUT_FORMATS, IMAGE_PATH_PREFIX, CACHE_DIR } from './config/defaults';
@@ -19,7 +19,7 @@ import { imageMiddleware } from './runtime/middleware';
 /**
  * Virtual module prefix for image imports.
  */
-const VIRTUAL_PREFIX = '\0areo-image:';
+const VIRTUAL_PREFIX = '\0ereo-image:';
 
 /**
  * Image plugin state.
@@ -38,10 +38,10 @@ interface PluginState {
  * Create the image optimization plugin.
  *
  * @param options - Plugin configuration
- * @returns Areo plugin
+ * @returns Ereo plugin
  *
  * @example
- * import images from '@areo/plugin-images';
+ * import images from '@ereo/plugin-images';
  *
  * export default defineConfig({
  *   plugins: [
@@ -80,7 +80,7 @@ export function imagesPlugin(options: ImagePluginConfig = {}): Plugin {
         processedImages: new Map(),
       };
 
-      console.log(`  @areo/plugin-images initialized (${mode} mode)`);
+      console.log(`  @ereo/plugin-images initialized (${mode} mode)`);
     },
 
     resolveId(id: string) {
@@ -194,7 +194,7 @@ export function imagesPlugin(options: ImagePluginConfig = {}): Plugin {
 
       // In production, run the build optimizer
       if (state.mode === 'production') {
-        const outDir = join(state.root, '.areo', 'public');
+        const outDir = join(state.root, '.ereo', 'public');
 
         state.optimizer = createBuildOptimizer({
           root: state.root,

@@ -1,10 +1,10 @@
 /**
- * @areo/router - Middleware Compatibility Tests
+ * @ereo/router - Middleware Compatibility Tests
  *
  * These tests verify that middleware types are compatible across packages:
- * - @areo/core: MiddlewareHandler (base type)
- * - @areo/router: TypedMiddlewareHandler (typed extension)
- * - @areo/server: MiddlewareChain (execution)
+ * - @ereo/core: MiddlewareHandler (base type)
+ * - @ereo/router: TypedMiddlewareHandler (typed extension)
+ * - @ereo/server: MiddlewareChain (execution)
  *
  * All three packages should work seamlessly together.
  */
@@ -15,8 +15,8 @@ import type {
   AppContext,
   NextFunction,
   Middleware,
-} from '@areo/core';
-import { createContext, RequestContext } from '@areo/core';
+} from '@ereo/core';
+import { createContext, RequestContext } from '@ereo/core';
 import {
   createMiddleware,
   chainMiddleware,
@@ -71,7 +71,7 @@ function createMockContextWithStore(): AppContext & { _store: Map<string, unknow
 describe('Middleware Type Compatibility', () => {
   describe('Core MiddlewareHandler with Server', () => {
     it('should accept core MiddlewareHandler in executeMiddlewareChain', async () => {
-      // Define a plain MiddlewareHandler from @areo/core
+      // Define a plain MiddlewareHandler from @ereo/core
       const coreMiddleware: MiddlewareHandler = async (request, context, next) => {
         context.set('fromCore', true);
         return next();
@@ -91,7 +91,7 @@ describe('Middleware Type Compatibility', () => {
     });
 
     it('should use RequestContext (which implements AppContext) with core middleware', async () => {
-      // RequestContext from @areo/core implements AppContext
+      // RequestContext from @ereo/core implements AppContext
       const request = new Request('http://localhost:3000/test');
       const context = createContext(request);
 
@@ -225,7 +225,7 @@ describe('Middleware Type Compatibility', () => {
     it('should allow Middleware interface to use MiddlewareHandler', () => {
       const handler: MiddlewareHandler = async (req, ctx, next) => next();
 
-      // Middleware interface from @areo/core
+      // Middleware interface from @ereo/core
       const middleware: Middleware = {
         name: 'test',
         handler,

@@ -1,9 +1,9 @@
 import { describe, expect, test, beforeEach, afterEach, mock } from 'bun:test';
 import { BunServer, createServer, serve, type ServerRenderMode } from './bun-server';
-import { AreoApp, type RenderMode as CoreRenderMode } from '@areo/core';
+import { EreoApp, type RenderMode as CoreRenderMode } from '@ereo/core';
 import { createElement } from 'react';
 
-describe('@areo/server - BunServer', () => {
+describe('@ereo/server - BunServer', () => {
   let server: BunServer;
 
   afterEach(() => {
@@ -162,7 +162,7 @@ describe('@areo/server - BunServer', () => {
   describe('setApp', () => {
     test('sets the app instance', async () => {
       server = createServer({ port: 4573, logging: false });
-      const app = new AreoApp();
+      const app = new EreoApp();
 
       server.setApp(app);
 
@@ -177,7 +177,7 @@ describe('@areo/server - BunServer', () => {
   describe('setRouter with app', () => {
     test('sets router and connects to app', async () => {
       server = createServer({ port: 4574, logging: false });
-      const app = new AreoApp();
+      const app = new EreoApp();
       server.setApp(app);
 
       const mockRouter = {
@@ -422,7 +422,7 @@ describe('@areo/server - BunServer', () => {
       const html = await response.text();
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('<div id="root">');
-      expect(html).toContain('window.__AREO_DATA__');
+      expect(html).toContain('window.__EREO_DATA__');
     });
 
     test('handles route with no loader', async () => {
@@ -638,8 +638,8 @@ describe('@areo/server - BunServer', () => {
       expect(html).toContain('<div id="root">');
       expect(html).toContain('Hello from SSR!');
       expect(html).toContain('class="test"');
-      expect(html).toContain('window.__AREO_DATA__');
-      expect(html).toContain('/_areo/client.js');
+      expect(html).toContain('window.__EREO_DATA__');
+      expect(html).toContain('/_ereo/client.js');
     });
 
     test('renders React component to HTML with string mode', async () => {
@@ -684,7 +684,7 @@ describe('@areo/server - BunServer', () => {
       const html = await response.text();
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('<h1>String SSR Title</h1>');
-      expect(html).toContain('window.__AREO_DATA__');
+      expect(html).toContain('window.__EREO_DATA__');
     });
 
     test('renders page with meta function for title', async () => {
@@ -879,9 +879,9 @@ describe('@areo/server - BunServer', () => {
       expect(response.status).toBe(200);
       const html = await response.text();
       expect(html).toContain('<!DOCTYPE html>');
-      expect(html).toContain('<title>Areo App</title>');
+      expect(html).toContain('<title>Ereo App</title>');
       expect(html).toContain('<div id="root"></div>');
-      expect(html).toContain('window.__AREO_DATA__');
+      expect(html).toContain('window.__EREO_DATA__');
     });
   });
 

@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Dominant Color Extraction
+ * @ereo/plugin-images - Dominant Color Extraction
  *
  * Extract dominant colors from images using k-means clustering.
  */

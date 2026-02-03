@@ -1,12 +1,12 @@
 /**
- * @areo/plugin-images - On-Demand Transform Middleware
+ * @ereo/plugin-images - On-Demand Transform Middleware
  *
  * HTTP middleware for runtime image optimization.
  */
 
 import { readFile, stat } from 'node:fs/promises';
 import { join, extname } from 'node:path';
-import type { AppContext, MiddlewareHandler } from '@areo/core';
+import type { AppContext, MiddlewareHandler } from '@ereo/core';
 import type { ImagePluginConfig, ImageOptimizationParams } from '../components/types';
 import { createImageProcessor, type ImageProcessor } from '../processing/processor';
 import { TwoTierCache, generateCacheKey } from './cache';

@@ -1,5 +1,5 @@
 /**
- * @areo/dev-inspector - Cache Tab
+ * @ereo/dev-inspector - Cache Tab
  *
  * Visualize cache entries, tags, TTL, and hit rates.
  */
@@ -95,10 +95,10 @@ export function generateCacheTabHTML(cache: CacheVisualization): string {
       </div>
 
       <div class="cache-actions">
-        <button class="action-btn danger" onclick="window.__AREO_DEVTOOLS__.clearCache()">
+        <button class="action-btn danger" onclick="window.__EREO_DEVTOOLS__.clearCache()">
           Clear All Cache
         </button>
-        <button class="action-btn" onclick="window.__AREO_DEVTOOLS__.refreshCache()">
+        <button class="action-btn" onclick="window.__EREO_DEVTOOLS__.refreshCache()">
           Refresh
         </button>
       </div>
@@ -149,10 +149,10 @@ function generateEntryRow(entry: CacheEntry): string {
         ${entry.accessCount}
       </div>
       <div class="entry-actions">
-        <button class="entry-action" onclick="window.__AREO_DEVTOOLS__.invalidateKey('${escapeHtml(entry.key)}')" title="Invalidate">
+        <button class="entry-action" onclick="window.__EREO_DEVTOOLS__.invalidateKey('${escapeHtml(entry.key)}')" title="Invalidate">
           🗑️
         </button>
-        <button class="entry-action" onclick="window.__AREO_DEVTOOLS__.inspectEntry('${escapeHtml(entry.key)}')" title="Inspect">
+        <button class="entry-action" onclick="window.__EREO_DEVTOOLS__.inspectEntry('${escapeHtml(entry.key)}')" title="Inspect">
           🔍
         </button>
       </div>
@@ -180,7 +180,7 @@ function generateTagRow(tag: string, stats: { count: number; hits: number; misse
         ${(tagHitRate * 100).toFixed(0)}%
       </div>
       <div class="tag-actions">
-        <button class="tag-action" onclick="window.__AREO_DEVTOOLS__.invalidateTag('${escapeHtml(tag)}')" title="Invalidate tag">
+        <button class="tag-action" onclick="window.__EREO_DEVTOOLS__.invalidateTag('${escapeHtml(tag)}')" title="Invalidate tag">
           🗑️
         </button>
       </div>

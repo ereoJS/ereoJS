@@ -1,10 +1,10 @@
 /**
- * @areo/testing - Test Server
+ * @ereo/testing - Test Server
  *
  * Create a test server for integration testing.
  */
 
-import type { FrameworkConfig } from '@areo/core';
+import type { FrameworkConfig } from '@ereo/core';
 
 /**
  * Test server options.
@@ -48,7 +48,7 @@ export interface TestServer {
  * Create a test server for integration testing.
  *
  * @example
- * import { createTestServer } from '@areo/testing';
+ * import { createTestServer } from '@ereo/testing';
  *
  * describe('API routes', () => {
  *   let server: TestServer;
@@ -85,9 +85,9 @@ export async function createTestServer(options: TestServerOptions = {}): Promise
   const url = `http://localhost:${port}`;
 
   // Import dynamically to avoid bundling issues
-  const { createApp } = await import('@areo/core');
-  const { initFileRouter } = await import('@areo/router');
-  const { createServer } = await import('@areo/server');
+  const { createApp } = await import('@ereo/core');
+  const { initFileRouter } = await import('@ereo/router');
+  const { createServer } = await import('@ereo/server');
 
   // Create app
   const app = createApp({

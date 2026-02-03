@@ -8,9 +8,9 @@ import {
   compress,
   rateLimit,
 } from './middleware';
-import { createContext, RequestContext } from '@areo/core';
+import { createContext, RequestContext } from '@ereo/core';
 
-describe('@areo/server - Middleware', () => {
+describe('@ereo/server - Middleware', () => {
   describe('MiddlewareChain', () => {
     let chain: MiddlewareChain;
 

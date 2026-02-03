@@ -1,5 +1,5 @@
 /**
- * @areo/dev-inspector - Islands Tab
+ * @ereo/dev-inspector - Islands Tab
  *
  * Visualize island components with hydration status and strategies.
  */
@@ -80,10 +80,10 @@ export function generateIslandsTabHTML(islands: IslandVisualization[]): string {
       `}
 
       <div class="islands-actions">
-        <button class="action-btn" onclick="window.__AREO_DEVTOOLS__.highlightIslands()">
+        <button class="action-btn" onclick="window.__EREO_DEVTOOLS__.highlightIslands()">
           Highlight Islands
         </button>
-        <button class="action-btn" onclick="window.__AREO_DEVTOOLS__.hydrateAll()">
+        <button class="action-btn" onclick="window.__EREO_DEVTOOLS__.hydrateAll()">
           Force Hydrate All
         </button>
       </div>
@@ -120,10 +120,10 @@ function generateIslandRow(island: IslandVisualization): string {
         <span class="props-size">${formatBytes(island.propsSize)}</span>
       </div>
       <div class="island-actions">
-        <button class="island-action" onclick="window.__AREO_DEVTOOLS__.inspectIsland('${island.id}')" title="Inspect">
+        <button class="island-action" onclick="window.__EREO_DEVTOOLS__.inspectIsland('${island.id}')" title="Inspect">
           🔍
         </button>
-        <button class="island-action" onclick="window.__AREO_DEVTOOLS__.scrollToIsland('${island.id}')" title="Scroll to">
+        <button class="island-action" onclick="window.__EREO_DEVTOOLS__.scrollToIsland('${island.id}')" title="Scroll to">
           📍
         </button>
       </div>

@@ -1,5 +1,5 @@
 # Build output
-.areo/
+.ereo/
 dist/
 
 # Dependencies (handled by root)

@@ -1,5 +1,5 @@
 /**
- * @areo/router - File-based Route Discovery
+ * @ereo/router - File-based Route Discovery
  *
  * Discovers routes from the filesystem and builds a route tree.
  * Supports watching for changes in development mode.
@@ -7,7 +7,7 @@
 
 import { readdir, stat } from 'node:fs/promises';
 import { join, relative, extname } from 'node:path';
-import type { Route, RouteConfig } from '@areo/core';
+import type { Route, RouteConfig } from '@ereo/core';
 import type { FileRoute, RouterOptions, RouterEvents } from './types';
 import { buildRouteTree, RouteTree } from './route-tree';
 import { createMatcher, RouteMatcher } from './matcher';

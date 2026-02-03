@@ -1,5 +1,5 @@
 /**
- * @areo/data - Cache Revalidation
+ * @ereo/data - Cache Revalidation
  *
  * Explicit cache invalidation by tags.
  * No hidden magic - you control exactly when caches are cleared.

@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Build-time Image Optimizer
+ * @ereo/plugin-images - Build-time Image Optimizer
  *
  * Scans and processes images during the build phase.
  */

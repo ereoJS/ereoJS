@@ -1,10 +1,10 @@
 /**
- * @areo/testing - Render Tests
+ * @ereo/testing - Render Tests
  */
 
 import { describe, expect, test } from 'bun:test';
 import type { ComponentType, ReactElement } from 'react';
-import type { RouteModule, LoaderFunction, RouteComponentProps, RouteParams } from '@areo/core';
+import type { RouteModule, LoaderFunction, RouteComponentProps, RouteParams } from '@ereo/core';
 import {
   renderRoute,
   createRouteRenderer,

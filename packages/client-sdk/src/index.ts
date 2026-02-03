@@ -1,5 +1,5 @@
 /**
- * @areo/client-sdk - Main exports
+ * @ereo/client-sdk - Main exports
  */
 
 export {

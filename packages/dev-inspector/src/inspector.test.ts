@@ -1,5 +1,5 @@
 /**
- * @areo/dev-inspector - Tests
+ * @ereo/dev-inspector - Tests
  */
 
 import { describe, it, expect } from 'bun:test';
@@ -9,19 +9,19 @@ import {
   createRouteInfo,
   formatRouteTree,
 } from './inspector';
-import type { Route } from '@areo/core';
+import type { Route } from '@ereo/core';
 
 describe('createDevInspector', () => {
   it('should create inspector plugin', () => {
     const plugin = createDevInspector();
 
-    expect(plugin.name).toBe('@areo/dev-inspector');
+    expect(plugin.name).toBe('@ereo/dev-inspector');
     expect(typeof plugin.configureServer).toBe('function');
   });
 
   it('should accept custom mount path', () => {
     const plugin = createDevInspector({ mountPath: '/custom-inspector' });
-    expect(plugin.name).toBe('@areo/dev-inspector');
+    expect(plugin.name).toBe('@ereo/dev-inspector');
   });
 });
 
@@ -296,7 +296,7 @@ describe('createDevInspector configureServer', () => {
   });
 
   it('should return routes JSON at api/routes endpoint', async () => {
-    const plugin = createDevInspector({ mountPath: '/__areo' });
+    const plugin = createDevInspector({ mountPath: '/__ereo' });
 
     let middleware: (
       request: Request,
@@ -313,7 +313,7 @@ describe('createDevInspector configureServer', () => {
 
     plugin.configureServer!(mockServer);
 
-    const request = new Request('http://localhost:3000/__areo/api/routes');
+    const request = new Request('http://localhost:3000/__ereo/api/routes');
     const next = () => Promise.resolve(new Response('fallback'));
 
     const response = await middleware!(request, {}, next);
@@ -367,7 +367,7 @@ describe('createDevInspector configureServer', () => {
 
     plugin.configureServer!(mockServer);
 
-    const request = new Request('http://localhost:3000/__areo');
+    const request = new Request('http://localhost:3000/__ereo');
     const next = () => Promise.resolve(new Response('fallback'));
 
     const response = await middleware!(request, {}, next);

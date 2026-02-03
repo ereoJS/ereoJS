@@ -1,14 +1,14 @@
 /**
- * @areo/dev-inspector - Visual route inspector
+ * @ereo/dev-inspector - Visual route inspector
  *
  * Provides a visual interface for exploring routes during development.
  */
 
-import type { Plugin, Route } from '@areo/core';
+import type { Plugin, Route } from '@ereo/core';
 
 /** Inspector configuration */
 export interface InspectorConfig {
-  /** Path to mount inspector (default: /__areo) */
+  /** Path to mount inspector (default: /__ereo) */
   mountPath?: string;
   /** Enable route testing */
   enableTesting?: boolean;
@@ -37,7 +37,7 @@ export function generateInspectorHTML(routes: RouteInfo[]): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Areo Route Inspector</title>
+  <title>Ereo Route Inspector</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -223,10 +223,10 @@ export function createRouteInfo(routes: Route[]): RouteInfo[] {
 
 /** Create the dev inspector plugin */
 export function createDevInspector(config: InspectorConfig = {}): Plugin {
-  const mountPath = config.mountPath || '/__areo';
+  const mountPath = config.mountPath || '/__ereo';
 
   return {
-    name: '@areo/dev-inspector',
+    name: '@ereo/dev-inspector',
 
     configureServer(server) {
       // Store routes for inspection

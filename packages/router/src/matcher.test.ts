@@ -6,9 +6,9 @@ import {
   RouteMatcher,
   createMatcher,
 } from './matcher';
-import type { Route } from '@areo/core';
+import type { Route } from '@ereo/core';
 
-describe('@areo/router - Matcher', () => {
+describe('@ereo/router - Matcher', () => {
   describe('parsePathSegments', () => {
     test('parses static segments', () => {
       const segments = parsePathSegments('/blog/posts');

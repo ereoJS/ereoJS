@@ -1,15 +1,15 @@
 /**
- * @areo/plugin-images - Transform Cache Management
+ * @ereo/plugin-images - Transform Cache Management
  *
  * LRU memory cache and disk cache for optimized images.
- * Implements the unified CacheAdapter interface from @areo/core.
+ * Implements the unified CacheAdapter interface from @ereo/core.
  */
 
 import { readFile, writeFile, mkdir, unlink, readdir, stat } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 
-import type { CacheAdapter, CacheSetOptions } from '@areo/core';
+import type { CacheAdapter, CacheSetOptions } from '@ereo/core';
 
 /**
  * Cached item with metadata.

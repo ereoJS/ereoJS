@@ -1,5 +1,5 @@
 /**
- * @areo/router - Middleware Chain Executor
+ * @ereo/router - Middleware Chain Executor
  *
  * Executes route-level middleware chains with support for named middleware,
  * inline middleware functions, and type-safe context passing.
@@ -7,12 +7,12 @@
  * ## Type Compatibility
  *
  * This module provides `TypedMiddlewareHandler<TProvides, TRequires>` which extends
- * the base `MiddlewareHandler` from `@areo/core`. The typed version adds generic
+ * the base `MiddlewareHandler` from `@ereo/core`. The typed version adds generic
  * parameters for compile-time context type checking while remaining fully compatible
  * with the core middleware system.
  *
  * ```typescript
- * // Base type from @areo/core:
+ * // Base type from @ereo/core:
  * type MiddlewareHandler = (
  *   request: Request,
  *   context: AppContext,
@@ -27,7 +27,7 @@
  * ) => Response | Promise<Response>
  * ```
  *
- * Both types can be used interchangeably with `@areo/server`'s middleware chain.
+ * Both types can be used interchangeably with `@ereo/server`'s middleware chain.
  */
 
 import type {
@@ -36,7 +36,7 @@ import type {
   AppContext,
   NextFunction,
   RouteConfig,
-} from '@areo/core';
+} from '@ereo/core';
 
 // ============================================================================
 // Type-Safe Middleware Creation
@@ -53,7 +53,7 @@ export interface TypedMiddlewareContext {
 /**
  * Typed middleware handler that declares its context additions.
  *
- * This type is fully compatible with `MiddlewareHandler` from `@areo/core`.
+ * This type is fully compatible with `MiddlewareHandler` from `@ereo/core`.
  * The generic parameters allow TypeScript to track what context values
  * are provided and required by each middleware.
  *

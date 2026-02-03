@@ -1,5 +1,5 @@
 /**
- * @areo/data - Explicit Caching
+ * @ereo/data - Explicit Caching
  *
  * A transparent caching system with tags for invalidation.
  * No hidden magic - you see exactly what's being cached.
@@ -10,7 +10,7 @@ import type {
   CacheAdapter,
   TaggedCache,
   CacheSetOptions as CoreCacheSetOptions,
-} from '@areo/core';
+} from '@ereo/core';
 
 /**
  * Cache entry with metadata.
@@ -25,8 +25,8 @@ export interface CacheEntry<T = unknown> {
 
 /**
  * Cache storage interface.
- * This is the legacy interface used by @areo/data.
- * For new implementations, consider using CacheAdapter from @areo/core.
+ * This is the legacy interface used by @ereo/data.
+ * For new implementations, consider using CacheAdapter from @ereo/core.
  */
 export interface CacheStorage {
   get<T>(key: string): Promise<CacheEntry<T> | null>;

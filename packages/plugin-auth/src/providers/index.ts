@@ -1,5 +1,5 @@
 /**
- * @areo/auth/providers - Built-in authentication providers
+ * @ereo/auth/providers - Built-in authentication providers
  *
  * Provides credential-based and OAuth authentication providers.
  */
@@ -171,7 +171,7 @@ export function github(config: GitHubConfig): AuthProvider {
       const userResponse = await fetch(userInfoUrl, {
         headers: {
           'Authorization': `token ${tokenData.access_token}`,
-          'User-Agent': 'Areo-Auth',
+          'User-Agent': 'Ereo-Auth',
           'Accept': 'application/json',
         },
       });
@@ -184,7 +184,7 @@ export function github(config: GitHubConfig): AuthProvider {
         const emailsResponse = await fetch(`${apiBaseUrl}/user/emails`, {
           headers: {
             'Authorization': `token ${tokenData.access_token}`,
-            'User-Agent': 'Areo-Auth',
+            'User-Agent': 'Ereo-Auth',
             'Accept': 'application/json',
           },
         });
@@ -236,7 +236,7 @@ export function github(config: GitHubConfig): AuthProvider {
       const userResponse = await fetch(userInfoUrl, {
         headers: {
           'Authorization': `token ${tokenData.access_token}`,
-          'User-Agent': 'Areo-Auth',
+          'User-Agent': 'Ereo-Auth',
           'Accept': 'application/json',
         },
       });
@@ -249,7 +249,7 @@ export function github(config: GitHubConfig): AuthProvider {
         const emailsResponse = await fetch(`${apiBaseUrl}/user/emails`, {
           headers: {
             'Authorization': `token ${tokenData.access_token}`,
-            'User-Agent': 'Areo-Auth',
+            'User-Agent': 'Ereo-Auth',
             'Accept': 'application/json',
           },
         });

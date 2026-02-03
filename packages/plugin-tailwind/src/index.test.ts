@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import tailwind, { generateConfig, generateCSSEntry } from './index';
 
-describe('@areo/plugin-tailwind', () => {
+describe('@ereo/plugin-tailwind', () => {
   describe('tailwind plugin factory', () => {
     test('creates a plugin with default options', () => {
       const plugin = tailwind();
 
-      expect(plugin.name).toBe('areo:tailwind');
+      expect(plugin.name).toBe('ereo:tailwind');
       expect(typeof plugin.setup).toBe('function');
       expect(typeof plugin.resolveId).toBe('function');
       expect(typeof plugin.load).toBe('function');
@@ -21,7 +21,7 @@ describe('@areo/plugin-tailwind', () => {
         usePreset: false,
       });
 
-      expect(plugin.name).toBe('areo:tailwind');
+      expect(plugin.name).toBe('ereo:tailwind');
     });
   });
 
@@ -111,7 +111,7 @@ describe('@areo/plugin-tailwind', () => {
     test('loads existing tailwind config when it exists', async () => {
       // Create a temporary config file to test the hasConfig = true path
       const fs = await import('node:fs/promises');
-      const tmpDir = '/tmp/areo-test-tailwind-' + Date.now();
+      const tmpDir = '/tmp/ereo-test-tailwind-' + Date.now();
       await fs.mkdir(tmpDir, { recursive: true });
       const configFile = `${tmpDir}/tailwind.config.js`;
       await Bun.write(configFile, 'module.exports = {}');
@@ -176,7 +176,7 @@ describe('@areo/plugin-tailwind', () => {
       // The test passes as long as it doesn't throw
     });
 
-    test('uses Areo preset when config does not exist and usePreset is true', async () => {
+    test('uses Ereo preset when config does not exist and usePreset is true', async () => {
       const plugin = tailwind({ usePreset: true });
       const mockContext = {
         root: '/nonexistent/path',
@@ -194,7 +194,7 @@ describe('@areo/plugin-tailwind', () => {
 
       console.log = originalLog;
 
-      expect(logs.some((log) => log.includes('Using Areo Tailwind preset'))).toBe(true);
+      expect(logs.some((log) => log.includes('Using Ereo Tailwind preset'))).toBe(true);
     });
 
     test('does not log preset message when usePreset is false', async () => {
@@ -215,7 +215,7 @@ describe('@areo/plugin-tailwind', () => {
 
       console.log = originalLog;
 
-      expect(logs.some((log) => log.includes('Using Areo Tailwind preset'))).toBe(false);
+      expect(logs.some((log) => log.includes('Using Ereo Tailwind preset'))).toBe(false);
     });
 
     test('handles error when Bun.file throws', async () => {
@@ -299,14 +299,14 @@ describe('@areo/plugin-tailwind', () => {
     test('generates config with Oreo preset by default', () => {
       const config = generateConfig();
 
-      expect(config).toContain('getAreoTailwindConfig');
-      expect(config).toContain('@areo/plugin-tailwind');
+      expect(config).toContain('getEreoTailwindConfig');
+      expect(config).toContain('@ereo/plugin-tailwind');
     });
 
     test('generates config without preset when disabled', () => {
       const config = generateConfig({ usePreset: false });
 
-      expect(config).not.toContain('getAreoTailwindConfig');
+      expect(config).not.toContain('getEreoTailwindConfig');
       expect(config).toContain('content:');
       expect(config).toContain('darkMode:');
     });

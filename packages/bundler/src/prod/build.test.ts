@@ -3,7 +3,7 @@ import { formatSize, printBuildReport, build, type BuildResult, type BuildOption
 import { rm, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-describe('@areo/bundler - Build', () => {
+describe('@ereo/bundler - Build', () => {
   describe('formatSize', () => {
     test('formats bytes', () => {
       expect(formatSize(0)).toBe('0 B');
@@ -101,7 +101,7 @@ describe('@areo/bundler - Build', () => {
     test('default values', () => {
       const defaults: Required<Omit<BuildOptions, 'entrypoints' | 'external'>> = {
         root: process.cwd(),
-        outDir: '.areo',
+        outDir: '.ereo',
         minify: true,
         sourcemap: true,
         target: 'bun',
@@ -228,8 +228,8 @@ describe('@areo/bundler - Build', () => {
   });
 
   describe('build function', () => {
-    const testRoot = '/tmp/areo-build-test-' + Date.now();
-    const testOutDir = join(testRoot, '.areo');
+    const testRoot = '/tmp/ereo-build-test-' + Date.now();
+    const testOutDir = join(testRoot, '.ereo');
 
     beforeEach(async () => {
       // Create test project structure
@@ -316,21 +316,21 @@ export default function Home() {
     test('build uses default root if not provided', async () => {
       // This will use process.cwd() as root
       const result = await build({
-        outDir: '/tmp/areo-build-default-test',
+        outDir: '/tmp/ereo-build-default-test',
       });
 
       expect(result).toBeDefined();
-      await rm('/tmp/areo-build-default-test', { recursive: true, force: true });
+      await rm('/tmp/ereo-build-default-test', { recursive: true, force: true });
     });
 
     test('build handles error gracefully', async () => {
       // Create an invalid project structure
-      const invalidRoot = '/tmp/areo-invalid-' + Date.now();
+      const invalidRoot = '/tmp/ereo-invalid-' + Date.now();
       await mkdir(invalidRoot, { recursive: true });
 
       const result = await build({
         root: invalidRoot,
-        outDir: join(invalidRoot, '.areo'),
+        outDir: join(invalidRoot, '.ereo'),
       });
 
       // Build should handle missing routes gracefully
@@ -423,8 +423,8 @@ export default function FormPage() { return <form>Form</form>; }
   });
 
   describe('build with client entry', () => {
-    const testRoot = '/tmp/areo-client-entry-test-' + Date.now();
-    const testOutDir = join(testRoot, '.areo');
+    const testRoot = '/tmp/ereo-client-entry-test-' + Date.now();
+    const testOutDir = join(testRoot, '.ereo');
 
     beforeEach(async () => {
       await mkdir(join(testRoot, 'app', 'routes'), { recursive: true });
@@ -443,7 +443,7 @@ export default function FormPage() { return <form>Form</form>; }
       await Bun.write(
         join(testRoot, 'app', 'entry.client.tsx'),
         `
-import { initClient } from '@areo/client';
+import { initClient } from '@ereo/client';
 console.log('Custom client entry');
 initClient();
         `.trim()
@@ -470,8 +470,8 @@ initClient();
   });
 
   describe('build manifest generation', () => {
-    const testRoot = '/tmp/areo-manifest-test-' + Date.now();
-    const testOutDir = join(testRoot, '.areo');
+    const testRoot = '/tmp/ereo-manifest-test-' + Date.now();
+    const testOutDir = join(testRoot, '.ereo');
 
     beforeEach(async () => {
       await mkdir(join(testRoot, 'app', 'routes'), { recursive: true });
@@ -600,8 +600,8 @@ initClient();
   });
 
   describe('build with simple files (no external deps)', () => {
-    const testRoot = '/tmp/areo-simple-build-' + Date.now();
-    const testOutDir = join(testRoot, '.areo');
+    const testRoot = '/tmp/ereo-simple-build-' + Date.now();
+    const testOutDir = join(testRoot, '.ereo');
 
     beforeEach(async () => {
       await mkdir(join(testRoot, 'app', 'routes'), { recursive: true });
@@ -620,7 +620,7 @@ export default Home;
         `.trim()
       );
 
-      // Create a client entry that doesn't need @areo/client
+      // Create a client entry that doesn't need @ereo/client
       await Bun.write(
         join(testRoot, 'app', 'entry.client.tsx'),
         `
@@ -672,12 +672,12 @@ console.log('Client initialized');
 
   describe('build error scenarios', () => {
     test('handles missing routes directory', async () => {
-      const testRoot = '/tmp/areo-no-routes-' + Date.now();
+      const testRoot = '/tmp/ereo-no-routes-' + Date.now();
       await mkdir(testRoot, { recursive: true });
 
       const result = await build({
         root: testRoot,
-        outDir: join(testRoot, '.areo'),
+        outDir: join(testRoot, '.ereo'),
       });
 
       expect(result).toBeDefined();
@@ -685,12 +685,12 @@ console.log('Client initialized');
     });
 
     test('handles empty routes directory', async () => {
-      const testRoot = '/tmp/areo-empty-routes-' + Date.now();
+      const testRoot = '/tmp/ereo-empty-routes-' + Date.now();
       await mkdir(join(testRoot, 'app', 'routes'), { recursive: true });
 
       const result = await build({
         root: testRoot,
-        outDir: join(testRoot, '.areo'),
+        outDir: join(testRoot, '.ereo'),
       });
 
       expect(result).toBeDefined();
@@ -699,7 +699,7 @@ console.log('Client initialized');
   });
 
   describe('build with deeply nested routes', () => {
-    const testRoot = '/tmp/areo-nested-build-' + Date.now();
+    const testRoot = '/tmp/ereo-nested-build-' + Date.now();
 
     beforeEach(async () => {
       // Create nested route structure
@@ -737,7 +737,7 @@ console.log('Client initialized');
     test('build handles nested route structure', async () => {
       const result = await build({
         root: testRoot,
-        outDir: join(testRoot, '.areo'),
+        outDir: join(testRoot, '.ereo'),
       });
 
       expect(result).toBeDefined();
@@ -746,7 +746,7 @@ console.log('Client initialized');
   });
 
   describe('build with routes that have children', () => {
-    const testRoot = '/tmp/areo-children-build-' + Date.now();
+    const testRoot = '/tmp/ereo-children-build-' + Date.now();
 
     beforeEach(async () => {
       // Create a layout-based structure
@@ -788,7 +788,7 @@ console.log('Client initialized');
     test('build processes layout routes with children', async () => {
       const result = await build({
         root: testRoot,
-        outDir: join(testRoot, '.areo'),
+        outDir: join(testRoot, '.ereo'),
       });
 
       expect(result).toBeDefined();
@@ -796,7 +796,7 @@ console.log('Client initialized');
   });
 
   describe('build server failure handling', () => {
-    const testRoot = '/tmp/areo-server-fail-' + Date.now();
+    const testRoot = '/tmp/ereo-server-fail-' + Date.now();
 
     beforeEach(async () => {
       await mkdir(join(testRoot, 'app', 'routes'), { recursive: true });
@@ -821,7 +821,7 @@ export default function Invalid() {
 
       const result = await build({
         root: testRoot,
-        outDir: join(testRoot, '.areo'),
+        outDir: join(testRoot, '.ereo'),
       });
 
       // Build should handle failures gracefully
@@ -843,7 +843,7 @@ export default function Broken() { return missing; }
 
       const result = await build({
         root: testRoot,
-        outDir: join(testRoot, '.areo'),
+        outDir: join(testRoot, '.ereo'),
       });
 
       expect(result).toBeDefined();
@@ -855,7 +855,7 @@ export default function Broken() { return missing; }
   });
 
   describe('build client failure handling', () => {
-    const testRoot = '/tmp/areo-client-fail-' + Date.now();
+    const testRoot = '/tmp/ereo-client-fail-' + Date.now();
 
     beforeEach(async () => {
       await mkdir(join(testRoot, 'app', 'routes'), { recursive: true });
@@ -883,7 +883,7 @@ console.log(nonExistent);
 
       const result = await build({
         root: testRoot,
-        outDir: join(testRoot, '.areo'),
+        outDir: join(testRoot, '.ereo'),
       });
 
       expect(result).toBeDefined();

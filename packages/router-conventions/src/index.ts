@@ -1,5 +1,5 @@
 /**
- * @areo/router-conventions - Main exports
+ * @ereo/router-conventions - Main exports
  */
 
 export {

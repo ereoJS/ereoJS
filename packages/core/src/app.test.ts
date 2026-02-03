@@ -1,13 +1,13 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
-import { createApp, defineConfig, AreoApp, isAreoApp } from './app';
+import { createApp, defineConfig, EreoApp, isEreoApp } from './app';
 import type { FrameworkConfig, Plugin, RouteMatch, RequestContext, RouteErrorComponentProps, ErrorBoundaryProps } from './types';
 
-describe('@areo/core - App', () => {
+describe('@ereo/core - App', () => {
   describe('createApp', () => {
     test('creates an app with default config', () => {
       const app = createApp();
 
-      expect(app).toBeInstanceOf(AreoApp);
+      expect(app).toBeInstanceOf(EreoApp);
       expect(app.config.server?.port).toBe(3000);
       expect(app.config.server?.hostname).toBe('localhost');
     });
@@ -45,8 +45,8 @@ describe('@areo/core - App', () => {
     });
   });
 
-  describe('AreoApp', () => {
-    let app: AreoApp;
+  describe('EreoApp', () => {
+    let app: EreoApp;
 
     beforeEach(() => {
       app = createApp();
@@ -343,18 +343,18 @@ describe('@areo/core - App', () => {
     });
   });
 
-  describe('isAreoApp', () => {
-    test('returns true for AreoApp instance', () => {
+  describe('isEreoApp', () => {
+    test('returns true for EreoApp instance', () => {
       const app = createApp();
-      expect(isAreoApp(app)).toBe(true);
+      expect(isEreoApp(app)).toBe(true);
     });
 
-    test('returns false for non-AreoApp values', () => {
-      expect(isAreoApp(null)).toBe(false);
-      expect(isAreoApp(undefined)).toBe(false);
-      expect(isAreoApp({})).toBe(false);
-      expect(isAreoApp('string')).toBe(false);
-      expect(isAreoApp(123)).toBe(false);
+    test('returns false for non-EreoApp values', () => {
+      expect(isEreoApp(null)).toBe(false);
+      expect(isEreoApp(undefined)).toBe(false);
+      expect(isEreoApp({})).toBe(false);
+      expect(isEreoApp('string')).toBe(false);
+      expect(isEreoApp(123)).toBe(false);
     });
   });
 
@@ -386,7 +386,7 @@ describe('@areo/core - App', () => {
   describe('build() method', () => {
     test('initializes plugins and runs build hooks', async () => {
       const app = createApp({
-        config: { build: { target: 'bun', outDir: '.areo' } },
+        config: { build: { target: 'bun', outDir: '.ereo' } },
       });
 
       // Should not throw
@@ -441,7 +441,7 @@ describe('@areo/core - App', () => {
 // ============================================================================
 // Type Definition Tests (Critical Fix Verification)
 // ============================================================================
-describe('@areo/core - Type Definitions', () => {
+describe('@ereo/core - Type Definitions', () => {
   describe('RouteErrorComponentProps', () => {
     test('should have error property of type Error', () => {
       const props: RouteErrorComponentProps = {
@@ -512,10 +512,10 @@ describe('@areo/core - Type Definitions', () => {
     });
   });
 
-  describe('Type distinctness from @areo/client ErrorBoundaryProps', () => {
+  describe('Type distinctness from @ereo/client ErrorBoundaryProps', () => {
     // This test documents that RouteErrorComponentProps is for the props
     // passed to error component (fallback UI), not for the ErrorBoundary
-    // wrapper component itself (which is in @areo/client)
+    // wrapper component itself (which is in @ereo/client)
     test('RouteErrorComponentProps is for error fallback components', () => {
       // A route error component receives error and params
       const ErrorComponent = (props: RouteErrorComponentProps) => {

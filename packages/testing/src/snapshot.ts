@@ -1,10 +1,10 @@
 /**
- * @areo/testing - Snapshot Testing
+ * @ereo/testing - Snapshot Testing
  *
  * Utilities for snapshot testing loaders and actions.
  */
 
-import type { LoaderFunction, ActionFunction, RouteParams } from '@areo/core';
+import type { LoaderFunction, ActionFunction, RouteParams } from '@ereo/core';
 import { testLoader, type LoaderTestOptions } from './loader';
 import { testAction, type ActionTestOptions } from './action';
 

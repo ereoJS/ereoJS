@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Picture Component
+ * @ereo/plugin-images - Picture Component
  *
  * Art direction component for responsive images with different sources.
  */
@@ -10,7 +10,7 @@ import React, { forwardRef, useState, useMemo } from 'react';
 import type { PictureProps, PictureSource, StaticImageData, ImageLoaderParams } from './types';
 
 /**
- * Default image loader for the Areo image endpoint.
+ * Default image loader for the Ereo image endpoint.
  */
 const defaultLoader = ({ src, width, quality }: ImageLoaderParams): string => {
   const params = new URLSearchParams({
@@ -22,7 +22,7 @@ const defaultLoader = ({ src, width, quality }: ImageLoaderParams): string => {
     params.set('q', quality.toString());
   }
 
-  return `/_areo/image?${params.toString()}`;
+  return `/_ereo/image?${params.toString()}`;
 };
 
 /**
@@ -89,7 +89,7 @@ function getBlurDataURL(source: string | StaticImageData): string | undefined {
 }
 
 /**
- * Areo Picture Component
+ * Ereo Picture Component
  *
  * Provides art direction for responsive images, allowing different images
  * to be served at different breakpoints.
@@ -264,7 +264,7 @@ export const Picture = forwardRef<HTMLImageElement, PictureProps>(function Pictu
       return {
         background: `linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)`,
         backgroundSize: '200% 100%',
-        animation: 'areo-shimmer 1.5s infinite',
+        animation: 'ereo-shimmer 1.5s infinite',
       };
     }
     return {};
@@ -330,7 +330,7 @@ export const Picture = forwardRef<HTMLImageElement, PictureProps>(function Pictu
       {/* Shimmer animation styles */}
       {placeholder === 'shimmer' && (
         <style>{`
-          @keyframes areo-shimmer {
+          @keyframes ereo-shimmer {
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
           }

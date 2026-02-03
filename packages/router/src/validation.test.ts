@@ -1,5 +1,5 @@
 /**
- * @areo/router - Validation Tests
+ * @ereo/router - Validation Tests
  */
 
 import { describe, it, expect } from 'bun:test';

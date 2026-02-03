@@ -1,5 +1,5 @@
 /**
- * @areo/client - React Hooks
+ * @ereo/client - React Hooks
  *
  * Client-side React hooks for accessing loader data, action results,
  * navigation state, and error boundaries.
@@ -119,7 +119,7 @@ export const ErrorContext: Context<ErrorContextValue | null> =
  * Access loader data in components.
  *
  * @returns The loader data for the current route
- * @throws Error if used outside of AreoProvider
+ * @throws Error if used outside of EreoProvider
  *
  * @example
  * ```tsx
@@ -134,8 +134,8 @@ export function useLoaderData<T>(): T {
 
   if (context === null) {
     throw new Error(
-      'useLoaderData must be used within an AreoProvider. ' +
-        'Make sure your component is wrapped with <AreoProvider>.'
+      'useLoaderData must be used within an EreoProvider. ' +
+        'Make sure your component is wrapped with <EreoProvider>.'
     );
   }
 
@@ -146,7 +146,7 @@ export function useLoaderData<T>(): T {
  * Access action results in components.
  *
  * @returns The action data (undefined if no action has been submitted)
- * @throws Error if used outside of AreoProvider
+ * @throws Error if used outside of EreoProvider
  *
  * @example
  * ```tsx
@@ -172,8 +172,8 @@ export function useActionData<T>(): T | undefined {
 
   if (context === null) {
     throw new Error(
-      'useActionData must be used within an AreoProvider. ' +
-        'Make sure your component is wrapped with <AreoProvider>.'
+      'useActionData must be used within an EreoProvider. ' +
+        'Make sure your component is wrapped with <EreoProvider>.'
     );
   }
 
@@ -184,7 +184,7 @@ export function useActionData<T>(): T | undefined {
  * Get current navigation state.
  *
  * @returns The current navigation state
- * @throws Error if used outside of AreoProvider
+ * @throws Error if used outside of EreoProvider
  *
  * @example
  * ```tsx
@@ -208,8 +208,8 @@ export function useNavigation(): NavigationStateHook {
 
   if (context === null) {
     throw new Error(
-      'useNavigation must be used within an AreoProvider. ' +
-        'Make sure your component is wrapped with <AreoProvider>.'
+      'useNavigation must be used within an EreoProvider. ' +
+        'Make sure your component is wrapped with <EreoProvider>.'
     );
   }
 
@@ -220,7 +220,7 @@ export function useNavigation(): NavigationStateHook {
  * Access error from error boundary context.
  *
  * @returns The current error (undefined if no error)
- * @throws Error if used outside of AreoProvider
+ * @throws Error if used outside of EreoProvider
  *
  * @example
  * ```tsx
@@ -243,8 +243,8 @@ export function useError(): Error | undefined {
 
   if (context === null) {
     throw new Error(
-      'useError must be used within an AreoProvider. ' +
-        'Make sure your component is wrapped with <AreoProvider>.'
+      'useError must be used within an EreoProvider. ' +
+        'Make sure your component is wrapped with <EreoProvider>.'
     );
   }
 
@@ -403,9 +403,9 @@ export function ErrorProvider({
 }
 
 /**
- * Props for AreoProvider - the combined provider that wraps your app.
+ * Props for EreoProvider - the combined provider that wraps your app.
  */
-export interface AreoProviderProps {
+export interface EreoProviderProps {
   children: ReactNode;
   /** Initial loader data (typically from SSR) */
   loaderData?: unknown;
@@ -418,29 +418,29 @@ export interface AreoProviderProps {
 }
 
 /**
- * Combined provider that wraps the application with all Areo contexts.
+ * Combined provider that wraps the application with all Ereo contexts.
  *
  * @example
  * ```tsx
  * // In your entry point
- * import { AreoProvider } from '@areo/client';
+ * import { EreoProvider } from '@ereo/client';
  *
  * function App() {
  *   return (
- *     <AreoProvider loaderData={window.__AREO_DATA__}>
+ *     <EreoProvider loaderData={window.__EREO_DATA__}>
  *       <Router />
- *     </AreoProvider>
+ *     </EreoProvider>
  *   );
  * }
  * ```
  */
-export function AreoProvider({
+export function EreoProvider({
   children,
   loaderData,
   actionData,
   navigationState,
   error,
-}: AreoProviderProps): ReactNode {
+}: EreoProviderProps): ReactNode {
   return createElement(
     ErrorProvider,
     { initialError: error, children: createElement(
@@ -467,7 +467,7 @@ export function useLoaderDataContext(): LoaderDataContextValue {
   const context = useContext(LoaderDataContext);
 
   if (context === null) {
-    throw new Error('useLoaderDataContext must be used within an AreoProvider');
+    throw new Error('useLoaderDataContext must be used within an EreoProvider');
   }
 
   return context;
@@ -480,7 +480,7 @@ export function useActionDataContext(): ActionDataContextValue {
   const context = useContext(ActionDataContext);
 
   if (context === null) {
-    throw new Error('useActionDataContext must be used within an AreoProvider');
+    throw new Error('useActionDataContext must be used within an EreoProvider');
   }
 
   return context;
@@ -493,7 +493,7 @@ export function useNavigationContext(): NavigationContextValue {
   const context = useContext(NavigationContext);
 
   if (context === null) {
-    throw new Error('useNavigationContext must be used within an AreoProvider');
+    throw new Error('useNavigationContext must be used within an EreoProvider');
   }
 
   return context;
@@ -506,7 +506,7 @@ export function useErrorContext(): ErrorContextValue {
   const context = useContext(ErrorContext);
 
   if (context === null) {
-    throw new Error('useErrorContext must be used within an AreoProvider');
+    throw new Error('useErrorContext must be used within an EreoProvider');
   }
 
   return context;

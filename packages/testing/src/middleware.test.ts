@@ -1,9 +1,9 @@
 /**
- * @areo/testing - Middleware Tests
+ * @ereo/testing - Middleware Tests
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { MiddlewareHandler, NextFunction } from '@areo/core';
+import type { MiddlewareHandler, NextFunction } from '@ereo/core';
 import {
   testMiddleware,
   createMiddlewareTester,

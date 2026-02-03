@@ -1,7 +1,7 @@
 /**
- * @areo/dev-inspector - DevTools
+ * @ereo/dev-inspector - DevTools
  *
- * Browser DevTools panel for Areo framework.
+ * Browser DevTools panel for Ereo framework.
  * Provides visibility into routes, data loading, islands, and cache.
  */
 

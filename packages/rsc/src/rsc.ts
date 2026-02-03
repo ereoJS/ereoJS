@@ -1,10 +1,10 @@
 /**
- * @areo/rsc - React Server Components support
+ * @ereo/rsc - React Server Components support
  *
  * Implements RSC rendering for the 'rsc' render mode.
  */
 
-import type { RenderConfig } from '@areo/core';
+import type { RenderConfig } from '@ereo/core';
 
 /** RSC render configuration */
 export interface RSCConfig {

@@ -1,10 +1,10 @@
 /**
- * @areo/dev-inspector - DevTools Plugin
+ * @ereo/dev-inspector - DevTools Plugin
  *
- * Plugin that adds DevTools to the Areo dev server.
+ * Plugin that adds DevTools to the Ereo dev server.
  */
 
-import type { Plugin, Route } from '@areo/core';
+import type { Plugin, Route } from '@ereo/core';
 import { generateDevToolsPanelHTML, type DevToolsPanelData } from './DevToolsPanel';
 import type {
   DevToolsConfig,
@@ -28,7 +28,7 @@ interface DevToolsState {
  * Create the DevTools plugin.
  *
  * @example
- * import { createDevToolsPlugin } from '@areo/dev-inspector';
+ * import { createDevToolsPlugin } from '@ereo/dev-inspector';
  *
  * export default defineConfig({
  *   plugins: [
@@ -57,7 +57,7 @@ export function createDevToolsPlugin(config: DevToolsConfig = {}): Plugin {
   };
 
   return {
-    name: '@areo/dev-inspector:devtools',
+    name: '@ereo/dev-inspector:devtools',
 
     /**
      * Transform routes to collect route info.
@@ -148,7 +148,7 @@ export function createDevToolsPlugin(config: DevToolsConfig = {}): Plugin {
         const response = await next();
 
         // Check if this request has pipeline metrics
-        const metrics = context.get<import('@areo/data').PipelineMetrics>('__pipeline_metrics');
+        const metrics = context.get<import('@ereo/data').PipelineMetrics>('__pipeline_metrics');
         if (metrics) {
           const routePath = url.pathname;
           const visualization: DataPipelineVisualization = {
@@ -240,9 +240,9 @@ function generateOverlayScript(mountPath: string, position: string): string {
 (function() {
   // DevTools toggle button
   const button = document.createElement('button');
-  button.id = 'areo-devtools-toggle';
+  button.id = 'ereo-devtools-toggle';
   button.innerHTML = '⬡';
-  button.title = 'Open Areo DevTools';
+  button.title = 'Open Ereo DevTools';
   button.style.cssText = \`
     position: fixed;
     ${position.includes('bottom') ? 'bottom: 16px;' : 'top: 16px;'}
@@ -283,7 +283,7 @@ function generateOverlayScript(mountPath: string, position: string): string {
   function openDevTools() {
     if (!iframe) {
       iframe = document.createElement('iframe');
-      iframe.id = 'areo-devtools-frame';
+      iframe.id = 'ereo-devtools-frame';
       iframe.src = '${mountPath}';
       iframe.style.cssText = \`
         position: fixed;
@@ -315,13 +315,13 @@ function generateOverlayScript(mountPath: string, position: string): string {
 
   // Listen for messages from DevTools
   window.addEventListener('message', (event) => {
-    if (event.data.type === 'areo-devtools-close') {
+    if (event.data.type === 'ereo-devtools-close') {
       closeDevTools();
-    } else if (event.data.type === 'areo-devtools-toggle-position') {
+    } else if (event.data.type === 'ereo-devtools-toggle-position') {
       // Toggle between top and bottom
-    } else if (event.data.type === 'areo-devtools-highlight-islands') {
+    } else if (event.data.type === 'ereo-devtools-highlight-islands') {
       highlightIslands();
-    } else if (event.data.type === 'areo-devtools-scroll-to-island') {
+    } else if (event.data.type === 'ereo-devtools-scroll-to-island') {
       scrollToIsland(event.data.id);
     }
   });

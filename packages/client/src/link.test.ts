@@ -14,7 +14,7 @@ const React = {
   }),
 };
 
-describe('@areo/client - Link Component', () => {
+describe('@ereo/client - Link Component', () => {
   describe('LinkProps interface', () => {
     interface LinkProps {
       to: string;

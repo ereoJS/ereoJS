@@ -1,5 +1,5 @@
 /**
- * @areo/data - Pipeline Tests
+ * @ereo/data - Pipeline Tests
  */
 
 import { describe, expect, test, beforeEach } from 'bun:test';

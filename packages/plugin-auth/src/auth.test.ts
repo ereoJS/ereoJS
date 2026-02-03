@@ -1,12 +1,12 @@
 /**
- * @areo/auth - Auth tests
+ * @ereo/auth - Auth tests
  */
 
 import { describe, it, expect, beforeEach, mock as bunMock, spyOn } from 'bun:test';
 import { createAuthPlugin, requireAuth, optionalAuth, requireRoles, useAuth, getSession, getUser } from './auth';
 import type { AuthContext, Session, User } from './auth';
 import { credentials, mock } from './providers/index';
-import type { AppContext } from '@areo/core';
+import type { AppContext } from '@ereo/core';
 
 // Helper to create a signed JWT for testing
 async function createTestJWT(payload: Record<string, unknown>, secret: string): Promise<string> {
@@ -49,7 +49,7 @@ describe('createAuthPlugin', () => {
       providers: [],
     });
 
-    expect(plugin.name).toBe('@areo/auth');
+    expect(plugin.name).toBe('@ereo/auth');
     expect(typeof plugin.setup).toBe('function');
   });
 
@@ -66,7 +66,7 @@ describe('createAuthPlugin', () => {
       ],
     });
 
-    expect(plugin.name).toBe('@areo/auth');
+    expect(plugin.name).toBe('@ereo/auth');
   });
 
   it('should accept custom session duration', () => {
@@ -75,7 +75,7 @@ describe('createAuthPlugin', () => {
       sessionDuration: 3600,
     });
 
-    expect(plugin.name).toBe('@areo/auth');
+    expect(plugin.name).toBe('@ereo/auth');
   });
 
   it('should accept session config', () => {
@@ -87,7 +87,7 @@ describe('createAuthPlugin', () => {
       },
     });
 
-    expect(plugin.name).toBe('@areo/auth');
+    expect(plugin.name).toBe('@ereo/auth');
   });
 
   it('should accept custom cookie config', () => {
@@ -102,7 +102,7 @@ describe('createAuthPlugin', () => {
       },
     });
 
-    expect(plugin.name).toBe('@areo/auth');
+    expect(plugin.name).toBe('@ereo/auth');
   });
 
   it('should throw error if no secret provided', () => {
@@ -224,7 +224,7 @@ describe('createAuthPlugin - configureServer middleware', () => {
 
     const request = new Request('http://localhost/test', {
       headers: {
-        cookie: `areo.session=${jwt}`,
+        cookie: `ereo.session=${jwt}`,
       },
     });
 
@@ -275,7 +275,7 @@ describe('createAuthPlugin - configureServer middleware', () => {
 
     const request = new Request('http://localhost/test', {
       headers: {
-        cookie: 'areo.session=invalid-jwt-token',
+        cookie: 'ereo.session=invalid-jwt-token',
       },
     });
 
@@ -303,7 +303,7 @@ describe('createAuthPlugin - configureServer middleware', () => {
 
     const request = new Request('http://localhost/test', {
       headers: {
-        cookie: `areo.session=${jwt}`,
+        cookie: `ereo.session=${jwt}`,
       },
     });
 
@@ -335,7 +335,7 @@ describe('createAuthPlugin - configureServer middleware', () => {
 
     const request = new Request('http://localhost/test', {
       headers: {
-        cookie: `areo.session=${jwt}`,
+        cookie: `ereo.session=${jwt}`,
       },
     });
 
@@ -367,7 +367,7 @@ describe('createAuthPlugin - configureServer middleware', () => {
 
     const request = new Request('http://localhost/test', {
       headers: {
-        cookie: `areo.session=${jwt}`,
+        cookie: `ereo.session=${jwt}`,
       },
     });
 
@@ -602,7 +602,7 @@ describe('createAuthPlugin - signIn', () => {
     });
 
     // Cookie should be set
-    expect(response.headers.get('Set-Cookie')).toContain('areo.session=');
+    expect(response.headers.get('Set-Cookie')).toContain('ereo.session=');
   });
 });
 

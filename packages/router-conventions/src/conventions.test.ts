@@ -1,5 +1,5 @@
 /**
- * @areo/router-conventions - Tests for file naming conventions
+ * @ereo/router-conventions - Tests for file naming conventions
  */
 
 import { describe, it, expect } from 'bun:test';
@@ -12,7 +12,7 @@ import {
   getConventionPatterns,
   CONVENTION_SUFFIXES,
 } from './conventions';
-import type { RouteConfig } from '@areo/core';
+import type { RouteConfig } from '@ereo/core';
 
 describe('parseConvention', () => {
   it('should parse basic route files', () => {

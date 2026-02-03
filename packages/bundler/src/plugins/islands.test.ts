@@ -11,7 +11,7 @@ import {
 } from './islands';
 import { rm, mkdir } from 'node:fs/promises';
 
-describe('@areo/bundler - Islands Plugin', () => {
+describe('@ereo/bundler - Islands Plugin', () => {
   describe('extractIslands', () => {
     test('extracts islands from use client files at line start', () => {
       // The regex expects 'use client' at the start of a line
@@ -231,14 +231,14 @@ export function Component() {}`;
       expect(entry).toContain("registerIslandComponent('Counter', Island_counter)");
     });
 
-    test('imports from @areo/client', () => {
+    test('imports from @ereo/client', () => {
       const islands: IslandMeta[] = [
         { id: 'test', name: 'Test', file: '/test.tsx', strategy: 'load', exports: ['Test'] },
       ];
 
       const entry = generateIslandEntry(islands);
 
-      expect(entry).toContain("from '@areo/client'");
+      expect(entry).toContain("from '@ereo/client'");
       expect(entry).toContain('registerIslandComponent');
       expect(entry).toContain('initializeIslands');
     });
@@ -306,7 +306,7 @@ export function Component() {}`;
   });
 
   describe('createIslandsPlugin', () => {
-    const testOutDir = '.areo';
+    const testOutDir = '.ereo';
 
     beforeEach(async () => {
       // Clean up test output directory
@@ -320,7 +320,7 @@ export function Component() {}`;
     test('creates plugin with correct name', () => {
       const plugin = createIslandsPlugin();
 
-      expect(plugin.name).toBe('areo:islands');
+      expect(plugin.name).toBe('ereo:islands');
     });
 
     test('plugin has transform function', () => {
@@ -380,7 +380,7 @@ export function Button() { return <button client:idle>Click</button>; }`;
       // Should not throw or create files
       await plugin.buildEnd!();
 
-      const manifestExists = await Bun.file('.areo/islands.json').exists();
+      const manifestExists = await Bun.file('.ereo/islands.json').exists();
       expect(manifestExists).toBe(false);
     });
 
@@ -393,14 +393,14 @@ export function Counter() { return <button>+</button>; }`;
       plugin.transform!(code, '/app/components/Counter.tsx');
 
       // Create output directory
-      await mkdir('.areo', { recursive: true });
+      await mkdir('.ereo', { recursive: true });
 
       // Build end should write files
       await plugin.buildEnd!();
 
       // Check files were created
-      const manifestExists = await Bun.file('.areo/islands.json').exists();
-      const entryExists = await Bun.file('.areo/islands.entry.ts').exists();
+      const manifestExists = await Bun.file('.ereo/islands.json').exists();
+      const entryExists = await Bun.file('.ereo/islands.entry.ts').exists();
 
       expect(manifestExists).toBe(true);
       expect(entryExists).toBe(true);
@@ -413,10 +413,10 @@ export function Counter() { return <button>+</button>; }`;
 export function Timer() { return <span>Timer</span>; }`;
       plugin.transform!(code, '/app/components/Timer.tsx');
 
-      await mkdir('.areo', { recursive: true });
+      await mkdir('.ereo', { recursive: true });
       await plugin.buildEnd!();
 
-      const manifestContent = await Bun.file('.areo/islands.json').text();
+      const manifestContent = await Bun.file('.ereo/islands.json').text();
       const manifest = JSON.parse(manifestContent);
 
       expect(Object.keys(manifest).length).toBeGreaterThan(0);
@@ -432,12 +432,12 @@ export function Timer() { return <span>Timer</span>; }`;
 export function Widget() { return <div>Widget</div>; }`;
       plugin.transform!(code, '/app/components/Widget.tsx');
 
-      await mkdir('.areo', { recursive: true });
+      await mkdir('.ereo', { recursive: true });
       await plugin.buildEnd!();
 
-      const entryContent = await Bun.file('.areo/islands.entry.ts').text();
+      const entryContent = await Bun.file('.ereo/islands.entry.ts').text();
 
-      expect(entryContent).toContain("from '@areo/client'");
+      expect(entryContent).toContain("from '@ereo/client'");
       expect(entryContent).toContain('registerIslandComponent');
       expect(entryContent).toContain('initializeIslands');
       expect(entryContent).toContain('Widget');
@@ -454,10 +454,10 @@ export function Timer() { return <span>0:00</span>; }`;
       plugin.transform!(code1, '/app/components/Counter.tsx');
       plugin.transform!(code2, '/app/components/Timer.tsx');
 
-      await mkdir('.areo', { recursive: true });
+      await mkdir('.ereo', { recursive: true });
       await plugin.buildEnd!();
 
-      const manifestContent = await Bun.file('.areo/islands.json').text();
+      const manifestContent = await Bun.file('.ereo/islands.json').text();
       const manifest = JSON.parse(manifestContent);
 
       expect(Object.keys(manifest).length).toBe(2);

@@ -1,11 +1,11 @@
 /**
- * @areo/router - Route Tree
+ * @ereo/router - Route Tree
  *
  * Builds a hierarchical route tree from flat routes.
  * Handles layout nesting and route groups.
  */
 
-import type { Route } from '@areo/core';
+import type { Route } from '@ereo/core';
 import type { RouteNode, RouteSegment } from './types';
 import { parsePathSegments, calculateRouteScore } from './matcher';
 import { SPECIAL_FILES, ROUTE_GROUP_PATTERN } from './types';

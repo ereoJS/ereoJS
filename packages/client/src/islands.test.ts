@@ -18,7 +18,7 @@ class MockElement {
   }
 }
 
-describe('@areo/client - Islands', () => {
+describe('@ereo/client - Islands', () => {
   // Store original globals to restore after tests
   let originalWindow: any;
   let originalDocument: any;

@@ -1,5 +1,5 @@
 /**
- * @areo/client - Link Component
+ * @ereo/client - Link Component
  *
  * Link and NavLink components with prefetch support for client-side navigation.
  */

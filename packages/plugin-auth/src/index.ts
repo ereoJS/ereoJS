@@ -1,5 +1,5 @@
 /**
- * @areo/auth - Authentication plugin for Areo framework
+ * @ereo/auth - Authentication plugin for Ereo framework
  *
  * Provides complete authentication and authorization with:
  * - Multiple auth providers (credentials, OAuth)

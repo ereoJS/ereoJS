@@ -1,5 +1,5 @@
 /**
- * @areo/db - Database integration plugin
+ * @ereo/db - Database integration plugin
  *
  * Provides database connectivity with SQLite support via Bun's native bun:sqlite.
  * Features:
@@ -10,7 +10,7 @@
  */
 
 import { Database, Statement, type SQLQueryBindings } from 'bun:sqlite';
-import type { Plugin, AppContext } from '@areo/core';
+import type { Plugin, AppContext } from '@ereo/core';
 
 // ============================================================================
 // Configuration Types
@@ -1063,7 +1063,7 @@ export const db: DBProxy = new Proxy({} as DBProxy, {
 /** Create database plugin */
 export function createDatabasePlugin(config: DatabaseConfig): Plugin {
   return {
-    name: '@areo/db',
+    name: '@ereo/db',
 
     async setup() {
       console.log(`[db] Initializing ${config.provider} connection to ${config.url}...`);

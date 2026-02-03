@@ -1,5 +1,5 @@
 /**
- * @areo/bundler - Hot Module Replacement
+ * @ereo/bundler - Hot Module Replacement
  *
  * Sub-100ms HMR for rapid development with granular JS updates.
  */
@@ -67,7 +67,7 @@ export const HMR_CLIENT_CODE = `
   const ws = new WebSocket('ws://' + location.host + '/__hmr');
 
   // Module registry for hot updates
-  window.__AREO_HMR__ = window.__AREO_HMR__ || {
+  window.__EREO_HMR__ = window.__EREO_HMR__ || {
     modules: new Map(),
     islands: new Map(),
     acceptedModules: new Set(),
@@ -189,12 +189,12 @@ export const HMR_CLIENT_CODE = `
           const props = propsJson ? JSON.parse(propsJson) : {};
 
           // Use React to re-render
-          if (window.__AREO_REACT__) {
-            const { createRoot } = window.__AREO_REACT_DOM__;
-            const { createElement } = window.__AREO_REACT__;
+          if (window.__EREO_REACT__) {
+            const { createRoot } = window.__EREO_REACT_DOM__;
+            const { createElement } = window.__EREO_REACT__;
 
             // Unmount existing
-            const existingRoot = window.__AREO_HMR__.islands.get(element);
+            const existingRoot = window.__EREO_HMR__.islands.get(element);
             if (existingRoot) {
               existingRoot.unmount();
             }
@@ -202,7 +202,7 @@ export const HMR_CLIENT_CODE = `
             // Create new root and render
             const root = createRoot(element);
             root.render(createElement(Component, props));
-            window.__AREO_HMR__.islands.set(element, root);
+            window.__EREO_HMR__.islands.set(element, root);
           }
         });
       })
@@ -217,11 +217,11 @@ export const HMR_CLIENT_CODE = `
   function refreshLoaderData(path) {
     // Fetch fresh loader data and update the page
     const routePath = path.replace(/\\/routes\\//, '/').replace(/\\.[jt]sx?$/, '');
-    fetch('/__areo/loader-data' + routePath + '?t=' + Date.now())
+    fetch('/__ereo/loader-data' + routePath + '?t=' + Date.now())
       .then(function(res) { return res.json(); })
       .then(function(data) {
         // Emit event for components to update
-        window.dispatchEvent(new CustomEvent('areo:loader-update', {
+        window.dispatchEvent(new CustomEvent('ereo:loader-update', {
           detail: { path: routePath, data: data }
         }));
       })
@@ -239,10 +239,10 @@ export const HMR_CLIENT_CODE = `
   function showErrorOverlay(error) {
     if (!error) return;
 
-    let overlay = document.getElementById('areo-error-overlay');
+    let overlay = document.getElementById('ereo-error-overlay');
     if (!overlay) {
       overlay = document.createElement('div');
-      overlay.id = 'areo-error-overlay';
+      overlay.id = 'ereo-error-overlay';
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);color:#ff5555;padding:2rem;font-family:monospace;white-space:pre-wrap;overflow:auto;z-index:99999';
       document.body.appendChild(overlay);
     }
@@ -261,7 +261,7 @@ export const HMR_CLIENT_CODE = `
   ws.addEventListener('message', function(event) {
     const update = JSON.parse(event.data);
     if (update.type !== 'error') {
-      const overlay = document.getElementById('areo-error-overlay');
+      const overlay = document.getElementById('ereo-error-overlay');
       if (overlay) overlay.remove();
     }
   });
@@ -764,7 +764,7 @@ export class HMRWatcher {
         case 'tsx':
         case 'js':
         case 'jsx':
-          if (filename.includes('.config.') || filename === 'areo.config.ts') {
+          if (filename.includes('.config.') || filename === 'ereo.config.ts') {
             configChanges.push(filename);
           } else {
             jsChanges.push(filename);

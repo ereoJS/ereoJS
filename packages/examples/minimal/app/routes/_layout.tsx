@@ -1,4 +1,4 @@
-import type { RouteComponentProps } from '@areo/core';
+import type { RouteComponentProps } from '@ereo/core';
 
 export default function RootLayout({ children }: RouteComponentProps) {
   return (
@@ -6,7 +6,7 @@ export default function RootLayout({ children }: RouteComponentProps) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Areo Minimal</title>
+        <title>Ereo Minimal</title>
       </head>
       <body>
         {children}

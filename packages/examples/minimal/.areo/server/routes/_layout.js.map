@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "sources": ["../../../app/routes/_layout.tsx"],
+  "sourcesContent": [
+    "import type { RouteComponentProps } from '@areo/core';\n\nexport default function RootLayout({ children }: RouteComponentProps) {\n  return (\n    <html lang=\"en\">\n      <head>\n        <meta charSet=\"utf-8\" />\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n        <title>Areo Minimal</title>\n      </head>\n      <body>\n        {children}\n      </body>\n    </html>\n  );\n}\n"
+  ],
+  "mappings": ";+CAEA,SAAwB,CAAU,EAAG,YAAiC,CACpE,OACE,EASE,OATF,CAAM,KAAK,KAAX,SASE,CARA,EAIE,OAJF,UAIE,CAHA,EAAC,OAAD,CAAM,QAAQ,SAAd,qBAAsB,EACtB,EAAC,OAAD,CAAM,KAAK,WAAW,QAAQ,uCAA9B,qBAAoE,EACpE,EAAqB,QAArB,+CAAqB,IAHvB,qBAIE,EACF,EAEE,OAFF,UACG,GADH,qBAEE,IARJ,qBASE",
+  "debugId": "8BC600D28DDFF8B064756E2164756E21",
+  "names": []
+}

@@ -1,9 +1,9 @@
 /**
- * @areo/testing - Loader Tests
+ * @ereo/testing - Loader Tests
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { LoaderFunction } from '@areo/core';
+import type { LoaderFunction } from '@ereo/core';
 import {
   testLoader,
   createLoaderTester,

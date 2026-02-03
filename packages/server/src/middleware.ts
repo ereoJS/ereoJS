@@ -1,28 +1,28 @@
 /**
- * @areo/server - Middleware Chain
+ * @ereo/server - Middleware Chain
  *
  * Hono-inspired middleware system for request processing.
  * Uses Web Standards throughout.
  *
- * NOTE: This module uses `MiddlewareHandler` from `@areo/core` as the base type.
+ * NOTE: This module uses `MiddlewareHandler` from `@ereo/core` as the base type.
  * The handler signature is: (request: Request, context: AppContext, next: NextFunction) => Response | Promise<Response>
  *
- * For typed middleware with context type safety, use `TypedMiddlewareHandler` from `@areo/router`.
+ * For typed middleware with context type safety, use `TypedMiddlewareHandler` from `@ereo/router`.
  * TypedMiddlewareHandler is fully compatible with MiddlewareHandler.
  */
 
-import type { MiddlewareHandler, NextFunction, AppContext } from '@areo/core';
-import { createContext, RequestContext } from '@areo/core';
+import type { MiddlewareHandler, NextFunction, AppContext } from '@ereo/core';
+import { createContext, RequestContext } from '@ereo/core';
 
 /**
  * Middleware definition with optional path matching.
  *
- * This interface uses `MiddlewareHandler` from `@areo/core`, ensuring
- * compatibility across all Areo packages. The handler signature is:
+ * This interface uses `MiddlewareHandler` from `@ereo/core`, ensuring
+ * compatibility across all Ereo packages. The handler signature is:
  * `(request: Request, context: AppContext, next: NextFunction) => Response | Promise<Response>`
  *
  * Note: The `path` property here supports both single strings and arrays,
- * similar to the `paths` property in `@areo/core`'s `Middleware` interface.
+ * similar to the `paths` property in `@ereo/core`'s `Middleware` interface.
  */
 export interface MiddlewareDefinition {
   /** Optional path patterns to match. Supports wildcards like '/api/*'. */

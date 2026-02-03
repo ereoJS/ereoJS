@@ -8,7 +8,7 @@ import {
 } from './plugin';
 import type { Plugin, FrameworkConfig } from './types';
 
-describe('@areo/core - Plugin', () => {
+describe('@ereo/core - Plugin', () => {
   describe('PluginRegistry', () => {
     let registry: PluginRegistry;
     const mockConfig: FrameworkConfig = { server: { port: 3000 } };
@@ -360,7 +360,7 @@ describe('@areo/core - Plugin', () => {
 
   describe('securityHeadersPlugin', () => {
     test('is a valid plugin', () => {
-      expect(securityHeadersPlugin.name).toBe('areo:security-headers');
+      expect(securityHeadersPlugin.name).toBe('ereo:security-headers');
       expect(typeof securityHeadersPlugin.setup).toBe('function');
     });
   });

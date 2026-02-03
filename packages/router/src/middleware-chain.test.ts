@@ -1,9 +1,9 @@
 /**
- * @areo/router - Middleware Chain Tests
+ * @ereo/router - Middleware Chain Tests
  */
 
 import { describe, it, expect, beforeEach } from 'bun:test';
-import type { MiddlewareHandler, AppContext } from '@areo/core';
+import type { MiddlewareHandler, AppContext } from '@ereo/core';
 import {
   registerMiddleware,
   getMiddleware,

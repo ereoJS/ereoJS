@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Sharp-based Image Processor
+ * @ereo/plugin-images - Sharp-based Image Processor
  *
  * Core image processing using the Sharp library.
  */

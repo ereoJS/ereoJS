@@ -1,10 +1,10 @@
 /**
- * @areo/client - Client-side Navigation
+ * @ereo/client - Client-side Navigation
  *
  * SPA-style navigation with loader data fetching.
  */
 
-import type { RouteParams } from '@areo/core';
+import type { RouteParams } from '@ereo/core';
 
 /**
  * Navigation state.

@@ -1,10 +1,10 @@
 /**
- * @areo/deploy-vercel - Vercel deployment adapter
+ * @ereo/deploy-vercel - Vercel deployment adapter
  *
- * Configures Areo apps for deployment to Vercel (Edge or Node runtime).
+ * Configures Ereo apps for deployment to Vercel (Edge or Node runtime).
  */
 
-import type { FrameworkConfig } from '@areo/core';
+import type { FrameworkConfig } from '@ereo/core';
 
 /** Vercel deployment configuration */
 export interface VercelConfig {
@@ -66,7 +66,7 @@ export function generateVercelJson(config: VercelConfig): string {
 /** Generate build script for Vercel */
 export function generateBuildScript(): string {
   return `#!/bin/bash
-# Vercel build script for Areo framework
+# Vercel build script for Ereo framework
 
 set -e
 

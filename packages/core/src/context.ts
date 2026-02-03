@@ -1,5 +1,5 @@
 /**
- * @areo/core - Request Context
+ * @ereo/core - Request Context
  *
  * Web Standards-based request context that travels through the request lifecycle.
  * Provides cache control, key-value storage, and response header management.
@@ -148,7 +148,7 @@ export function isRequestContext(value: unknown): value is RequestContext {
  * Extract context from a request if it was previously attached.
  * This is used internally by the framework.
  */
-const contextSymbol = Symbol.for('areo.context');
+const contextSymbol = Symbol.for('ereo.context');
 
 export function attachContext(request: Request, context: RequestContext): void {
   (request as any)[contextSymbol] = context;

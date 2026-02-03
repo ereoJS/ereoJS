@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "buildTime": "2026-02-02T22:24:53.768Z",
+  "buildId": "ml5qml0h295fcd",
+  "routes": [
+    {
+      "id": "/_layout",
+      "path": "/",
+      "file": "/Users/macm1/new-y-combinator/oreo-js/packages/examples/minimal/app/routes/_layout.tsx",
+      "index": false,
+      "layout": true,
+      "hasLoader": false,
+      "hasAction": false,
+      "hasMeta": false,
+      "hasErrorBoundary": false
+    },
+    {
+      "id": "/index",
+      "path": "/",
+      "file": "/Users/macm1/new-y-combinator/oreo-js/packages/examples/minimal/app/routes/index.tsx",
+      "index": true,
+      "layout": false,
+      "hasLoader": false,
+      "hasAction": false,
+      "hasMeta": false,
+      "hasErrorBoundary": false
+    }
+  ],
+  "server": {
+    "entry": ".areo/server/index.js",
+    "modules": {
+      "_layout": ".areo/server/routes/_layout.js",
+      "index": ".areo/server/routes/index.js"
+    }
+  },
+  "client": {
+    "entry": ".areo/client/index.js",
+    "islands": {},
+    "chunks": {}
+  },
+  "assets": {
+    ".areo/server/routes/_layout.js": {
+      "file": ".areo/server/routes/_layout.js",
+      "isEntry": true
+    },
+    ".areo/server/routes/index.js": {
+      "file": ".areo/server/routes/index.js",
+      "isEntry": true
+    },
+    ".areo/server/index.js": {
+      "file": ".areo/server/index.js",
+      "isEntry": true
+    },
+    ".areo/server/index.js.map": {
+      "file": ".areo/server/index.js.map",
+      "isEntry": true
+    },
+    ".areo/client/index.js": {
+      "file": ".areo/client/index.js",
+      "isEntry": true
+    }
+  },
+  "css": []
+}

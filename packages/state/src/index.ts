@@ -1,5 +1,5 @@
 /**
- * @areo/state - Main exports
+ * @ereo/state - Main exports
  */
 
 export {

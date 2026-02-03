@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { RouteTree, filePathToUrlPath, buildRouteTree, createRouteTree } from './route-tree';
 
-describe('@areo/router - RouteTree', () => {
+describe('@ereo/router - RouteTree', () => {
   describe('filePathToUrlPath', () => {
     test('converts index files to root path', () => {
       const result = filePathToUrlPath('/index.tsx', '');

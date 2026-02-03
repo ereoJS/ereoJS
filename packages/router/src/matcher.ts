@@ -1,11 +1,11 @@
 /**
- * @areo/router - URL Pattern Matching
+ * @ereo/router - URL Pattern Matching
  *
  * Matches URLs against route patterns and extracts parameters.
  * Supports dynamic segments, catch-all, and optional segments.
  */
 
-import type { Route, RouteParams, RouteMatch } from '@areo/core';
+import type { Route, RouteParams, RouteMatch } from '@ereo/core';
 import type { RouteSegment, MatchResult } from './types';
 import {
   DYNAMIC_SEGMENT_PATTERN,

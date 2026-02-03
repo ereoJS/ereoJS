@@ -8,9 +8,9 @@ import {
   matchWithLayouts,
   patternToRegex,
 } from './matcher';
-import type { Route } from '@areo/core';
+import type { Route } from '@ereo/core';
 
-describe('@areo/router - Matcher (Additional Coverage)', () => {
+describe('@ereo/router - Matcher (Additional Coverage)', () => {
   describe('parsePathSegments', () => {
     test('handles empty path', () => {
       const result = parsePathSegments('');

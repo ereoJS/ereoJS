@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Component Exports
+ * @ereo/plugin-images - Component Exports
  *
  * React components for optimized images.
  */

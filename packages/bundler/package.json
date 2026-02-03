@@ -1,5 +1,5 @@
 {
-  "name": "@areo/bundler",
+  "name": "@ereo/bundler",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,8 +21,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@areo/core": "workspace:*",
-    "@areo/router": "workspace:*",
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "autoprefixer": "^10.4.17",

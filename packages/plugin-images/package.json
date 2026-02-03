@@ -1,5 +1,5 @@
 {
-  "name": "@areo/plugin-images",
+  "name": "@ereo/plugin-images",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@areo/core": "workspace:*",
+    "@ereo/core": "workspace:*",
     "sharp": "^0.33.0"
   },
   "devDependencies": {

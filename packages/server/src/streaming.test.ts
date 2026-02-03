@@ -83,7 +83,7 @@ mock.module('stream', () => {
   };
 });
 
-describe('@areo/server - Streaming', () => {
+describe('@ereo/server - Streaming', () => {
   describe('createShell', () => {
     test('creates basic HTML shell', () => {
       const { head, tail } = createShell({});
@@ -143,7 +143,7 @@ describe('@areo/server - Streaming', () => {
         loaderData: { user: 'test', count: 42 },
       });
 
-      expect(tail).toContain('window.__AREO_DATA__=');
+      expect(tail).toContain('window.__EREO_DATA__=');
       expect(tail).toContain('user');
     });
 
@@ -320,7 +320,7 @@ describe('@areo/server - Streaming', () => {
         context: mockContext as any,
       });
 
-      expect(result.body).toContain('window.__AREO_DATA__');
+      expect(result.body).toContain('window.__EREO_DATA__');
     });
   });
 
@@ -483,7 +483,7 @@ describe('@areo/server - Streaming', () => {
       const fullContent = result.body as string;
 
       // Verify loader data is included
-      expect(fullContent).toContain('window.__AREO_DATA__');
+      expect(fullContent).toContain('window.__EREO_DATA__');
     });
 
     test('renderToStream handles route without loader', async () => {
@@ -508,7 +508,7 @@ describe('@areo/server - Streaming', () => {
       const fullContent = result.body as string;
 
       // Should not contain loader data script when no loader
-      expect(fullContent).not.toContain('window.__AREO_DATA__');
+      expect(fullContent).not.toContain('window.__EREO_DATA__');
     });
 
     test('renderToStream handles route with module but no loader', async () => {

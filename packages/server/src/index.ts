@@ -1,7 +1,7 @@
 /**
- * @areo/server
+ * @ereo/server
  *
- * High-performance Bun HTTP server for the Areo framework.
+ * High-performance Bun HTTP server for the Ereo framework.
  */
 
 // Server
@@ -32,13 +32,13 @@ export type {
 } from './middleware';
 
 // Re-export core middleware types for convenience
-// Users can import these from either @areo/core or @areo/server
+// Users can import these from either @ereo/core or @ereo/server
 export type {
   MiddlewareHandler,
   NextFunction,
   Middleware,
   AppContext,
-} from '@areo/core';
+} from '@ereo/core';
 
 // Static Files
 export {

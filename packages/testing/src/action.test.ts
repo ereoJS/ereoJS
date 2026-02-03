@@ -1,9 +1,9 @@
 /**
- * @areo/testing - Action Tests
+ * @ereo/testing - Action Tests
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { ActionFunction } from '@areo/core';
+import type { ActionFunction } from '@ereo/core';
 import {
   testAction,
   createActionTester,

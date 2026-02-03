@@ -1,14 +1,14 @@
 /**
- * @areo/server - Bun HTTP Server
+ * @ereo/server - Bun HTTP Server
  *
  * High-performance HTTP server using Bun.serve().
  * Designed for 5-6x faster performance than Node.js.
  */
 
 import type { Server } from 'bun';
-import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler } from '@areo/core';
-import { createContext, RequestContext, AreoApp } from '@areo/core';
-import { FileRouter, createFileRouter, matchWithLayouts, type MatchResult } from '@areo/router';
+import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler } from '@ereo/core';
+import { createContext, RequestContext, EreoApp } from '@ereo/core';
+import { FileRouter, createFileRouter, matchWithLayouts, type MatchResult } from '@ereo/router';
 import {
   MiddlewareChain,
   createMiddlewareChain,
@@ -18,13 +18,13 @@ import {
 } from './middleware';
 import { serveStatic, type StaticOptions } from './static';
 import { createShell, createResponse, renderToString, type ShellTemplate } from './streaming';
-import { serializeLoaderData } from '@areo/data';
+import { serializeLoaderData } from '@ereo/data';
 import { createElement, type ReactElement, type ComponentType } from 'react';
 
 /**
  * Server render mode options.
  *
- * This type is distinct from the route-level RenderMode in @areo/core.
+ * This type is distinct from the route-level RenderMode in @ereo/core.
  * - ServerRenderMode: How the server renders React components ('streaming' vs 'string')
  * - RenderMode (core): What type of rendering a route uses ('ssg', 'ssr', 'csr', etc.)
  */
@@ -72,7 +72,7 @@ export interface ServerOptions {
  */
 export class BunServer {
   private server: Server<unknown> | null = null;
-  private app: AreoApp | null = null;
+  private app: EreoApp | null = null;
   private router: FileRouter | null = null;
   private middleware: MiddlewareChain;
   private staticHandler: ((request: Request) => Promise<Response | null>) | null = null;
@@ -85,8 +85,8 @@ export class BunServer {
       development: process.env.NODE_ENV !== 'production',
       logging: true,
       renderMode: 'streaming',
-      assetsPath: '/_areo',
-      clientEntry: '/_areo/client.js',
+      assetsPath: '/_ereo',
+      clientEntry: '/_ereo/client.js',
       ...options,
     };
 
@@ -121,9 +121,9 @@ export class BunServer {
   }
 
   /**
-   * Set the Oreo app instance.
+   * Set the Ereo app instance.
    */
-  setApp(app: AreoApp): void {
+  setApp(app: EreoApp): void {
     this.app = app;
   }
 
@@ -173,7 +173,7 @@ export class BunServer {
         }
 
         // Use router for matching and BunServer for rendering
-        // This ensures we get full HTML SSR instead of JSON from AreoApp
+        // This ensures we get full HTML SSR instead of JSON from EreoApp
         if (this.router) {
           const pathname = new URL(request.url).pathname;
 
@@ -487,7 +487,7 @@ export class BunServer {
       // Inject loader data script before closing body tag
       const encoder = new TextEncoder();
       const loaderScript = loaderData
-        ? `<script>window.__AREO_DATA__=${serializeLoaderData(loaderData)}</script>`
+        ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
         : '';
       const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
       const injectedScripts = encoder.encode(loaderScript + clientScript);
@@ -529,7 +529,7 @@ export class BunServer {
 
       // Inject loader data and client script before closing body tag
       const loaderScript = loaderData
-        ? `<script>window.__AREO_DATA__=${serializeLoaderData(loaderData)}</script>`
+        ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
         : '';
       const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
       html = html.replace('</body>', `${loaderScript}${clientScript}</body>`);
@@ -564,11 +564,11 @@ export class BunServer {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Areo App</title>
+  <title>Ereo App</title>
 </head>
 <body>
   <div id="root"></div>
-  <script>window.__AREO_DATA__=${serializedData}</script>
+  <script>window.__EREO_DATA__=${serializedData}</script>
   <script type="module" src="${this.options.clientEntry}"></script>
 </body>
 </html>`;

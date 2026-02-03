@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Blur Placeholder Generation
+ * @ereo/plugin-images - Blur Placeholder Generation
  *
  * Generate tiny blur placeholders for images (LQIP - Low Quality Image Placeholders).
  */

@@ -1,5 +1,5 @@
 /**
- * @areo/auth/providers - Provider tests
+ * @ereo/auth/providers - Provider tests
  */
 
 import { describe, it, expect, beforeEach, afterEach, spyOn } from 'bun:test';

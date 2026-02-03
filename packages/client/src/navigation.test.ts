@@ -3,7 +3,7 @@ import { describe, expect, test, beforeEach } from 'bun:test';
 // Since navigation depends on window/browser APIs, we test the logic separately
 // by reimplementing testable parts
 
-describe('@areo/client - Navigation', () => {
+describe('@ereo/client - Navigation', () => {
   describe('NavigationState', () => {
     interface NavigationState {
       pathname: string;

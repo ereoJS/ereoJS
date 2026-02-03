@@ -1,13 +1,13 @@
 {
-  "name": "@areo/deploy-cloudflare",
+  "name": "@ereo/deploy-cloudflare",
   "version": "0.1.0",
-  "description": "Cloudflare Pages/Workers deployment adapter for Areo framework",
+  "description": "Cloudflare Pages/Workers deployment adapter for Ereo framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@areo/core": "workspace:*"
+    "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

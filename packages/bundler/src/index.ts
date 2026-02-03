@@ -1,7 +1,7 @@
 /**
- * @areo/bundler
+ * @ereo/bundler
  *
- * Build system for the Areo framework.
+ * Build system for the Ereo framework.
  * Includes HMR, production builds, and plugin system.
  */
 

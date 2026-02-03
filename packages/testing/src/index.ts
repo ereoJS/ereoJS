@@ -1,7 +1,7 @@
 /**
- * @areo/testing
+ * @ereo/testing
  *
- * Testing utilities for Areo applications.
+ * Testing utilities for Ereo applications.
  * Makes testing loaders, actions, middleware, and components trivial.
  */
 

@@ -4,7 +4,7 @@ import { describe, expect, test, beforeEach, mock } from 'bun:test';
 // we test the logic separately by reimplementing testable parts
 // and testing the utility functions directly
 
-describe('@areo/client - Form', () => {
+describe('@ereo/client - Form', () => {
   describe('FormProps interface', () => {
     interface FormProps {
       method?: 'get' | 'post' | 'put' | 'patch' | 'delete';

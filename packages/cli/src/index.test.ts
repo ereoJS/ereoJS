@@ -44,7 +44,7 @@ function parseArgs(args: string[]): {
   return { command, options, positional };
 }
 
-describe('@areo/cli - parseArgs', () => {
+describe('@ereo/cli - parseArgs', () => {
   test('parses command', () => {
     const result = parseArgs(['dev']);
     expect(result.command).toBe('dev');
@@ -103,7 +103,7 @@ describe('@areo/cli - parseArgs', () => {
   });
 });
 
-describe('@areo/cli - generateTemplateFiles', () => {
+describe('@ereo/cli - generateTemplateFiles', () => {
   // Test the template generation logic
   function generateTemplateFiles(
     template: string,
@@ -115,13 +115,13 @@ describe('@areo/cli - generateTemplateFiles', () => {
     // package.json
     files['package.json'] = JSON.stringify(
       {
-        name: 'areo-app',
+        name: 'ereo-app',
         version: '0.1.0',
         type: 'module',
         scripts: {
-          dev: 'areo dev',
-          build: 'areo build',
-          start: 'areo start',
+          dev: 'ereo dev',
+          build: 'ereo build',
+          start: 'ereo start',
         },
       },
       null,
@@ -159,8 +159,8 @@ describe('@areo/cli - generateTemplateFiles', () => {
     expect(files['package.json']).toBeDefined();
 
     const pkg = JSON.parse(files['package.json']);
-    expect(pkg.name).toBe('areo-app');
-    expect(pkg.scripts.dev).toBe('areo dev');
+    expect(pkg.name).toBe('ereo-app');
+    expect(pkg.scripts.dev).toBe('ereo dev');
   });
 
   test('generates tsconfig.json for TypeScript', () => {

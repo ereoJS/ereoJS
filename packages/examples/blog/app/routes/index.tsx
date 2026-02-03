@@ -1,4 +1,4 @@
-import type { LoaderArgs } from '@areo/core';
+import type { LoaderArgs } from '@ereo/core';
 
 interface Post {
   slug: string;
@@ -10,9 +10,9 @@ interface Post {
 // Simulated database
 const posts: Post[] = [
   {
-    slug: 'getting-started-with-areo',
-    title: 'Getting Started with Areo',
-    excerpt: 'Learn how to build modern web apps with the Areo framework.',
+    slug: 'getting-started-with-ereo',
+    title: 'Getting Started with Ereo',
+    excerpt: 'Learn how to build modern web apps with the Ereo framework.',
     date: '2024-01-15',
   },
   {
@@ -23,7 +23,7 @@ const posts: Post[] = [
   },
   {
     slug: 'bun-performance',
-    title: 'Why Bun Makes Areo Fast',
+    title: 'Why Bun Makes Ereo Fast',
     excerpt: 'Explore the performance benefits of building on Bun.',
     date: '2024-01-05',
   },
@@ -45,10 +45,10 @@ export default function HomePage({ loaderData }: { loaderData: { posts: Post[] }
     <div>
       <section className="text-center py-12">
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          Welcome to Areo Blog
+          Welcome to Ereo Blog
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-300">
-          A blog built with Areo - the React fullstack framework.
+          A blog built with Ereo - the React fullstack framework.
         </p>
       </section>
 

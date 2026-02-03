@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "buildTime": "2026-02-02T22:24:53.734Z",
+  "buildId": "ml5qmkyxktxe7i",
+  "routes": [
+    {
+      "id": "/blog/index",
+      "path": "/blog",
+      "file": "/Users/macm1/new-y-combinator/oreo-js/packages/examples/blog/app/routes/blog/index.tsx",
+      "index": true,
+      "layout": false,
+      "hasLoader": false,
+      "hasAction": false,
+      "hasMeta": false,
+      "hasErrorBoundary": false
+    },
+    {
+      "id": "/_layout",
+      "path": "/",
+      "file": "/Users/macm1/new-y-combinator/oreo-js/packages/examples/blog/app/routes/_layout.tsx",
+      "index": false,
+      "layout": true,
+      "hasLoader": false,
+      "hasAction": false,
+      "hasMeta": false,
+      "hasErrorBoundary": false
+    },
+    {
+      "id": "/blog/[slug]",
+      "path": "/blog/[slug]",
+      "file": "/Users/macm1/new-y-combinator/oreo-js/packages/examples/blog/app/routes/blog/[slug].tsx",
+      "index": false,
+      "layout": false,
+      "hasLoader": false,
+      "hasAction": false,
+      "hasMeta": false,
+      "hasErrorBoundary": false,
+      "parentId": "/_layout"
+    },
+    {
+      "id": "/index",
+      "path": "/",
+      "file": "/Users/macm1/new-y-combinator/oreo-js/packages/examples/blog/app/routes/index.tsx",
+      "index": true,
+      "layout": false,
+      "hasLoader": false,
+      "hasAction": false,
+      "hasMeta": false,
+      "hasErrorBoundary": false
+    }
+  ],
+  "server": {
+    "entry": ".areo/server/index.js",
+    "modules": {
+      "blog/index": ".areo/server/routes/index.js",
+      "_layout": ".areo/server/routes/_layout.js",
+      "blog/[slug]": ".areo/server/routes/blog/[slug].js"
+    }
+  },
+  "client": {
+    "entry": ".areo/client/index.js",
+    "islands": {},
+    "chunks": {}
+  },
+  "assets": {
+    ".areo/server/routes/blog/index.js": {
+      "file": ".areo/server/routes/blog/index.js",
+      "isEntry": true
+    },
+    ".areo/server/routes/_layout.js": {
+      "file": ".areo/server/routes/_layout.js",
+      "isEntry": true
+    },
+    ".areo/server/routes/blog/[slug].js": {
+      "file": ".areo/server/routes/blog/[slug].js",
+      "isEntry": true
+    },
+    ".areo/server/routes/index.js": {
+      "file": ".areo/server/routes/index.js",
+      "isEntry": true
+    },
+    ".areo/server/index.js": {
+      "file": ".areo/server/index.js",
+      "isEntry": true
+    },
+    ".areo/server/index.js.map": {
+      "file": ".areo/server/index.js.map",
+      "isEntry": true
+    },
+    ".areo/client/index.js": {
+      "file": ".areo/client/index.js",
+      "isEntry": true
+    }
+  },
+  "css": []
+}

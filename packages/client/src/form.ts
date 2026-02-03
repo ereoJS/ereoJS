@@ -1,5 +1,5 @@
 /**
- * @areo/client - Form Component with Progressive Enhancement
+ * @ereo/client - Form Component with Progressive Enhancement
  *
  * Form handling that works without JavaScript (progressive enhancement)
  * and enhances with client-side submission when JS is available.

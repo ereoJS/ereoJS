@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Default Configuration
+ * @ereo/plugin-images - Default Configuration
  *
  * Default values for the image optimization plugin.
  */
@@ -52,12 +52,12 @@ export const BLUR_WIDTH = 8;
 /**
  * URL path prefix for the image optimization endpoint.
  */
-export const IMAGE_PATH_PREFIX = '/_areo/image';
+export const IMAGE_PATH_PREFIX = '/_ereo/image';
 
 /**
  * Cache directory for optimized images.
  */
-export const CACHE_DIR = '.areo/images';
+export const CACHE_DIR = '.ereo/images';
 
 /**
  * Supported input formats for processing.

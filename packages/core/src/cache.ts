@@ -1,7 +1,7 @@
 /**
- * @areo/core - Unified Cache Interface
+ * @ereo/core - Unified Cache Interface
  *
- * A unified cache adapter interface for the Areo framework.
+ * A unified cache adapter interface for the Ereo framework.
  * All cache implementations should implement CacheAdapter for interoperability.
  */
 
@@ -21,7 +21,7 @@ export interface CacheSetOptions {
 
 /**
  * Base cache adapter interface.
- * All cache implementations in Areo should implement this interface.
+ * All cache implementations in Ereo should implement this interface.
  *
  * @example
  * // Using a cache adapter

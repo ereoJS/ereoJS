@@ -1,17 +1,17 @@
 /**
- * @areo/plugin-images - TypeScript Declarations for Image Imports
+ * @ereo/plugin-images - TypeScript Declarations for Image Imports
  *
  * This file provides type declarations for importing image files.
  * Include this in your project's tsconfig.json:
  *
  * {
  *   "compilerOptions": {
- *     "types": ["@areo/plugin-images/image-types"]
+ *     "types": ["@ereo/plugin-images/image-types"]
  *   }
  * }
  *
  * Or add a reference in your app:
- * /// <reference types="@areo/plugin-images/image-types" />
+ * /// <reference types="@ereo/plugin-images/image-types" />
  */
 
 import type { StaticImageData } from './components/types';

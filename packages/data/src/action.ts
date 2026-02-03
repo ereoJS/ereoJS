@@ -1,11 +1,11 @@
 /**
- * @areo/data - Mutations (Actions)
+ * @ereo/data - Mutations (Actions)
  *
  * Handle form submissions and mutations with a simple, type-safe API.
  * Supports both FormData and JSON payloads with complex data types.
  */
 
-import type { ActionArgs, ActionFunction, RouteParams } from '@areo/core';
+import type { ActionArgs, ActionFunction, RouteParams } from '@ereo/core';
 
 /**
  * Parsed action body - can be any type when using JSON.

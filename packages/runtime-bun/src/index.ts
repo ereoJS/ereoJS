@@ -1,14 +1,14 @@
 /**
- * @areo/runtime-bun
+ * @ereo/runtime-bun
  *
- * Bun runtime adapter for the Areo framework.
+ * Bun runtime adapter for the Ereo framework.
  * This is the default runtime, optimized for Bun's performance.
  */
 
 import type { Server, ServerWebSocket } from 'bun';
-import type { FrameworkConfig, Plugin } from '@areo/core';
-import { createApp, AreoApp } from '@areo/core';
-import { createServer, type ServerOptions } from '@areo/server';
+import type { FrameworkConfig, Plugin } from '@ereo/core';
+import { createApp, EreoApp } from '@ereo/core';
+import { createServer, type ServerOptions } from '@ereo/server';
 
 /**
  * Bun runtime options.
@@ -24,7 +24,7 @@ export interface BunRuntimeOptions {
  * Bun runtime adapter.
  */
 export class BunRuntime {
-  private app: AreoApp;
+  private app: EreoApp;
   private server: ReturnType<typeof createServer> | null = null;
   private bunServer: Server<unknown> | null = null;
   private options: BunRuntimeOptions;
@@ -35,9 +35,9 @@ export class BunRuntime {
   }
 
   /**
-   * Get the Areo app instance.
+   * Get the Ereo app instance.
    */
-  getApp(): AreoApp {
+  getApp(): EreoApp {
     return this.app;
   }
 

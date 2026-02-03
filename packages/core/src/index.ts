@@ -1,12 +1,12 @@
 /**
- * @areo/core
+ * @ereo/core
  *
  * Core framework package providing the application container,
  * request context, plugin system, and type definitions.
  */
 
 // Application
-export { createApp, defineConfig, AreoApp, isAreoApp } from './app';
+export { createApp, defineConfig, EreoApp, isEreoApp } from './app';
 
 // Context
 export {

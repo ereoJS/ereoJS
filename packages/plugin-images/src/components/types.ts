@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Component Type Definitions
+ * @ereo/plugin-images - Component Type Definitions
  *
  * TypeScript interfaces for the Image and Picture components.
  */
@@ -307,7 +307,7 @@ export interface ImagePluginConfig {
 
   /**
    * Directory for cached/optimized images.
-   * @default '.areo/images'
+   * @default '.ereo/images'
    */
   cacheDir?: string;
 

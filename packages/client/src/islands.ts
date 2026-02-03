@@ -1,12 +1,12 @@
 /**
- * @areo/client - Islands Architecture
+ * @ereo/client - Islands Architecture
  *
  * Selective hydration for interactive components.
  * Static content stays static, only islands get hydrated.
  */
 
 import type { ComponentType } from 'react';
-import type { HydrationStrategy } from '@areo/core';
+import type { HydrationStrategy } from '@ereo/core';
 import {
   parseHydrationDirective,
   createHydrationTrigger,

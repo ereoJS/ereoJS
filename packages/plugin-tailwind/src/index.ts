@@ -1,12 +1,12 @@
 /**
- * @areo/plugin-tailwind
+ * @ereo/plugin-tailwind
  *
- * Zero-config Tailwind CSS integration for Areo.
+ * Zero-config Tailwind CSS integration for Ereo.
  */
 
 import { join } from 'node:path';
-import type { Plugin } from '@areo/core';
-import { areoPreset, getAreoTailwindConfig } from './preset';
+import type { Plugin } from '@ereo/core';
+import { ereoPreset, getEreoTailwindConfig } from './preset';
 
 /**
  * Tailwind plugin options.
@@ -18,7 +18,7 @@ export interface TailwindPluginOptions {
   config?: string;
   /** Enable dark mode */
   darkMode?: 'class' | 'media' | false;
-  /** Use Areo preset */
+  /** Use Ereo preset */
   usePreset?: boolean;
 }
 
@@ -36,8 +36,8 @@ const defaults: Required<TailwindPluginOptions> = {
  * Create Tailwind CSS plugin.
  *
  * @example
- * import { defineConfig } from '@areo/core';
- * import tailwind from '@areo/plugin-tailwind';
+ * import { defineConfig } from '@ereo/core';
+ * import tailwind from '@ereo/plugin-tailwind';
  *
  * export default defineConfig({
  *   plugins: [
@@ -67,7 +67,7 @@ export default function tailwind(options: TailwindPluginOptions = {}): Plugin {
         } else {
           // Generate default config if using preset
           if (opts.usePreset) {
-            console.log('  Using Areo Tailwind preset');
+            console.log('  Using Ereo Tailwind preset');
           }
         }
       } catch (error) {
@@ -143,7 +143,7 @@ export default function tailwind(options: TailwindPluginOptions = {}): Plugin {
 }
 
 // Export utilities
-export { areoPreset, getAreoTailwindConfig } from './preset';
+export { ereoPreset, getEreoTailwindConfig } from './preset';
 
 /**
  * Generate Tailwind config file content.
@@ -153,9 +153,9 @@ export function generateConfig(options: TailwindPluginOptions = {}): string {
 
   if (opts.usePreset) {
     return `
-import { getAreoTailwindConfig } from '@areo/plugin-tailwind';
+import { getEreoTailwindConfig } from '@ereo/plugin-tailwind';
 
-export default getAreoTailwindConfig({
+export default getEreoTailwindConfig({
   // Add your customizations here
 });
     `.trim();

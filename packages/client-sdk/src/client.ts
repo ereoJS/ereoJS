@@ -1,5 +1,5 @@
 /**
- * @areo/client-sdk - Type-safe API client
+ * @ereo/client-sdk - Type-safe API client
  *
  * Provides end-to-end type safety for API calls.
  */

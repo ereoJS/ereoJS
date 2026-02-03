@@ -1,11 +1,11 @@
 /**
- * @areo/auth - Authentication plugin for Areo framework
+ * @ereo/auth - Authentication plugin for Ereo framework
  *
  * Provides authentication and authorization with multiple providers,
  * JWT-based sessions, and role-based access control.
  */
 
-import type { Plugin, RouteConfig, AppContext, MiddlewareHandler, NextFunction } from '@areo/core';
+import type { Plugin, RouteConfig, AppContext, MiddlewareHandler, NextFunction } from '@ereo/core';
 
 // ============================================================================
 // Type Definitions
@@ -448,7 +448,7 @@ export function createAuthPlugin(config: AuthConfig): Plugin {
   const sessionStrategy: SessionStrategy = config.session?.strategy ?? 'jwt';
   const sessionUpdateAge = config.session?.updateAge ?? sessionMaxAge / 2;
 
-  const cookieName = config.cookie?.name || 'areo.session';
+  const cookieName = config.cookie?.name || 'ereo.session';
   const cookieOptions = {
     secure: config.cookie?.secure ?? process.env.NODE_ENV === 'production',
     httpOnly: config.cookie?.httpOnly ?? true,
@@ -633,7 +633,7 @@ export function createAuthPlugin(config: AuthConfig): Plugin {
   }
 
   return {
-    name: '@areo/auth',
+    name: '@ereo/auth',
 
     async setup(context) {
       // Initialize auth providers

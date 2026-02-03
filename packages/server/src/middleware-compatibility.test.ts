@@ -1,8 +1,8 @@
 /**
- * @areo/server - Middleware Compatibility Tests
+ * @ereo/server - Middleware Compatibility Tests
  *
  * These tests verify that the server's MiddlewareChain works with middleware
- * defined using types from @areo/core and @areo/router.
+ * defined using types from @ereo/core and @ereo/router.
  */
 
 import { describe, expect, test, beforeEach } from 'bun:test';
@@ -10,8 +10,8 @@ import type {
   MiddlewareHandler,
   AppContext,
   NextFunction,
-} from '@areo/core';
-import { createContext, RequestContext } from '@areo/core';
+} from '@ereo/core';
+import { createContext, RequestContext } from '@ereo/core';
 import {
   MiddlewareChain,
   createMiddlewareChain,
@@ -48,7 +48,7 @@ describe('MiddlewareChain with Core Types', () => {
     chain = createMiddlewareChain();
   });
 
-  test('accepts MiddlewareHandler from @areo/core', async () => {
+  test('accepts MiddlewareHandler from @ereo/core', async () => {
     // Define middleware using the core MiddlewareHandler type
     const middleware: MiddlewareHandler = async (request, context, next) => {
       context.set('handled', true);

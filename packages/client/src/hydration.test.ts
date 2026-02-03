@@ -9,7 +9,7 @@ import {
   createHydrationTrigger,
 } from './hydration';
 
-describe('@areo/client - Hydration', () => {
+describe('@ereo/client - Hydration', () => {
   beforeEach(() => {
     resetIslandCounter();
   });

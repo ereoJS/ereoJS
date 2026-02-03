@@ -1,5 +1,5 @@
 /**
- * @areo/client - Link Prefetching
+ * @ereo/client - Link Prefetching
  *
  * Intelligent prefetching for faster navigation.
  */

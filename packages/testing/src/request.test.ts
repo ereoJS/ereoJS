@@ -1,5 +1,5 @@
 /**
- * @areo/testing - Request Tests
+ * @ereo/testing - Request Tests
  */
 
 import { describe, expect, test } from 'bun:test';

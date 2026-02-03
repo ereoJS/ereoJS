@@ -1,13 +1,13 @@
 /**
- * @areo/plugin-images
+ * @ereo/plugin-images
  *
- * Complete image optimization system for Areo.
+ * Complete image optimization system for Ereo.
  * Provides automatic image optimization, blur placeholders,
  * responsive srcset generation, and art direction support.
  *
  * @example
- * // areo.config.ts
- * import images from '@areo/plugin-images';
+ * // ereo.config.ts
+ * import images from '@ereo/plugin-images';
  *
  * export default defineConfig({
  *   plugins: [
@@ -20,7 +20,7 @@
  *
  * @example
  * // In your components
- * import { Image, Picture } from '@areo/plugin-images/components';
+ * import { Image, Picture } from '@ereo/plugin-images/components';
  * import heroImg from './hero.jpg';
  *
  * function Hero() {

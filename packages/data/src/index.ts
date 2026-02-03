@@ -1,7 +1,7 @@
 /**
- * @areo/data
+ * @ereo/data
  *
- * Data loading and caching for the Areo framework.
+ * Data loading and caching for the Ereo framework.
  * One pattern, not four - simple and explicit.
  */
 

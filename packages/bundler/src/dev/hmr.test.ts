@@ -10,7 +10,7 @@ import {
 } from './hmr';
 import { join } from 'node:path';
 
-describe('@areo/bundler - HMR', () => {
+describe('@ereo/bundler - HMR', () => {
   describe('HMR_CLIENT_CODE', () => {
     test('contains WebSocket connection code', () => {
       expect(HMR_CLIENT_CODE).toContain('WebSocket');
@@ -655,7 +655,7 @@ describe('@areo/bundler - HMR', () => {
       const testDir = '/tmp/hmr-test-' + Date.now();
       const testFile = join(testDir, 'island-factory.tsx');
       await Bun.write(testFile, `
-        import { createIsland } from '@areo/client';
+        import { createIsland } from '@ereo/client';
         export default createIsland(function Counter() { return <div />; });
       `);
 
@@ -822,7 +822,7 @@ describe('@areo/bundler - HMR', () => {
     });
 
     test('clears error overlay on successful update', () => {
-      expect(HMR_CLIENT_CODE).toContain('areo-error-overlay');
+      expect(HMR_CLIENT_CODE).toContain('ereo-error-overlay');
       expect(HMR_CLIENT_CODE).toContain('overlay.remove()');
     });
   });
@@ -910,10 +910,10 @@ describe('@areo/bundler - HMR', () => {
       expect(parsed.reason).toContain('Config changed');
     });
 
-    test('processPendingChanges handles areo.config.ts changes', async () => {
+    test('processPendingChanges handles ereo.config.ts changes', async () => {
       const watcher = new TestableHMRWatcher(hmr);
       watcher.setWatchDir('/tmp/test-dir');
-      watcher.simulateFileChange('areo.config.ts');
+      watcher.simulateFileChange('ereo.config.ts');
 
       await watcher.triggerProcessPendingChanges();
 

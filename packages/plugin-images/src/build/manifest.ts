@@ -1,5 +1,5 @@
 /**
- * @areo/plugin-images - Image Manifest Generation
+ * @ereo/plugin-images - Image Manifest Generation
  *
  * Track processed images and their variants.
  */

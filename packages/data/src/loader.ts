@@ -1,5 +1,5 @@
 /**
- * @areo/data - Unified Data Loading
+ * @ereo/data - Unified Data Loading
  *
  * A single, simple pattern for server-side data fetching.
  * No confusion about which loading method to use.
@@ -11,7 +11,7 @@ import type {
   AppContext,
   RouteParams,
   CacheOptions,
-} from '@areo/core';
+} from '@ereo/core';
 
 /**
  * Options for creating a loader.

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createContext, RequestContext, isRequestContext, attachContext, getContext } from './context';
 
-describe('@areo/core - Context', () => {
+describe('@ereo/core - Context', () => {
   describe('createContext', () => {
     test('creates a context from a request', () => {
       const request = new Request('http://localhost:3000/test?foo=bar');

@@ -1,12 +1,12 @@
 /**
- * @areo/cli - Build Command
+ * @ereo/cli - Build Command
  *
  * Build the project for production.
  */
 
 import { join } from 'node:path';
-import { build as bundlerBuild, printBuildReport, type BuildOptions } from '@areo/bundler';
-import type { FrameworkConfig } from '@areo/core';
+import { build as bundlerBuild, printBuildReport, type BuildOptions } from '@ereo/bundler';
+import type { FrameworkConfig } from '@ereo/core';
 
 /**
  * Build command options.
@@ -24,11 +24,11 @@ export interface BuildCommandOptions {
 export async function build(options: BuildCommandOptions = {}): Promise<void> {
   const root = process.cwd();
 
-  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m Production Build\n');
+  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Production Build\n');
 
   // Load config if exists
   let config: FrameworkConfig = {};
-  const configPath = join(root, 'areo.config.ts');
+  const configPath = join(root, 'ereo.config.ts');
 
   try {
     if (await Bun.file(configPath).exists()) {
@@ -46,7 +46,7 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
   // Merge options
   const buildOptions: BuildOptions = {
     root,
-    outDir: options.outDir || config.build?.outDir || '.areo',
+    outDir: options.outDir || config.build?.outDir || '.ereo',
     minify: options.minify ?? config.build?.minify ?? true,
     sourcemap: options.sourcemap ?? config.build?.sourcemap ?? true,
     target: bundlerTarget,

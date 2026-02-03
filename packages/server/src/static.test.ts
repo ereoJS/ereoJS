@@ -5,7 +5,7 @@ import { serveStatic, staticMiddleware, getMimeType } from './static';
 
 const TEST_DIR = join(import.meta.dir, '__test_static__');
 
-describe('@areo/server - Static', () => {
+describe('@ereo/server - Static', () => {
   beforeEach(async () => {
     await mkdir(TEST_DIR, { recursive: true });
     await mkdir(join(TEST_DIR, 'subdir'), { recursive: true });

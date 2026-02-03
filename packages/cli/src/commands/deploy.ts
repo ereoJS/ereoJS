@@ -1,11 +1,11 @@
 /**
- * @areo/cli - Deploy Command
+ * @ereo/cli - Deploy Command
  *
  * One-command deployment to various platforms.
  */
 
 import { join } from 'node:path';
-import { type FrameworkConfig } from '@areo/core';
+import { type FrameworkConfig } from '@ereo/core';
 
 /**
  * Supported deployment targets.
@@ -48,12 +48,12 @@ export async function deploy(options: DeployOptions = {}): Promise<DeployResult>
   const root = process.cwd();
   const target = options.target || await detectTarget(root);
 
-  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mAreo\x1b[0m Deploy\n');
+  console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Deploy\n');
   console.log(`  Target: \x1b[33m${target}\x1b[0m\n`);
 
   // Load config
   let config: FrameworkConfig = {};
-  const configPath = join(root, 'areo.config.ts');
+  const configPath = join(root, 'ereo.config.ts');
 
   try {
     if (await Bun.file(configPath).exists()) {
@@ -238,7 +238,7 @@ async function deployToCloudflare(root: string, options: DeployOptions): Promise
   // Generate wrangler.toml if needed
   const wranglerConfigPath = join(root, 'wrangler.toml');
   if (!(await Bun.file(wranglerConfigPath).exists())) {
-    const projectName = options.name || 'areo-app';
+    const projectName = options.name || 'ereo-app';
     const wranglerConfig = `name = "${projectName}"
 main = "dist/server/index.js"
 compatibility_date = "2024-01-01"
@@ -299,7 +299,7 @@ async function deployToFly(root: string, options: DeployOptions): Promise<Deploy
   // Generate fly.toml if needed
   const flyConfigPath = join(root, 'fly.toml');
   if (!(await Bun.file(flyConfigPath).exists())) {
-    const projectName = options.name || 'areo-app';
+    const projectName = options.name || 'ereo-app';
     const flyConfig = `app = "${projectName}"
 primary_region = "iad"
 
@@ -453,7 +453,7 @@ CMD ["bun", "run", "start"]
   }
 
   // Build image
-  const imageName = options.name || 'areo-app';
+  const imageName = options.name || 'ereo-app';
   const tag = options.production ? 'latest' : 'dev';
 
   const result = await runCommandWithOutput(
@@ -550,7 +550,7 @@ async function runCommandWithOutput(
  */
 export function printDeployHelp(): void {
   console.log(`
-  Usage: areo deploy [target] [options]
+  Usage: ereo deploy [target] [options]
 
   Targets:
     vercel       Deploy to Vercel (default)
@@ -566,9 +566,9 @@ export function printDeployHelp(): void {
     --no-build   Skip build step
 
   Examples:
-    areo deploy                    Deploy to auto-detected platform
-    areo deploy vercel --prod      Deploy to Vercel production
-    areo deploy cloudflare         Deploy to Cloudflare
-    areo deploy docker --name app  Build Docker image named 'app'
+    ereo deploy                    Deploy to auto-detected platform
+    ereo deploy vercel --prod      Deploy to Vercel production
+    ereo deploy cloudflare         Deploy to Cloudflare
+    ereo deploy docker --name app  Build Docker image named 'app'
   `);
 }

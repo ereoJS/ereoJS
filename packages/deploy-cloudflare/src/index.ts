@@ -1,8 +1,8 @@
 /**
- * @areo/deploy-cloudflare - Cloudflare deployment adapter
+ * @ereo/deploy-cloudflare - Cloudflare deployment adapter
  */
 
-import type { FrameworkConfig } from '@areo/core';
+import type { FrameworkConfig } from '@ereo/core';
 
 /** Cloudflare deployment configuration */
 export interface CloudflareConfig {
@@ -39,7 +39,7 @@ id = "your-namespace-id"`);
     }
   }
 
-  return `name = "areo-app"
+  return `name = "ereo-app"
 compatibility_date = "2024-01-01"
 main = "dist/server.js"
 

@@ -1,10 +1,10 @@
 /**
- * @areo/testing - Test Context
+ * @ereo/testing - Test Context
  *
  * Create mock contexts for testing loaders, actions, and middleware.
  */
 
-import type { AppContext, CacheControl, CacheOptions } from '@areo/core';
+import type { AppContext, CacheControl, CacheOptions } from '@ereo/core';
 
 /**
  * Options for creating a test context.

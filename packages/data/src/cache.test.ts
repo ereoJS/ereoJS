@@ -10,7 +10,7 @@ import {
   createDataCacheAdapter,
 } from './cache';
 
-describe('@areo/data - Cache', () => {
+describe('@ereo/data - Cache', () => {
   describe('MemoryCache', () => {
     let cache: MemoryCache;
 

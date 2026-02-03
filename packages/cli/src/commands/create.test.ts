@@ -46,18 +46,18 @@ describe('create command', () => {
         const deps = packageJson.dependencies || {};
         for (const [name, version] of Object.entries(deps)) {
           expect(version).not.toContain('workspace:*');
-          if (name.startsWith('@areo/')) {
+          if (name.startsWith('@ereo/')) {
             expect(version).toMatch(/^\^?\d+\.\d+\.\d+/);
           }
         }
 
         // Verify specific versions
-        expect(deps['@areo/core']).toBe('^0.1.0');
-        expect(deps['@areo/router']).toBe('^0.1.0');
-        expect(deps['@areo/server']).toBe('^0.1.0');
-        expect(deps['@areo/client']).toBe('^0.1.0');
-        expect(deps['@areo/data']).toBe('^0.1.0');
-        expect(deps['@areo/cli']).toBe('^0.1.0');
+        expect(deps['@ereo/core']).toBe('^0.1.0');
+        expect(deps['@ereo/router']).toBe('^0.1.0');
+        expect(deps['@ereo/server']).toBe('^0.1.0');
+        expect(deps['@ereo/client']).toBe('^0.1.0');
+        expect(deps['@ereo/data']).toBe('^0.1.0');
+        expect(deps['@ereo/cli']).toBe('^0.1.0');
         expect(deps['react']).toBe('^18.2.0');
         expect(deps['react-dom']).toBe('^18.2.0');
       } finally {
@@ -121,7 +121,7 @@ describe('create command', () => {
         const requiredFiles = [
           'package.json',
           'tsconfig.json',
-          'areo.config.ts',
+          'ereo.config.ts',
           'app/routes/_layout.tsx',
           'app/routes/index.tsx',
           'app/routes/about.tsx',
@@ -151,7 +151,7 @@ describe('create command', () => {
 
         // Check JS files exist (not TSX)
         const jsFiles = [
-          'areo.config.js',
+          'ereo.config.js',
           'app/routes/_layout.jsx',
           'app/routes/index.jsx',
           'app/routes/about.jsx',

@@ -1,13 +1,13 @@
 {
-  "name": "@areo/db",
+  "name": "@ereo/db",
   "version": "0.1.0",
-  "description": "Database integration plugin for Areo framework",
+  "description": "Database integration plugin for Ereo framework",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@areo/core": "workspace:*"
+    "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

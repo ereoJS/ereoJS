@@ -8,11 +8,11 @@ import {
   writeRouteTypes,
   generateAllTypes,
 } from './types';
-import type { Route } from '@areo/core';
+import type { Route } from '@ereo/core';
 import { rm, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-describe('@areo/bundler - Types Plugin', () => {
+describe('@ereo/bundler - Types Plugin', () => {
   describe('extractParams', () => {
     test('extracts no params from static path', () => {
       const params = extractParams('/about');
@@ -53,7 +53,7 @@ describe('@areo/bundler - Types Plugin', () => {
 
       const types = generateRouteTypes(routes);
 
-      expect(types).toContain("declare module '@areo/core'");
+      expect(types).toContain("declare module '@ereo/core'");
       expect(types).toContain("export interface RouteTypes");
       expect(types).toContain("'/':");
       expect(types).toContain("'/about':");
@@ -105,7 +105,7 @@ describe('@areo/bundler - Types Plugin', () => {
     test('handles empty routes array', () => {
       const types = generateRouteTypes([]);
 
-      expect(types).toContain("declare module '@areo/core'");
+      expect(types).toContain("declare module '@ereo/core'");
       expect(types).toContain('export {};');
     });
   });
@@ -185,7 +185,7 @@ describe('@areo/bundler - Types Plugin', () => {
   });
 
   describe('createTypesPlugin', () => {
-    const testOutDir = '.areo-types-test';
+    const testOutDir = '.ereo-types-test';
 
     beforeEach(async () => {
       await rm(testOutDir, { recursive: true, force: true });
@@ -199,7 +199,7 @@ describe('@areo/bundler - Types Plugin', () => {
       const plugin = createTypesPlugin();
 
       expect(plugin).toBeDefined();
-      expect(plugin.name).toBe('areo:types');
+      expect(plugin.name).toBe('ereo:types');
     });
 
     test('has buildEnd hook', () => {
@@ -281,12 +281,12 @@ describe('@areo/bundler - Types Plugin', () => {
         watch: true,
       });
 
-      expect(plugin.name).toBe('areo:types');
+      expect(plugin.name).toBe('ereo:types');
     });
   });
 
   describe('writeRouteTypes', () => {
-    const testOutDir = '.areo-write-test';
+    const testOutDir = '.ereo-write-test';
 
     beforeEach(async () => {
       await rm(testOutDir, { recursive: true, force: true });
@@ -306,7 +306,7 @@ describe('@areo/bundler - Types Plugin', () => {
       await writeRouteTypes(testOutDir, routes);
 
       const content = await Bun.file(join(testOutDir, 'routes.d.ts')).text();
-      expect(content).toContain("declare module '@areo/core'");
+      expect(content).toContain("declare module '@ereo/core'");
       expect(content).toContain("'/':");
       expect(content).toContain("'/about':");
     });
@@ -341,12 +341,12 @@ describe('@areo/bundler - Types Plugin', () => {
       await writeRouteTypes(testOutDir, routes, { inferTypes: false });
 
       const content = await Bun.file(join(testOutDir, 'routes.d.ts')).text();
-      expect(content).toContain("declare module '@areo/core'");
+      expect(content).toContain("declare module '@ereo/core'");
     });
   });
 
   describe('generateAllTypes', () => {
-    const testOutDir = '.areo-all-types-test';
+    const testOutDir = '.ereo-all-types-test';
 
     beforeEach(async () => {
       await rm(testOutDir, { recursive: true, force: true });
@@ -538,7 +538,7 @@ describe('@areo/bundler - Types Plugin', () => {
       const types = generateRouteTypes(routes, { inferTypes: true });
 
       // Should not duplicate imports
-      expect(types).toContain("declare module '@areo/core'");
+      expect(types).toContain("declare module '@ereo/core'");
     });
   });
 

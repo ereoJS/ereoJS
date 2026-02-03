@@ -9,7 +9,7 @@ import {
   type TaggedCache,
 } from './cache';
 
-describe('@areo/core - Unified Cache Interface', () => {
+describe('@ereo/core - Unified Cache Interface', () => {
   describe('MemoryCacheAdapter', () => {
     let cache: MemoryCacheAdapter;
 
