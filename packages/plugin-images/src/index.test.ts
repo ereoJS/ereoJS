@@ -93,8 +93,8 @@ describe('matchesRemotePattern', () => {
     const subUrl = new URL('https://cdn.example.com/image.jpg');
     const mainUrl = new URL('https://example.com/image.jpg');
     expect(matchesRemotePattern(subUrl, patterns)).toBe(true);
-    // *.example.com regex also matches example.com itself
-    expect(matchesRemotePattern(mainUrl, patterns)).toBe(true);
+    // Root domain does not match wildcard pattern
+    expect(matchesRemotePattern(mainUrl, patterns)).toBe(false);
   });
 
   test('matches with pathname pattern', () => {

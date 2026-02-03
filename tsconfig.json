@@ -42,6 +42,7 @@
     "packages/*/dist",
     "packages/*/node_modules",
     "**/*.test.ts",
+    "**/*.test-d.ts",
     "test-ereo-app"
   ]
 }

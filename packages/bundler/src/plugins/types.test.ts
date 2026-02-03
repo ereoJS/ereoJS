@@ -174,10 +174,10 @@ describe('@ereo/bundler - Types Plugin', () => {
       expect(types).toContain('useActionData');
     });
 
-    test('references RouteTypes for type inference', () => {
+    test('references RoutePath for type inference', () => {
       const types = generateHookTypes();
 
-      expect(types).toContain('RouteTypes');
+      expect(types).toContain('RoutePath');
       expect(types).toContain('LoaderDataFor<T>');
       expect(types).toContain('ParamsFor<T>');
       expect(types).toContain('ActionDataFor<T>');

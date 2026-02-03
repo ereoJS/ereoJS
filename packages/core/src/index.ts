@@ -162,7 +162,39 @@ export type {
 
   // Type-safe Routing
   RouteTypes,
+  RouteTypeDefinition,
   TypedRoutes,
   RouteParamsFor,
   LoaderDataFor,
+  SearchParamsFor,
+  HashParamsFor,
+  ContextFor,
+  ActionDataFor,
+  HandleFor,
+  HasLoader,
+  HasAction,
+  RouteData,
 } from './types';
+
+// Path Parser Types (compile-time path analysis)
+export type {
+  InferParams,
+  HasParams,
+  ParamNames,
+  IsOptionalParam,
+  IsCatchAllParam,
+  BuildPath,
+  ValidateParams,
+  StaticPrefix,
+  IsStaticPath,
+  ParentPath,
+  PathMatches,
+  PossiblePaths,
+  BrandedPath,
+  UnbrandPath,
+  ParsedSegment,
+  ParseSegment,
+  ParsePathSegments,
+  SplitPath,
+  ExtractParams,
+} from './types/path-parser';

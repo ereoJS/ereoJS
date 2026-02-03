@@ -115,6 +115,42 @@ export type {
   PrefetchStrategy,
 } from './link';
 
+// Type-Safe Link Components (compile-time route validation)
+export {
+  TypedLink,
+  TypedNavLink,
+  useIsRouteActive,
+  buildUrl,
+} from './typed-link';
+
+export type {
+  TypedLinkProps,
+  TypedNavLinkProps,
+  NavLinkActiveProps as TypedNavLinkActiveProps,
+} from './typed-link';
+
+// Type-Safe Navigation Utilities
+export {
+  typedNavigate,
+  useTypedNavigate,
+  typedRedirect,
+  redirect,
+  buildTypedUrl,
+  parseTypedSearchParams,
+  parseTypedHashParams,
+  goBack as typedGoBack,
+  goForward as typedGoForward,
+  go,
+  isCurrentPath,
+  preloadRoute,
+} from './typed-navigate';
+
+export type {
+  TypedNavigateOptions,
+  TypedRedirectOptions,
+  TypedNavigateFunction,
+} from './typed-navigate';
+
 // Form Components
 export {
   Form,

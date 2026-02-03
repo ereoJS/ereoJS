@@ -41,8 +41,11 @@ describe('BunRuntime', () => {
   test('handle() processes requests through app', async () => {
     const runtime = new BunRuntime();
     const request = new Request('http://localhost:3000/');
+    // handle() returns a Response even if app isn't fully configured
     const response = await runtime.handle(request);
     expect(response).toBeInstanceOf(Response);
+    // Should get 404 or 500 since no routes are configured
+    expect([404, 500]).toContain(response.status);
   });
 });
 

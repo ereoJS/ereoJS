@@ -96,3 +96,52 @@ export type {
   ExecutionStep,
   WaterfallInfo,
 } from './pipeline';
+
+// Route Definition Builder (stable type inference)
+export {
+  defineRoute,
+} from './define-route';
+
+export type {
+  RouteBuilder,
+  RouteBuilderWithLoader,
+  RouteBuilderWithLoaderAndAction,
+  RouteDefinition,
+  TypedLoaderArgs,
+  TypedActionArgs as RouteTypedActionArgs,
+  HeadArgs,
+  HeadData,
+  TypedMetaArgs,
+  RouteMiddleware,
+  ValidationSchema,
+  InferLoaderData as InferRouteLoaderData,
+  InferActionData as InferRouteActionData,
+  InferRouteParams,
+  InferRoutePath,
+} from './define-route';
+
+// Schema Adapters (Zod type alignment)
+export {
+  ereoSchema,
+  isEreoSchema,
+  createPaginationParser,
+  createSortParser,
+  createFilterParser,
+  parseBoolean,
+  parseStringArray,
+  parseDate,
+  parseEnum,
+  schemaBuilder,
+} from './schema-adapters';
+
+export type {
+  EreoSchema,
+  ZodLikeSchema,
+  ValidationError,
+  InferSchemaOutput,
+  InferSchemaInput,
+  PaginationParams,
+  PaginationSchemaOptions,
+  SortParams,
+  FilterParams,
+} from './schema-adapters';
