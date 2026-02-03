@@ -391,5 +391,5 @@ This logs:
 ## Related
 
 - [Islands Concepts](/core-concepts/islands)
-- [initClient](/api/client/init)
+- [Client Hooks](/api/client/hooks)
 - [State Management](/api/state/signals)

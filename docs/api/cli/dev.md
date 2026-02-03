@@ -206,4 +206,4 @@ bun ereo dev --port 3001
 
 - [build](/api/cli/build)
 - [start](/api/cli/start)
-- [Configuration](/guides/configuration)
+- [Environment Variables](/guides/environment-variables)
