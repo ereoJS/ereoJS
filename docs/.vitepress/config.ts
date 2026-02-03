@@ -118,7 +118,8 @@ export default defineConfig({
             { text: 'Plugins', link: '/api/core/plugins' },
             { text: 'Cache', link: '/api/core/cache' },
             { text: 'Environment', link: '/api/core/env' },
-            { text: 'Types', link: '/api/core/types' }
+            { text: 'Types', link: '/api/core/types' },
+            { text: 'Type-Safe Routing', link: '/api/core/type-safe-routing' }
           ]
         },
         {
@@ -138,8 +139,10 @@ export default defineConfig({
           items: [
             { text: 'Hooks', link: '/api/client/hooks' },
             { text: 'Link', link: '/api/client/link' },
+            { text: 'TypedLink', link: '/api/client/typed-link' },
             { text: 'Form', link: '/api/client/form' },
             { text: 'Navigation', link: '/api/client/navigation' },
+            { text: 'Typed Navigation', link: '/api/client/typed-navigation' },
             { text: 'Prefetch', link: '/api/client/prefetch' },
             { text: 'Islands', link: '/api/client/islands' },
             { text: 'Error Boundary', link: '/api/client/error-boundary' }
@@ -149,6 +152,8 @@ export default defineConfig({
           text: '@ereo/data',
           collapsed: false,
           items: [
+            { text: 'defineRoute', link: '/api/data/define-route' },
+            { text: 'Schema Adapters', link: '/api/data/schema-adapters' },
             { text: 'Loaders', link: '/api/data/loaders' },
             { text: 'Actions', link: '/api/data/actions' },
             { text: 'Cache', link: '/api/data/cache' },

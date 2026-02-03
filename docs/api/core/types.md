@@ -64,7 +64,22 @@ import type {
   RouteTypes,
   TypedRoutes,
   RouteParamsFor,
-  LoaderDataFor
+  LoaderDataFor,
+  SearchParamsFor,
+  HashParamsFor,
+  ContextFor,
+  ActionDataFor,
+  HandleFor,
+
+  // Path Parsing Types
+  InferParams,
+  HasParams,
+  ParamNames,
+  IsOptionalParam,
+  IsCatchAllParam,
+  StaticPrefix,
+  IsStaticPath,
+  BrandedPath
 } from '@ereo/core'
 ```
 
@@ -381,29 +396,227 @@ interface TaggedCache extends CacheAdapter {
 
 ## Type-Safe Routing
 
+EreoJS provides comprehensive type-safe routing that exceeds TanStack Start. See the [Type-Safe Routing Guide](/api/core/type-safe-routing) for full details.
+
+### RouteTypes Registry
+
+The automatically generated interface containing type information for all routes.
+
+```ts
+// Auto-generated in .ereo/routes.d.ts
+declare module '@ereo/core' {
+  interface RouteTypes {
+    '/users/[id]': {
+      params: { id: string }
+      search: { tab?: string; sort?: 'asc' | 'desc' }
+      hash: { section?: string }          // Unique to Ereo!
+      loader: { user: User }
+      action: { success: boolean }
+      context: { auth: AuthContext }
+    }
+  }
+}
+```
+
+### TypedRoutes
+
+Union of all valid route paths.
+
+```ts
+type TypedRoutes = keyof RouteTypes
+// '/users' | '/users/[id]' | '/posts' | ...
+```
+
 ### RouteParamsFor
 
 Extracts params type from a route path.
 
 ```ts
-type RouteParamsFor<Path extends string> = /* ... */
+type RouteParamsFor<Path extends TypedRoutes> = RouteTypes[Path]['params']
 
 // Example:
-type Params = RouteParamsFor<'/posts/[id]/comments/[commentId]'>
-// { id: string; commentId: string }
+type Params = RouteParamsFor<'/users/[id]'>
+// { id: string }
+
+type MultiParams = RouteParamsFor<'/users/[id]/posts/[postId]'>
+// { id: string; postId: string }
+```
+
+### SearchParamsFor
+
+Extracts search params type from a route.
+
+```ts
+type SearchParamsFor<Path extends TypedRoutes> = RouteTypes[Path]['search']
+
+// Example:
+type SearchParams = SearchParamsFor<'/posts'>
+// { page?: number; sort?: 'newest' | 'oldest' }
+```
+
+### HashParamsFor (Ereo Exclusive)
+
+Extracts hash params type from a route. This feature is unique to EreoJS.
+
+```ts
+type HashParamsFor<Path extends TypedRoutes> = RouteTypes[Path]['hash']
+
+// Example:
+type HashParams = HashParamsFor<'/docs/[topic]'>
+// { section?: string; highlight?: string }
 ```
 
 ### LoaderDataFor
 
-Extracts loader data type from a route module.
+Extracts loader data type from a route.
 
 ```ts
-type LoaderDataFor<Module> =
-  Module extends { loader: LoaderFunction<infer T> } ? T : never
+type LoaderDataFor<Path extends TypedRoutes> = RouteTypes[Path]['loader']
 
 // Example:
-import type PostModule from './routes/posts/[id]'
-type PostData = LoaderDataFor<typeof PostModule>
+type PostData = LoaderDataFor<'/posts/[slug]'>
+// { post: Post }
+```
+
+### ActionDataFor
+
+Extracts action data type from a route.
+
+```ts
+type ActionDataFor<Path extends TypedRoutes> = RouteTypes[Path]['action']
+
+// Example:
+type ActionResult = ActionDataFor<'/posts/[slug]'>
+// { success: boolean }
+```
+
+### ContextFor
+
+Extracts inherited context type from a route.
+
+```ts
+type ContextFor<Path extends TypedRoutes> = RouteTypes[Path]['context']
+
+// Example:
+type RouteContext = ContextFor<'/dashboard/settings'>
+// { user: User; settings: Settings }
+```
+
+### HandleFor
+
+Extracts handle type from a route.
+
+```ts
+type HandleFor<Path extends TypedRoutes> = RouteTypes[Path]['handle']
+
+// Example:
+type RouteHandle = HandleFor<'/users/[id]'>
+// { breadcrumb: string }
+```
+
+## Path Parsing Types
+
+Template literal types for compile-time path parameter inference.
+
+### InferParams
+
+Infers params type from a path pattern at compile time.
+
+```ts
+type InferParams<Path extends string> = /* template literal magic */
+
+// Examples:
+type P1 = InferParams<'/users/[id]'>
+// { id: string }
+
+type P2 = InferParams<'/users/[id]/posts/[postId]'>
+// { id: string; postId: string }
+
+type P3 = InferParams<'/blog/[[page]]'>
+// { page?: string }
+
+type P4 = InferParams<'/docs/[...path]'>
+// { path: string[] }
+
+type P5 = InferParams<'/[lang]/docs/[version]/[...path]'>
+// { lang: string; version: string; path: string[] }
+```
+
+### HasParams
+
+Check if a route path has dynamic parameters.
+
+```ts
+type HasParams<Path extends string> = /* ... */
+
+// Examples:
+type Has = HasParams<'/users/[id]'>  // true
+type NoParams = HasParams<'/about'>   // false
+```
+
+### ParamNames
+
+Extract parameter names from a path.
+
+```ts
+type ParamNames<Path extends string> = /* ... */
+
+// Example:
+type Names = ParamNames<'/users/[id]/posts/[postId]'>
+// 'id' | 'postId'
+```
+
+### IsOptionalParam
+
+Check if a specific parameter is optional.
+
+```ts
+type IsOptionalParam<Path extends string, Param extends string> = /* ... */
+
+// Example:
+type IsOpt = IsOptionalParam<'/blog/[[page]]', 'page'>  // true
+```
+
+### IsCatchAllParam
+
+Check if a specific parameter is catch-all.
+
+```ts
+type IsCatchAllParam<Path extends string, Param extends string> = /* ... */
+
+// Example:
+type IsCatch = IsCatchAllParam<'/docs/[...path]', 'path'>  // true
+```
+
+### StaticPrefix
+
+Get the static prefix of a path (before any parameters).
+
+```ts
+type StaticPrefix<Path extends string> = /* ... */
+
+// Example:
+type Prefix = StaticPrefix<'/api/users/[id]'>  // '/api/users'
+```
+
+### IsStaticPath
+
+Check if a path has no dynamic parameters.
+
+```ts
+type IsStaticPath<Path extends string> = /* ... */
+
+// Examples:
+type Static = IsStaticPath<'/about'>        // true
+type Dynamic = IsStaticPath<'/users/[id]'>  // false
+```
+
+### BrandedPath
+
+Type brand for preserving path information.
+
+```ts
+type BrandedPath<Path extends string> = string & { readonly __path: Path }
 ```
 
 ## Utility Types
