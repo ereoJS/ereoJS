@@ -1,13 +1,53 @@
 /**
  * @ereo/db - Database integration plugin
  *
- * Provides database connectivity with SQLite support via Bun's native bun:sqlite.
- * Features:
- * - Query builder API with type-safe CRUD operations
- * - Transaction support
- * - Connection management
- * - Caching integration
+ * @deprecated This package is deprecated. Please migrate to:
+ * - `@ereo/db` for core abstractions
+ * - `@ereo/db-drizzle` for Drizzle ORM adapter (recommended)
+ *
+ * Migration guide:
+ * ```typescript
+ * // Old (deprecated):
+ * import { createDatabasePlugin, useDB } from '@ereo/db';
+ *
+ * // New (recommended):
+ * import { createDrizzleAdapter } from '@ereo/db-drizzle';
+ * import { createDatabasePlugin, useDb } from '@ereo/db';
+ *
+ * const adapter = createDrizzleAdapter({
+ *   driver: 'bun-sqlite',
+ *   url: './data.db',
+ *   schema,
+ * });
+ *
+ * export default defineConfig({
+ *   plugins: [createDatabasePlugin(adapter)],
+ * });
+ * ```
+ *
+ * This package will continue to work but will not receive new features.
+ * The new packages provide:
+ * - Multiple database driver support (PostgreSQL, MySQL, SQLite, etc.)
+ * - Edge runtime compatibility (Neon, PlanetScale, Turso)
+ * - Query deduplication
+ * - Better TypeScript integration via Drizzle ORM
  */
+
+// Show deprecation warning on import
+const DEPRECATION_WARNING = `
+\x1b[33m⚠ DEPRECATION WARNING:\x1b[0m @ereo/db is deprecated.
+Please migrate to @ereo/db-drizzle for improved database support.
+See: https://ereo.dev/docs/database/migration
+`;
+
+// Only show warning once and in non-production environments
+if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  const warningKey = '__ereo_db_deprecation_shown';
+  if (!(globalThis as any)[warningKey]) {
+    console.warn(DEPRECATION_WARNING);
+    (globalThis as any)[warningKey] = true;
+  }
+}
 
 import { Database, Statement, type SQLQueryBindings } from 'bun:sqlite';
 import type { Plugin, AppContext } from '@ereo/core';

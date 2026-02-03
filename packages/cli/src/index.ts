@@ -10,6 +10,19 @@ import { build, type BuildCommandOptions } from './commands/build';
 import { start, type StartOptions } from './commands/start';
 import { create, type CreateOptions } from './commands/create';
 import { deploy, printDeployHelp, type DeployOptions, type DeployTarget } from './commands/deploy';
+import {
+  dbMigrate,
+  dbGenerate,
+  dbStudio,
+  dbPush,
+  dbSeed,
+  printDbHelp,
+  type DbMigrateOptions,
+  type DbGenerateOptions,
+  type DbStudioOptions,
+  type DbPushOptions,
+  type DbSeedOptions,
+} from './commands/db';
 
 /**
  * CLI version.
@@ -32,6 +45,7 @@ function printHelp(): void {
     start       Start production server
     create      Create new project
     deploy      Deploy to production
+    db:*        Database commands (db:migrate, db:generate, db:studio, db:push, db:seed)
 
   \x1b[1mDev Options:\x1b[0m
     --port, -p  Port number (default: 3000)
@@ -56,12 +70,20 @@ function printHelp(): void {
     --dry-run   Preview deployment
     --name      Project name
 
+  \x1b[1mDatabase Commands:\x1b[0m
+    ereo db:migrate           Run pending migrations
+    ereo db:generate --name   Generate migration from schema
+    ereo db:studio            Open Drizzle Studio
+    ereo db:push              Push schema (dev only)
+    ereo db:seed              Run database seeders
+
   \x1b[1mExamples:\x1b[0m
     ereo dev --port 8080
     ereo build --minify
     ereo start --port 3001
     ereo create my-app --template tailwind
     ereo deploy vercel --prod
+    ereo db:generate --name add_users
 
   Version: ${VERSION}
 `);
@@ -199,7 +221,68 @@ async function main(): Promise<void> {
         break;
       }
 
+      // Database commands
+      case 'db:migrate': {
+        const migrateOptions: DbMigrateOptions = {
+          config: options.config as string | undefined,
+          verbose: !!(options.verbose || options.v),
+        };
+        await dbMigrate(migrateOptions);
+        break;
+      }
+
+      case 'db:generate': {
+        const generateOptions: DbGenerateOptions = {
+          name: (options.name || positional[0]) as string,
+          config: options.config as string | undefined,
+          out: options.out as string | undefined,
+        };
+        await dbGenerate(generateOptions);
+        break;
+      }
+
+      case 'db:studio': {
+        const studioOptions: DbStudioOptions = {
+          port: options.port ? parseInt(options.port as string) : undefined,
+          config: options.config as string | undefined,
+          open: options.open !== false,
+        };
+        await dbStudio(studioOptions);
+        break;
+      }
+
+      case 'db:push': {
+        const pushOptions: DbPushOptions = {
+          config: options.config as string | undefined,
+          force: !!(options.force || options.f),
+          verbose: !!(options.verbose || options.v),
+        };
+        await dbPush(pushOptions);
+        break;
+      }
+
+      case 'db:seed': {
+        const seedOptions: DbSeedOptions = {
+          file: options.file as string | undefined,
+          reset: !!(options.reset || options.r),
+        };
+        await dbSeed(seedOptions);
+        break;
+      }
+
+      case 'db':
+      case 'db:help': {
+        printDbHelp();
+        break;
+      }
+
       default:
+        // Check if it's a db: command we don't recognize
+        if (command.startsWith('db:')) {
+          console.error(`\n  \x1b[31m✗\x1b[0m Unknown database command: ${command}\n`);
+          printDbHelp();
+          process.exit(1);
+        }
         console.error(`\n  \x1b[31m✗\x1b[0m Unknown command: ${command}\n`);
         printHelp();
         process.exit(1);
@@ -212,7 +295,9 @@ async function main(): Promise<void> {
 
 // Export commands for programmatic use
 export { dev, build, start, create, deploy };
+export { dbMigrate, dbGenerate, dbStudio, dbPush, dbSeed };
 export type { DevOptions, BuildCommandOptions, StartOptions, CreateOptions, DeployOptions, DeployTarget };
+export type { DbMigrateOptions, DbGenerateOptions, DbStudioOptions, DbPushOptions, DbSeedOptions };
 
 // Run CLI
 main().catch(console.error);

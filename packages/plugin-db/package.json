@@ -1,16 +1,23 @@
 {
-  "name": "@ereo/db",
+  "name": "@ereo/plugin-db",
   "version": "0.1.0",
-  "description": "Database integration plugin for EreoJS framework",
+  "description": "Database integration plugin for EreoJS framework (DEPRECATED - use @ereo/db and @ereo/db-drizzle)",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
+  "deprecated": "This package is deprecated. Please migrate to @ereo/db and @ereo/db-drizzle",
   "dependencies": {
     "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.0.0"
-  }
+  },
+  "keywords": [
+    "ereo",
+    "database",
+    "sqlite",
+    "deprecated"
+  ]
 }

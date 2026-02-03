@@ -1,0 +1,57 @@
+{
+  "name": "@ereo/db-drizzle",
+  "version": "0.1.0",
+  "description": "Drizzle ORM adapter for EreoJS database abstraction",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ereo/db": "workspace:*",
+    "drizzle-orm": "^0.30.0"
+  },
+  "peerDependencies": {
+    "postgres": "^3.4.0",
+    "@neondatabase/serverless": "^0.9.0",
+    "@planetscale/database": "^1.16.0",
+    "@libsql/client": "^0.5.0",
+    "better-sqlite3": "^9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "postgres": {
+      "optional": true
+    },
+    "@neondatabase/serverless": {
+      "optional": true
+    },
+    "@planetscale/database": {
+      "optional": true
+    },
+    "@libsql/client": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "typescript": "^5.4.0"
+  }
+}
