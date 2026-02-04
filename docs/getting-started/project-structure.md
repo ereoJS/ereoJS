@@ -119,21 +119,27 @@ app/routes/
 
 ### API Routes
 
-Files that export only HTTP method handlers become API routes:
+API routes use `loader` for GET requests and `action` for mutations (POST, PUT, DELETE, PATCH):
 
 ```ts
 // app/routes/api/users.ts
-export async function GET(request: Request) {
+import type { LoaderArgs, ActionArgs } from '@ereo/core'
+
+// GET handler - use loader
+export async function loader({ request }: LoaderArgs) {
   const users = await db.users.findMany()
-  return Response.json(users)
+  return users // Plain data is serialized to JSON
 }
 
-export async function POST(request: Request) {
+// POST handler - use action
+export async function action({ request }: ActionArgs) {
   const body = await request.json()
   const user = await db.users.create(body)
-  return Response.json(user, { status: 201 })
+  return user
 }
 ```
+
+**Note:** For API routes, request the endpoint with `Accept: application/json` header to receive JSON directly. Without this header, routes without a `default` component export will return a minimal HTML page with the data embedded.
 
 ## Components Directory
 
