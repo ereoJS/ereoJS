@@ -231,6 +231,64 @@ export class RouteTree {
 
     return layouts;
   }
+
+  /**
+   * Attach middleware to a route segment.
+   * Middleware applies to all routes in and below this segment.
+   */
+  attachMiddleware(path: string, middlewareFile: string): void {
+    // Find the node at this path or its parent
+    const node = this.findByPath(path);
+    if (node) {
+      node.middlewareFile = middlewareFile;
+      return;
+    }
+
+    // If no exact match, attach to root (for root _middleware.ts)
+    if (path === '/') {
+      this.root.middlewareFile = middlewareFile;
+    }
+  }
+
+  /**
+   * Get the middleware chain for a route (from root to leaf).
+   */
+  getMiddlewareChain(routeId: string): Array<{ file: string; module?: { middleware?: any } }> {
+    const node = this.findById(routeId);
+    if (!node) return [];
+
+    const middlewares: Array<{ file: string; module?: { middleware?: any } }> = [];
+
+    // Collect middleware from root to the matched route
+    const collectMiddleware = (current: RouteNode | undefined): void => {
+      if (!current) return;
+
+      // Process parent first (root to leaf order)
+      if (current.parent) {
+        collectMiddleware(current.parent);
+      }
+
+      // Add middleware if this node has one
+      if (current.middlewareFile) {
+        middlewares.push({
+          file: current.middlewareFile,
+          module: current.middlewareModule,
+        });
+      }
+    };
+
+    collectMiddleware(node);
+
+    // Also check root middleware
+    if (this.root.middlewareFile && !middlewares.find(m => m.file === this.root.middlewareFile)) {
+      middlewares.unshift({
+        file: this.root.middlewareFile,
+        module: this.root.middlewareModule,
+      });
+    }
+
+    return middlewares;
+  }
 }
 
 /**
@@ -239,7 +297,7 @@ export class RouteTree {
 export function filePathToUrlPath(
   filePath: string,
   routesDir: string
-): { path: string; index: boolean; layout: boolean } {
+): { path: string; index: boolean; layout: boolean; middleware: boolean } {
   // Remove routes directory prefix and extension
   let path = filePath
     .replace(routesDir, '')
@@ -248,11 +306,12 @@ export function filePathToUrlPath(
   // Handle special files
   const fileName = path.split('/').pop() || '';
   const isLayout = fileName === SPECIAL_FILES.LAYOUT;
+  const isMiddleware = fileName === SPECIAL_FILES.MIDDLEWARE;
   const isIndex = fileName === 'index';
 
   // Remove special file names from path
-  if (isLayout || isIndex) {
-    path = path.replace(/\/?(index|_layout)$/, '');
+  if (isLayout || isIndex || isMiddleware) {
+    path = path.replace(/\/?(index|_layout|_middleware)$/, '');
   }
 
   // Handle route groups - remove from URL but keep in structure
@@ -276,6 +335,7 @@ export function filePathToUrlPath(
     path: path || '/',
     index: isIndex,
     layout: isLayout,
+    middleware: isMiddleware,
   };
 }
 
@@ -288,8 +348,21 @@ export function buildRouteTree(
 ): RouteTree {
   const tree = new RouteTree();
 
-  // Sort files to ensure layouts are processed first
-  const sortedFiles = [...files].sort((a, b) => {
+  // Separate middleware files from route files
+  const middlewareFiles: Array<{ relativePath: string; absolutePath: string; path: string }> = [];
+  const routeFiles: Array<{ relativePath: string; absolutePath: string }> = [];
+
+  for (const file of files) {
+    const { path, middleware } = filePathToUrlPath(file.relativePath, routesDir);
+    if (middleware) {
+      middlewareFiles.push({ ...file, path });
+    } else {
+      routeFiles.push(file);
+    }
+  }
+
+  // Sort route files to ensure layouts are processed first
+  const sortedFiles = [...routeFiles].sort((a, b) => {
     const aIsLayout = a.relativePath.includes(SPECIAL_FILES.LAYOUT);
     const bIsLayout = b.relativePath.includes(SPECIAL_FILES.LAYOUT);
     if (aIsLayout && !bIsLayout) return -1;
@@ -302,6 +375,11 @@ export function buildRouteTree(
     const id = file.relativePath.replace(/\.(tsx?|jsx?)$/, '');
 
     tree.addRoute(id, path, file.absolutePath, { index, layout });
+  }
+
+  // Attach middleware files to their corresponding route segments
+  for (const mw of middlewareFiles) {
+    tree.attachMiddleware(mw.path, mw.absolutePath);
   }
 
   return tree;

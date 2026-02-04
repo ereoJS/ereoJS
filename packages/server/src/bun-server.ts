@@ -246,6 +246,21 @@ export class BunServer {
               await this.router.loadModule(layout);
             }
 
+            // Load and execute route-level middleware
+            if (typeof this.router.loadMiddlewareForRoute === 'function') {
+              const middlewareChain = await this.router.loadMiddlewareForRoute(matchResult.route.id);
+
+              if (middlewareChain.length > 0) {
+                // Execute middleware chain before handling route
+                return this.executeRouteMiddleware(
+                  request,
+                  context,
+                  middlewareChain,
+                  () => this.handleRoute(request, matchResult, context)
+                );
+              }
+            }
+
             // Use BunServer's handleRoute for full HTML rendering with layouts
             return this.handleRoute(request, matchResult, context);
           } else {
@@ -277,6 +292,36 @@ export class BunServer {
     } catch (error) {
       return this.handleError(error, context);
     }
+  }
+
+  /**
+   * Execute route-level middleware chain.
+   */
+  private async executeRouteMiddleware(
+    request: Request,
+    context: RequestContext,
+    middlewareChain: Array<{ file: string; middleware: Function }>,
+    handler: () => Promise<Response>
+  ): Promise<Response> {
+    // Build the middleware chain from inside out
+    let next = handler;
+
+    // Process middleware in reverse order so they execute in correct order
+    for (let i = middlewareChain.length - 1; i >= 0; i--) {
+      const mw = middlewareChain[i];
+      const currentNext = next;
+
+      next = async () => {
+        try {
+          return await mw.middleware(request, currentNext, context);
+        } catch (error) {
+          console.error(`Middleware error (${mw.file}):`, error);
+          throw error;
+        }
+      };
+    }
+
+    return next();
   }
 
   /**

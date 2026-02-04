@@ -46,6 +46,12 @@ export interface RouteNode {
   index: boolean;
   /** Is this a layout? */
   layout: boolean;
+  /** Is this a middleware file? */
+  middleware?: boolean;
+  /** Middleware file path for this segment (if exists) */
+  middlewareFile?: string;
+  /** Loaded middleware module */
+  middlewareModule?: { middleware?: MiddlewareFunction };
   /** Child routes */
   children: RouteNode[];
   /** Parent route (for layout resolution) */
@@ -55,6 +61,14 @@ export interface RouteNode {
   /** Score for sorting (more specific routes first) */
   score: number;
 }
+
+/**
+ * Middleware function type.
+ */
+export type MiddlewareFunction = (
+  request: Request,
+  next: () => Promise<Response>
+) => Promise<Response> | Response;
 
 /**
  * Router options.
@@ -82,6 +96,8 @@ export interface MatchResult {
   pathname: string;
   /** Layouts to render (from root to leaf) */
   layouts: Route[];
+  /** Middleware to execute (from root to leaf) */
+  middlewares?: Array<{ file: string; module?: { middleware?: MiddlewareFunction } }>;
 }
 
 /**
@@ -130,6 +146,7 @@ export const SPECIAL_FILES = {
   ERROR: '_error',
   LOADING: '_loading',
   NOT_FOUND: '_404',
+  MIDDLEWARE: '_middleware',
 } as const;
 
 /**

@@ -295,6 +295,46 @@ export class FileRouter {
   }
 
   /**
+   * Load middleware for a route path.
+   * Returns an array of middleware functions from root to the route's segment.
+   */
+  async loadMiddlewareForRoute(routeId: string): Promise<Array<{ file: string; middleware: Function }>> {
+    if (!this.tree) return [];
+
+    const middlewareChain = this.tree.getMiddlewareChain(routeId);
+    const result: Array<{ file: string; middleware: Function }> = [];
+
+    for (const mw of middlewareChain) {
+      if (!mw.module) {
+        try {
+          const mod = await import(mw.file);
+          mw.module = mod;
+        } catch (error) {
+          console.error(`Failed to load middleware: ${mw.file}`, error);
+          continue;
+        }
+      }
+
+      if (mw.module?.middleware) {
+        result.push({
+          file: mw.file,
+          middleware: mw.module.middleware,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get middleware chain for a matched route.
+   */
+  getMiddlewareChain(routeId: string): Array<{ file: string; module?: any }> {
+    if (!this.tree) return [];
+    return this.tree.getMiddlewareChain(routeId);
+  }
+
+  /**
    * Find parent route for a given route.
    */
   private findParentRoute(route: Route): Route | undefined {
