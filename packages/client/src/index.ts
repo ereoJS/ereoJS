@@ -196,6 +196,11 @@ export type {
   UseErrorBoundaryReturn,
 } from './error-boundary';
 
+// Await Component (for Streaming SSR)
+export { Await, resolveAwait } from './await';
+
+export type { AwaitProps, DeferredData } from './await';
+
 /**
  * Initialize the client runtime.
  * Call this in your entry point.

@@ -90,6 +90,9 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
     getTags() {
       return Array.from(cacheTags);
     },
+    addTags(tags: string[]) {
+      tags.forEach((tag) => cacheTags.add(tag));
+    },
   };
 
   const context: TestContext = {

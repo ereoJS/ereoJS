@@ -49,6 +49,9 @@ export class RequestContext implements AppContext {
     },
     get: () => this.cacheOptions,
     getTags: () => this.cacheTags,
+    addTags: (tags: string[]) => {
+      this.cacheTags = [...new Set([...this.cacheTags, ...tags])];
+    },
   };
 
   /**

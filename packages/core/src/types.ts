@@ -563,6 +563,8 @@ export interface CacheControl {
   set: (options: CacheOptions) => void;
   get: () => CacheOptions | undefined;
   getTags: () => string[];
+  /** Add additional cache tags dynamically */
+  addTags: (tags: string[]) => void;
 }
 
 // ============================================================================
