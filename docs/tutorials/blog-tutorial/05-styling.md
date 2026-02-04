@@ -77,10 +77,10 @@ Replace `public/styles.css` with:
 
 ## Update Layout
 
-Update `src/routes/_layout.tsx`:
+Update `app/routes/_layout.tsx`:
 
 ```tsx
-// src/routes/_layout.tsx
+// app/routes/_layout.tsx
 import { Link, NavLink } from '@ereo/client'
 
 export default function RootLayout({ children }) {
@@ -142,7 +142,7 @@ export default function RootLayout({ children }) {
 ## Update Home Page
 
 ```tsx
-// src/routes/index.tsx
+// app/routes/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
 import { getPosts } from '../lib/db'
@@ -216,7 +216,7 @@ export default function Home({ loaderData }) {
 ## Update Posts List
 
 ```tsx
-// src/routes/posts/index.tsx
+// app/routes/posts/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
 import { getPosts } from '../../lib/db'
@@ -289,7 +289,7 @@ export default function Posts({ loaderData }) {
 
 ```tsx
 // Update the post detail page with Tailwind classes
-// src/routes/posts/[slug].tsx
+// app/routes/posts/[slug].tsx
 
 export default function PostPage({ loaderData }) {
   const { post, comments } = loaderData

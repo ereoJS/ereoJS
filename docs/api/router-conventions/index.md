@@ -40,7 +40,7 @@ The `@ereo/router-conventions` package enables convention-based routing configur
 ### Examples
 
 ```
-src/routes/
+app/routes/
   index.tsx           # Default SSR
   about.ssg.tsx       # Static generation
   dashboard.client.tsx # Client-only rendering
@@ -56,7 +56,7 @@ src/routes/
 ### Standard Routes
 
 ```
-src/routes/
+app/routes/
   index.tsx              # /
   about.tsx              # /about
   contact.tsx            # /contact
@@ -65,7 +65,7 @@ src/routes/
 ### Nested Routes
 
 ```
-src/routes/
+app/routes/
   blog/
     index.tsx            # /blog
     [slug].tsx           # /blog/:slug
@@ -77,7 +77,7 @@ src/routes/
 ### Dynamic Routes
 
 ```
-src/routes/
+app/routes/
   posts/
     [id].tsx             # /posts/:id (single param)
     [id]/
@@ -93,7 +93,7 @@ src/routes/
 Layout files wrap child routes with shared UI:
 
 ```
-src/routes/
+app/routes/
   _layout.tsx            # Root layout
   dashboard/
     _layout.tsx          # Dashboard-specific layout
@@ -102,7 +102,7 @@ src/routes/
 ```
 
 ```tsx
-// src/routes/dashboard/_layout.tsx
+// app/routes/dashboard/_layout.tsx
 export default function DashboardLayout({ children }) {
   return (
     <div className="dashboard">
@@ -118,7 +118,7 @@ export default function DashboardLayout({ children }) {
 Components in `_islands` directories are automatically extracted as interactive islands:
 
 ```
-src/routes/
+app/routes/
   _islands/
     Counter.tsx          # Auto-extracted island
     SearchBar.tsx        # Auto-extracted island
@@ -547,7 +547,7 @@ getEffectiveRenderMode('page.tsx')             // 'ssr'
 Explicit configuration in route files takes precedence over conventions:
 
 ```tsx
-// src/routes/posts/[id].ssg.tsx
+// app/routes/posts/[id].ssg.tsx
 
 // Convention says SSG, but explicit config can override
 export const config = {

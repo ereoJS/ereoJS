@@ -77,7 +77,7 @@ import 'virtual:tailwind.css'
 ### 4. Import in Root
 
 ```tsx
-// src/routes/_layout.tsx
+// app/routes/_layout.tsx
 import '../styles/global.css'
 
 export default function RootLayout({ children }) {

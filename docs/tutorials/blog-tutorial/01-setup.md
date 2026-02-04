@@ -176,10 +176,10 @@ export function createComment(data: {
 
 ## Create the Root Layout
 
-Create `src/routes/_layout.tsx`:
+Create `app/routes/_layout.tsx`:
 
 ```tsx
-// src/routes/_layout.tsx
+// app/routes/_layout.tsx
 import { Link } from '@ereo/client'
 
 export default function RootLayout({ children }) {
@@ -350,10 +350,10 @@ a {
 
 ## Update the Home Page
 
-Replace `src/routes/index.tsx`:
+Replace `app/routes/index.tsx`:
 
 ```tsx
-// src/routes/index.tsx
+// app/routes/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
 import { getPosts } from '../lib/db'

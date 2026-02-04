@@ -10,68 +10,97 @@ Located at `/packages/examples/minimal` in the repository.
 
 ```
 minimal/
-├── src/
-│   ├── routes/
-│   │   ├── _layout.tsx
-│   │   └── index.tsx
-│   └── index.ts
+├── app/
+│   └── routes/
+│       ├── _layout.tsx
+│       └── index.tsx
+├── ereo.config.ts
 ├── package.json
-└── tsconfig.json
+└── .gitignore
 ```
 
 ## Files
 
-### Entry Point
+### Configuration
+
+EreoJS uses a configuration file instead of a manual entry point:
 
 ```ts
-// src/index.ts
-import { createApp } from '@ereo/core'
-import { createFileRouter } from '@ereo/router'
-import { createServer } from '@ereo/server'
+// ereo.config.ts
+import { defineConfig } from '@ereo/core';
 
-async function main() {
-  const app = createApp()
-  const router = await createFileRouter({ routesDir: './src/routes' })
-  app.setRoutes(router.getRoutes())
-
-  const server = createServer(app)
-  server.listen(3000, () => {
-    console.log('Server running at http://localhost:3000')
-  })
-}
-
-main()
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
+});
 ```
 
 ### Layout
 
+The root layout wraps all pages and sets up the HTML document:
+
 ```tsx
-// src/routes/_layout.tsx
-export default function RootLayout({ children }) {
+// app/routes/_layout.tsx
+import type { RouteComponentProps } from '@ereo/core';
+
+export default function RootLayout({ children }: RouteComponentProps) {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>EreoJS App</title>
+        <title>EreoJS Minimal</title>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+      </body>
     </html>
-  )
+  );
 }
 ```
 
 ### Home Page
 
+The index page demonstrates the loader pattern for server-side data loading:
+
 ```tsx
-// src/routes/index.tsx
-export default function Home() {
+// app/routes/index.tsx
+import type { LoaderArgs } from '@ereo/core';
+
+export async function loader({ request }: LoaderArgs) {
+  return {
+    message: 'Hello from EreoJS!',
+  };
+}
+
+export default function HomePage({ loaderData }: { loaderData: { message: string } }) {
   return (
-    <div>
-      <h1>Welcome to EreoJS</h1>
-      <p>A React fullstack framework built on Bun.</p>
-    </div>
-  )
+    <main>
+      <h1>{loaderData.message}</h1>
+    </main>
+  );
+}
+```
+
+## Dependencies
+
+The minimal example uses these workspace packages:
+
+```json
+{
+  "dependencies": {
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/server": "workspace:*",
+    "@ereo/client": "workspace:*",
+    "@ereo/data": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@ereo/cli": "workspace:*"
+  }
 }
 ```
 
@@ -80,12 +109,57 @@ export default function Home() {
 ```bash
 cd packages/examples/minimal
 bun install
-bun dev
+bun run dev
 ```
+
+Visit `http://localhost:3000` to see the app.
 
 ## What This Demonstrates
 
-- Basic project setup
-- File-based routing
-- Root layout
-- Simple page component
+| Feature | Implementation |
+|---------|----------------|
+| Configuration | `defineConfig()` in `ereo.config.ts` |
+| File-based routing | Files in `app/routes/` directory |
+| Root layout | `_layout.tsx` with `RouteComponentProps` |
+| Data loading | `loader` function with `LoaderArgs` type |
+| Type safety | Full TypeScript support with typed props |
+
+## Key Patterns
+
+### Loader Pattern
+
+The `loader` function runs on the server before rendering:
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  // Fetch data, access databases, etc.
+  return { data: 'value' };
+}
+
+export default function Page({ loaderData }: { loaderData: { data: string } }) {
+  // loaderData contains the loader's return value
+  return <div>{loaderData.data}</div>;
+}
+```
+
+### Layout Pattern
+
+Layouts wrap child routes and use the `children` prop:
+
+```tsx
+export default function Layout({ children }: RouteComponentProps) {
+  return (
+    <div className="layout">
+      <nav>Navigation</nav>
+      <main>{children}</main>
+    </div>
+  );
+}
+```
+
+## Related
+
+- [Getting Started](/getting-started/)
+- [Routing](/core-concepts/routing)
+- [Data Loading](/core-concepts/data-loading)
+- [Blog Example](/examples/blog) - More complete example

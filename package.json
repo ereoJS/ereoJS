@@ -18,7 +18,11 @@
     "test:client": "bun test packages/client",
     "test:bundler": "bun test packages/bundler",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf packages/*/dist"
+    "clean": "rm -rf packages/*/dist",
+    "publish:patch": "bun scripts/publish.ts patch",
+    "publish:minor": "bun scripts/publish.ts minor",
+    "publish:major": "bun scripts/publish.ts major",
+    "publish:dry": "bun scripts/publish.ts patch --dry-run"
   },
   "dependencies": {
     "react": "^18.2.0",

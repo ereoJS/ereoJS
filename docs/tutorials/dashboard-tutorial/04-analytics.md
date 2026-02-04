@@ -312,7 +312,7 @@ export default function AnalyticsChart({ data }: { data: DataSet }) {
 
 ## Analytics Page
 
-Create `src/routes/dashboard/analytics.tsx`:
+Create `app/routes/dashboard/analytics.tsx`:
 
 ```tsx
 import { createLoader } from '@ereo/data'

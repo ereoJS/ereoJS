@@ -367,7 +367,7 @@ const html = generateInspectorHTML([
   {
     id: 'home',
     path: '/',
-    file: 'src/routes/index.tsx',
+    file: 'app/routes/index.tsx',
     renderMode: 'ssr',
     islandCount: 2,
     hasLoader: true,
@@ -423,13 +423,13 @@ console.log(formatRouteTree(routeInfo))
 Route Tree:
 
   ⚡ / [loader]
-     → src/routes/index.tsx
+     → app/routes/index.tsx
   📄 /about
-     → src/routes/about.ssg.tsx
+     → app/routes/about.ssg.tsx
   🔌 /api/posts [loader, action]
-     → src/routes/api/posts.api.ts
+     → app/routes/api/posts.api.ts
   🚀 /dashboard [auth, 3 islands]
-     → src/routes/dashboard.tsx
+     → app/routes/dashboard.tsx
 ```
 
 **Render Mode Icons:**

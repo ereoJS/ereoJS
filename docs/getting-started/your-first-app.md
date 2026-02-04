@@ -13,10 +13,10 @@ cd tasks-app
 
 ## Step 1: Create the Home Page
 
-Replace `src/routes/index.tsx`:
+Replace `app/routes/index.tsx`:
 
 ```tsx
-// src/routes/index.tsx
+// app/routes/index.tsx
 import { Link } from '@ereo/client'
 
 export default function Home() {
@@ -35,10 +35,11 @@ export default function Home() {
 Create a layout that wraps all pages:
 
 ```tsx
-// src/routes/_layout.tsx
+// app/routes/_layout.tsx
+import type { RouteComponentProps } from '@ereo/core'
 import { Link } from '@ereo/client'
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: RouteComponentProps) {
   return (
     <html lang="en">
       <head>
@@ -62,8 +63,8 @@ export default function RootLayout({ children }) {
 ## Step 3: Create a Tasks List Page
 
 ```tsx
-// src/routes/tasks/index.tsx
-import { createLoader } from '@ereo/data'
+// app/routes/tasks/index.tsx
+import type { LoaderArgs } from '@ereo/core'
 import { Link } from '@ereo/client'
 
 // Simulated database
@@ -73,12 +74,12 @@ const tasks = [
   { id: '3', title: 'Deploy to production', completed: false },
 ]
 
-export const loader = createLoader(async () => {
+export async function loader({ request }: LoaderArgs) {
   // In a real app, fetch from database
   return { tasks }
-})
+}
 
-export default function TasksPage({ loaderData }) {
+export default function TasksPage({ loaderData }: { loaderData: { tasks: typeof tasks } }) {
   const { tasks } = loaderData
 
   return (
@@ -104,8 +105,9 @@ export default function TasksPage({ loaderData }) {
 ## Step 4: Create a Task Detail Page
 
 ```tsx
-// src/routes/tasks/[id].tsx
-import { createLoader, createAction, redirect } from '@ereo/data'
+// app/routes/tasks/[id].tsx
+import type { LoaderArgs, ActionArgs } from '@ereo/core'
+import { redirect } from '@ereo/data'
 import { Form, Link } from '@ereo/client'
 
 // Same simulated database
@@ -115,7 +117,7 @@ const tasks = [
   { id: '3', title: 'Deploy to production', completed: false },
 ]
 
-export const loader = createLoader(async ({ params }) => {
+export async function loader({ params }: LoaderArgs<{ id: string }>) {
   const task = tasks.find(t => t.id === params.id)
 
   if (!task) {
@@ -123,9 +125,9 @@ export const loader = createLoader(async ({ params }) => {
   }
 
   return { task }
-})
+}
 
-export const action = createAction(async ({ request, params }) => {
+export async function action({ request, params }: ActionArgs<{ id: string }>) {
   const formData = await request.formData()
   const intent = formData.get('intent')
 
@@ -139,9 +141,9 @@ export const action = createAction(async ({ request, params }) => {
   }
 
   return { success: true }
-})
+}
 
-export default function TaskPage({ loaderData }) {
+export default function TaskPage({ loaderData }: { loaderData: { task: typeof tasks[0] } }) {
   const { task } = loaderData
 
   return (
@@ -170,8 +172,9 @@ export default function TaskPage({ loaderData }) {
 ## Step 5: Create a New Task Page
 
 ```tsx
-// src/routes/tasks/new.tsx
-import { createAction, redirect } from '@ereo/data'
+// app/routes/tasks/new.tsx
+import type { ActionArgs } from '@ereo/core'
+import { redirect } from '@ereo/data'
 import { Form, Link, useActionData } from '@ereo/client'
 
 const tasks = [
@@ -180,7 +183,7 @@ const tasks = [
   { id: '3', title: 'Deploy to production', completed: false },
 ]
 
-export const action = createAction(async ({ request }) => {
+export async function action({ request }: ActionArgs) {
   const formData = await request.formData()
   const title = formData.get('title')
 
@@ -197,10 +200,10 @@ export const action = createAction(async ({ request }) => {
   tasks.push(newTask)
 
   return redirect(`/tasks/${newTask.id}`)
-})
+}
 
 export default function NewTaskPage() {
-  const actionData = useActionData()
+  const actionData = useActionData<{ error?: string }>()
 
   return (
     <div>
@@ -335,35 +338,42 @@ Visit `http://localhost:3000` and try:
 
 ### File-Based Routing
 
-Routes are defined by the file structure:
-- `routes/index.tsx` → `/`
-- `routes/tasks/index.tsx` → `/tasks`
-- `routes/tasks/[id].tsx` → `/tasks/:id`
-- `routes/tasks/new.tsx` → `/tasks/new`
+Routes are defined by the file structure in `app/routes/`:
+
+| File | URL |
+|------|-----|
+| `app/routes/index.tsx` | `/` |
+| `app/routes/tasks/index.tsx` | `/tasks` |
+| `app/routes/tasks/[id].tsx` | `/tasks/:id` |
+| `app/routes/tasks/new.tsx` | `/tasks/new` |
 
 ### Data Loading
 
 The `loader` function runs on the server before rendering:
 
 ```tsx
-export const loader = createLoader(async ({ params }) => {
+import type { LoaderArgs } from '@ereo/core'
+
+export async function loader({ params }: LoaderArgs<{ id: string }>) {
   const data = await fetchData(params.id)
   return { data }
-})
+}
 ```
 
-Data is available via `loaderData` prop or `useLoaderData()` hook.
+Data is available via the `loaderData` prop or `useLoaderData()` hook.
 
 ### Form Actions
 
 The `action` function handles form submissions:
 
 ```tsx
-export const action = createAction(async ({ request }) => {
+import type { ActionArgs } from '@ereo/core'
+
+export async function action({ request }: ActionArgs) {
   const formData = await request.formData()
   // Process the form
   return { success: true }
-})
+}
 ```
 
 ### Progressive Enhancement

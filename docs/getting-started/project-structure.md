@@ -6,27 +6,25 @@ EreoJS uses conventions to minimize configuration. Understanding the project str
 
 ```
 my-app/
-├── src/
-│   ├── routes/              # File-based routes
-│   │   ├── _layout.tsx      # Root layout
-│   │   ├── index.tsx        # Home page (/)
-│   │   ├── about.tsx        # /about
-│   │   ├── (auth)/          # Route group (no URL segment)
-│   │   │   ├── _layout.tsx  # Auth layout
-│   │   │   ├── login.tsx    # /login
-│   │   │   └── register.tsx # /register
-│   │   ├── posts/
-│   │   │   ├── _layout.tsx  # Posts layout
-│   │   │   ├── index.tsx    # /posts
-│   │   │   ├── [id].tsx     # /posts/:id (dynamic)
-│   │   │   └── [...slug].tsx # /posts/* (catch-all)
-│   │   └── api/
-│   │       └── users.ts     # /api/users (API route)
-│   ├── components/          # Shared React components
-│   ├── islands/             # Interactive island components
-│   ├── lib/                 # Utility functions
-│   ├── styles/              # Global styles
-│   └── index.ts             # Application entry point
+├── app/
+│   └── routes/              # File-based routes
+│       ├── _layout.tsx      # Root layout
+│       ├── index.tsx        # Home page (/)
+│       ├── about.tsx        # /about
+│       ├── (auth)/          # Route group (no URL segment)
+│       │   ├── _layout.tsx  # Auth layout
+│       │   ├── login.tsx    # /login
+│       │   └── register.tsx # /register
+│       ├── posts/
+│       │   ├── _layout.tsx  # Posts layout
+│       │   ├── index.tsx    # /posts
+│       │   ├── [id].tsx     # /posts/:id (dynamic)
+│       │   └── [...slug].tsx # /posts/* (catch-all)
+│       └── api/
+│           └── users.ts     # /api/users (API route)
+├── components/              # Shared React components
+├── islands/                 # Interactive island components
+├── lib/                     # Utility functions
 ├── public/                  # Static assets (served at /)
 ├── dist/                    # Production build output
 ├── ereo.config.ts           # Framework configuration
@@ -37,7 +35,7 @@ my-app/
 
 ## Routes Directory
 
-The `src/routes` directory defines your application's routes through file system conventions.
+The `app/routes` directory defines your application's routes through file system conventions. This is the default location - it can be customized in `ereo.config.ts`.
 
 ### Page Routes
 
@@ -45,10 +43,10 @@ Each `.tsx` file becomes a route:
 
 | File | URL |
 |------|-----|
-| `routes/index.tsx` | `/` |
-| `routes/about.tsx` | `/about` |
-| `routes/posts/index.tsx` | `/posts` |
-| `routes/posts/[id].tsx` | `/posts/:id` |
+| `app/routes/index.tsx` | `/` |
+| `app/routes/about.tsx` | `/about` |
+| `app/routes/posts/index.tsx` | `/posts` |
+| `app/routes/posts/[id].tsx` | `/posts/:id` |
 
 ### Special Files
 
@@ -64,7 +62,7 @@ Each `.tsx` file becomes a route:
 Use square brackets for dynamic segments:
 
 ```
-routes/
+app/routes/
 ├── posts/
 │   ├── [id].tsx          # /posts/123
 │   └── [id]/
@@ -74,11 +72,13 @@ routes/
 Access parameters in your component:
 
 ```tsx
-// routes/posts/[id].tsx
-export const loader = createLoader(async ({ params }) => {
+// app/routes/posts/[id].tsx
+import type { LoaderArgs } from '@ereo/core'
+
+export async function loader({ params }: LoaderArgs<{ id: string }>) {
   const post = await getPost(params.id) // params.id = "123"
   return { post }
-})
+}
 ```
 
 ### Catch-All Routes
@@ -86,18 +86,20 @@ export const loader = createLoader(async ({ params }) => {
 Use `[...slug]` for catch-all routes:
 
 ```
-routes/
+app/routes/
 └── docs/
     └── [...slug].tsx     # /docs/a, /docs/a/b, /docs/a/b/c
 ```
 
 ```tsx
-// routes/docs/[...slug].tsx
-export const loader = createLoader(async ({ params }) => {
+// app/routes/docs/[...slug].tsx
+import type { LoaderArgs } from '@ereo/core'
+
+export async function loader({ params }: LoaderArgs<{ slug: string[] }>) {
   // params.slug = ["a", "b", "c"] for /docs/a/b/c
   const path = params.slug.join('/')
   return { path }
-})
+}
 ```
 
 ### Route Groups
@@ -105,7 +107,7 @@ export const loader = createLoader(async ({ params }) => {
 Parentheses create groups without affecting the URL:
 
 ```
-routes/
+app/routes/
 ├── (marketing)/
 │   ├── _layout.tsx      # Marketing layout
 │   ├── about.tsx        # /about
@@ -120,7 +122,7 @@ routes/
 Files that export only HTTP method handlers become API routes:
 
 ```ts
-// routes/api/users.ts
+// app/routes/api/users.ts
 export async function GET(request: Request) {
   const users = await db.users.findMany()
   return Response.json(users)
@@ -166,6 +168,8 @@ Islands must be registered and used with hydration directives:
 
 ```tsx
 // islands/Counter.tsx
+import { useState } from 'react'
+
 export default function Counter() {
   const [count, setCount] = useState(0)
   return (
@@ -177,7 +181,7 @@ export default function Counter() {
 ```
 
 ```tsx
-// routes/index.tsx
+// app/routes/index.tsx
 import Counter from '../islands/Counter'
 
 export default function Home() {
@@ -229,10 +233,10 @@ TypeScript configuration:
     "strict": true,
     "noEmit": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./app/*"]
     }
   },
-  "include": ["src"]
+  "include": ["app", "components", "islands", "lib"]
 }
 ```
 
@@ -284,15 +288,16 @@ dist/
 5. **Organize by feature** - For large apps, consider organizing by feature rather than type:
 
 ```
-src/
+app/
+├── routes/
+│   ├── index.tsx
+│   └── ...
 ├── features/
 │   ├── auth/
 │   │   ├── components/
-│   │   ├── routes/
 │   │   └── lib/
 │   └── posts/
 │       ├── components/
-│       ├── routes/
 │       └── lib/
 └── shared/
     └── components/

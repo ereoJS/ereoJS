@@ -1,381 +1,339 @@
 # Blog Example
 
-A complete blog application demonstrating EreoJS features.
+A blog application demonstrating EreoJS with Tailwind CSS, dynamic routing, and caching.
 
 ## Overview
 
 This example showcases:
-- File-based routing
-- Data loading with loaders
-- Form handling with actions
-- Authentication
-- Islands for interactivity
-- Tag-based caching
+
+- File-based routing with nested routes
+- Data loading with the `loader` pattern
+- Dynamic route parameters
+- Cache control with tags
+- Tailwind CSS integration via plugin
+- Dark mode support
+- TypeScript type safety
+
+## Source
+
+Located at `/packages/examples/blog` in the repository.
 
 ## Project Structure
 
 ```
 blog/
-├── src/
-│   ├── routes/
-│   │   ├── _layout.tsx         # Root layout
-│   │   ├── index.tsx           # Homepage
-│   │   ├── login.tsx           # Login page
-│   │   ├── posts/
-│   │   │   ├── index.tsx       # Posts list
-│   │   │   ├── [slug].tsx      # Single post
-│   │   │   ├── new.tsx         # Create post
-│   │   │   └── [slug]/
-│   │   │       └── edit.tsx    # Edit post
-│   │   └── api/
-│   │       └── posts.tsx       # API endpoint
-│   ├── islands/
-│   │   ├── LikeButton.tsx      # Like button island
-│   │   └── CommentForm.tsx     # Comment form island
-│   ├── components/
-│   │   ├── PostCard.tsx        # Post preview card
-│   │   └── Header.tsx          # Site header
-│   ├── lib/
-│   │   ├── db.ts               # Database setup
-│   │   └── auth.ts             # Auth utilities
-│   └── styles/
-│       └── global.css          # Global styles
-├── ereo.config.ts
-└── package.json
+├── app/
+│   └── routes/
+│       ├── _layout.tsx         # Root layout with navigation
+│       ├── index.tsx           # Homepage with featured posts
+│       └── blog/
+│           ├── index.tsx       # Blog posts list
+│           └── [slug].tsx      # Dynamic post page
+├── ereo.config.ts              # Configuration with Tailwind plugin
+├── tailwind.config.js          # Tailwind CSS configuration
+├── package.json
+└── .gitignore
 ```
 
 ## Key Files
 
+### Configuration
+
+```ts
+// ereo.config.ts
+import { defineConfig } from '@ereo/core';
+import tailwind from '@ereo/plugin-tailwind';
+
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
+  plugins: [
+    tailwind(),
+  ],
+});
+```
+
 ### Root Layout
 
-```tsx
-// src/routes/_layout.tsx
-import '../styles/global.css'
-import { Header } from '../components/Header'
+The layout includes navigation, Tailwind CSS, and dark mode support:
 
-export default function RootLayout({ children }) {
+```tsx
+// app/routes/_layout.tsx
+import type { RouteComponentProps } from '@ereo/core';
+
+export default function RootLayout({ children }: RouteComponentProps) {
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>My Blog</title>
+        <title>EreoJS Blog</title>
+        <link rel="stylesheet" href="/__tailwind.css" />
       </head>
-      <body className="bg-gray-50">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
+      <body className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <header className="bg-white dark:bg-gray-800 shadow-sm">
+          <nav className="max-w-4xl mx-auto px-4 py-4">
+            <div className="flex justify-between items-center">
+              <a href="/" className="text-xl font-bold text-gray-900 dark:text-white">
+                EreoJS Blog
+              </a>
+              <div className="flex gap-4">
+                <a href="/" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                  Home
+                </a>
+                <a href="/blog" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                  Blog
+                </a>
+              </div>
+            </div>
+          </nav>
+        </header>
+        <main className="max-w-4xl mx-auto px-4 py-8">
           {children}
         </main>
+        <footer className="max-w-4xl mx-auto px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+          Built with EreoJS Framework
+        </footer>
       </body>
     </html>
-  )
+  );
 }
 ```
 
 ### Homepage
 
 ```tsx
-// src/routes/index.tsx
-import { createLoader } from '@ereo/data'
-import { Link } from '@ereo/client'
-import { db } from '../lib/db'
-import { PostCard } from '../components/PostCard'
+// app/routes/index.tsx
+import type { LoaderArgs } from '@ereo/core';
 
-export const config = {
-  cache: { maxAge: 60, tags: ['posts', 'homepage'] }
+interface Post {
+  slug: string;
+  title: string;
+  excerpt: string;
+  date: string;
 }
 
-export const loader = createLoader(async () => {
-  const posts = db.query(`
-    SELECT p.*, u.name as author_name
-    FROM posts p
-    JOIN users u ON p.author_id = u.id
-    WHERE p.published = 1
-    ORDER BY p.created_at DESC
-    LIMIT 10
-  `).all()
+// Simulated database
+const posts: Post[] = [
+  {
+    slug: 'getting-started-with-ereo',
+    title: 'Getting Started with EreoJS',
+    excerpt: 'Learn how to build modern web apps with the EreoJS framework.',
+    date: '2024-01-15',
+  },
+  // ... more posts
+];
 
-  return { posts }
-})
+export async function loader({ request, context }: LoaderArgs) {
+  // Set caching with tags for invalidation
+  context.cache.set({
+    maxAge: 60,
+    staleWhileRevalidate: 300,
+    tags: ['posts'],
+  });
 
-export default function HomePage({ loaderData }) {
-  const { posts } = loaderData
+  return { posts };
+}
 
+export default function HomePage({ loaderData }: { loaderData: { posts: Post[] } }) {
   return (
     <div>
       <section className="text-center py-12">
-        <h1 className="text-4xl font-bold mb-4">Welcome to My Blog</h1>
-        <p className="text-gray-600">Thoughts on web development and more</p>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          Welcome to EreoJS Blog
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-300">
+          A blog built with EreoJS - the React fullstack framework.
+        </p>
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold mb-6">Latest Posts</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.map(post => (
-            <PostCard key={post.id} post={post} />
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          Latest Posts
+        </h2>
+        <div className="space-y-6">
+          {loaderData.posts.map((post) => (
+            <article
+              key={post.slug}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+            >
+              <a href={`/blog/${post.slug}`}>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
+                  {post.title}
+                </h3>
+              </a>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                {post.excerpt}
+              </p>
+              <time className="text-sm text-gray-500 dark:text-gray-400">
+                {new Date(post.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </time>
+            </article>
           ))}
         </div>
       </section>
     </div>
-  )
+  );
 }
 ```
 
-### Single Post
+### Dynamic Post Page
 
 ```tsx
-// src/routes/posts/[slug].tsx
-import { createLoader } from '@ereo/data'
-import { db } from '../../lib/db'
+// app/routes/blog/[slug].tsx
+import type { LoaderArgs } from '@ereo/core';
 
-export const config = {
-  cache: {
-    maxAge: 300,
-    staleWhileRevalidate: 3600
-  }
+interface Post {
+  slug: string;
+  title: string;
+  content: string;
+  date: string;
+  author: string;
 }
 
-export const loader = createLoader(async ({ params, context }) => {
-  const post = db.query(`
-    SELECT p.*, u.name as author_name
-    FROM posts p
-    JOIN users u ON p.author_id = u.id
-    WHERE p.slug = ?
-  `).get(params.slug)
+// Simulated database
+const postsData: Record<string, Post> = {
+  'getting-started-with-ereo': {
+    slug: 'getting-started-with-ereo',
+    title: 'Getting Started with EreoJS',
+    content: '...',
+    date: '2024-01-15',
+    author: 'EreoJS Team',
+  },
+  // ... more posts
+};
+
+export async function loader({ params, context }: LoaderArgs<{ slug: string }>) {
+  const post = postsData[params.slug];
 
   if (!post) {
-    throw new Response('Post not found', { status: 404 })
+    throw new Response('Not Found', { status: 404 });
   }
 
-  // Add cache tags for this specific post
-  context.cache.addTags([`post-${post.id}`, `author-${post.author_id}`])
+  // Cache with post-specific tag
+  context.cache.set({
+    maxAge: 300,
+    tags: [`post:${params.slug}`],
+  });
 
-  const comments = db.query(`
-    SELECT c.*, u.name as author_name
-    FROM comments c
-    JOIN users u ON c.user_id = u.id
-    WHERE c.post_id = ?
-    ORDER BY c.created_at DESC
-  `).all(post.id)
+  return { post };
+}
 
-  return { post, comments }
-})
-
-export default function PostPage({ loaderData }) {
-  const { post, comments } = loaderData
+export default function BlogPost({ loaderData }: { loaderData: { post: Post } }) {
+  const { post } = loaderData;
 
   return (
-    <article className="max-w-3xl mx-auto">
+    <article className="max-w-2xl mx-auto">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
-        <p className="text-gray-600">
-          By {post.author_name} · {new Date(post.created_at).toLocaleDateString()}
-        </p>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          {post.title}
+        </h1>
+        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400">
+          <span>{post.author}</span>
+          <span>-</span>
+          <time>
+            {new Date(post.date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </time>
+        </div>
       </header>
 
-      <div className="prose lg:prose-xl" dangerouslySetInnerHTML={{ __html: post.content }} />
-
-      {/* Like Button Island */}
-      <div
-        data-island="LikeButton"
-        data-hydrate="visible"
-        data-props={JSON.stringify({ postId: post.id, initialLikes: post.likes })}
-      >
-        <button className="mt-8 px-4 py-2 border rounded">
-          ❤️ {post.likes} likes
-        </button>
+      <div className="prose prose-lg dark:prose-invert">
+        {post.content}
       </div>
 
-      {/* Comments Section */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-bold mb-6">Comments ({comments.length})</h2>
-
-        {/* Comment Form Island */}
-        <div
-          data-island="CommentForm"
-          data-hydrate="idle"
-          data-props={JSON.stringify({ postId: post.id })}
+      <footer className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+        <a
+          href="/blog"
+          className="text-blue-600 dark:text-blue-400 hover:underline"
         >
-          <form className="mb-8">
-            <textarea className="w-full p-3 border rounded" placeholder="Add a comment..." />
-            <button type="submit" className="mt-2 px-4 py-2 bg-blue-600 text-white rounded">
-              Post Comment
-            </button>
-          </form>
-        </div>
-
-        <div className="space-y-4">
-          {comments.map(comment => (
-            <div key={comment.id} className="p-4 bg-white rounded shadow">
-              <p className="font-medium">{comment.author_name}</p>
-              <p className="text-gray-600">{comment.content}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+          Back to all posts
+        </a>
+      </footer>
     </article>
-  )
+  );
 }
 ```
 
-### Like Button Island
+## Dependencies
 
-```tsx
-// src/islands/LikeButton.tsx
-import { useState } from 'react'
-
-export default function LikeButton({ postId, initialLikes }) {
-  const [likes, setLikes] = useState(initialLikes)
-  const [isLiking, setIsLiking] = useState(false)
-
-  const handleLike = async () => {
-    if (isLiking) return
-
-    setIsLiking(true)
-    setLikes(l => l + 1)  // Optimistic update
-
-    try {
-      const res = await fetch(`/api/posts/${postId}/like`, { method: 'POST' })
-      const data = await res.json()
-      setLikes(data.likes)
-    } catch {
-      setLikes(l => l - 1)  // Revert on error
-    } finally {
-      setIsLiking(false)
-    }
+```json
+{
+  "dependencies": {
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/server": "workspace:*",
+    "@ereo/client": "workspace:*",
+    "@ereo/data": "workspace:*",
+    "@ereo/plugin-tailwind": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@ereo/cli": "workspace:*",
+    "tailwindcss": "^3.4.0"
   }
-
-  return (
-    <button
-      onClick={handleLike}
-      disabled={isLiking}
-      className="mt-8 px-4 py-2 border rounded hover:bg-gray-100 transition"
-    >
-      ❤️ {likes} likes
-    </button>
-  )
-}
-```
-
-### Create Post
-
-```tsx
-// src/routes/posts/new.tsx
-import { createLoader, createAction } from '@ereo/data'
-import { Form, useActionData } from '@ereo/client'
-import { revalidateTags } from '@ereo/data'
-import { requireAuth } from '../../lib/auth'
-import { db } from '../../lib/db'
-
-export const config = {
-  middleware: [requireAuth]
-}
-
-export const action = createAction(async ({ request, context }) => {
-  const user = context.get('user')
-  const formData = await request.formData()
-
-  const title = formData.get('title') as string
-  const content = formData.get('content') as string
-  const slug = title.toLowerCase().replace(/\s+/g, '-')
-
-  // Validation
-  const errors: Record<string, string> = {}
-  if (!title) errors.title = 'Title is required'
-  if (!content) errors.content = 'Content is required'
-
-  if (Object.keys(errors).length) {
-    return { errors }
-  }
-
-  // Create post
-  db.run(
-    'INSERT INTO posts (title, slug, content, author_id) VALUES (?, ?, ?, ?)',
-    [title, slug, content, user.id]
-  )
-
-  // Invalidate caches
-  await revalidateTags(['posts', 'homepage'])
-
-  return Response.redirect(`/posts/${slug}`)
-})
-
-export default function NewPostPage() {
-  const actionData = useActionData()
-
-  return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Create New Post</h1>
-
-      <Form method="post" className="space-y-6">
-        <div>
-          <label className="block font-medium mb-2">Title</label>
-          <input
-            name="title"
-            className="w-full px-4 py-2 border rounded"
-            required
-          />
-          {actionData?.errors?.title && (
-            <p className="text-red-500 text-sm mt-1">{actionData.errors.title}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block font-medium mb-2">Content</label>
-          <textarea
-            name="content"
-            rows={10}
-            className="w-full px-4 py-2 border rounded"
-            required
-          />
-          {actionData?.errors?.content && (
-            <p className="text-red-500 text-sm mt-1">{actionData.errors.content}</p>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Publish Post
-        </button>
-      </Form>
-    </div>
-  )
 }
 ```
 
 ## Running the Example
 
 ```bash
-# Clone the repository
-git clone https://github.com/ereo/ereo.git
-cd ereo/packages/examples/blog
-
-# Install dependencies
+cd packages/examples/blog
 bun install
-
-# Start development server
-bun dev
+bun run dev
 ```
 
 Visit `http://localhost:3000` to see the blog.
 
 ## Key Concepts Demonstrated
 
-| Feature | File | Description |
-|---------|------|-------------|
-| File routing | `routes/` | Automatic route generation |
-| Dynamic routes | `posts/[slug].tsx` | Parameter extraction |
-| Data loading | `loader` functions | Server-side data fetching |
-| Form handling | `action` functions | Server-side form processing |
-| Caching | `config.cache` | Tag-based cache invalidation |
-| Islands | `islands/` | Selective hydration |
-| Authentication | `requireAuth` | Route protection |
+| Feature | Implementation |
+|---------|----------------|
+| Tailwind plugin | `tailwind()` in config, `/__tailwind.css` link |
+| Dynamic routes | `[slug].tsx` with `params.slug` |
+| Cache control | `context.cache.set()` with `maxAge` and `tags` |
+| 404 handling | `throw new Response('Not Found', { status: 404 })` |
+| Nested routes | `blog/index.tsx` and `blog/[slug].tsx` |
+| Dark mode | Tailwind's `dark:` prefix |
+| Type safety | `LoaderArgs<{ slug: string }>` for typed params |
+
+## Cache API
+
+The blog demonstrates EreoJS's cache API:
+
+```tsx
+export async function loader({ context }: LoaderArgs) {
+  context.cache.set({
+    maxAge: 60,              // Cache for 60 seconds
+    staleWhileRevalidate: 300, // Serve stale for 5 minutes while revalidating
+    tags: ['posts'],         // Tag for cache invalidation
+  });
+
+  return { data };
+}
+```
+
+### Cache Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `maxAge` | `number` | Seconds to cache the response |
+| `staleWhileRevalidate` | `number` | Seconds to serve stale content while revalidating |
+| `tags` | `string[]` | Tags for targeted cache invalidation |
 
 ## Related
 
-- [Blog Tutorial](/tutorials/blog-tutorial/01-setup)
-- [Routing](/core-concepts/routing)
-- [Data Loading](/core-concepts/data-loading)
-- [Caching](/core-concepts/caching)
+- [Minimal Example](/examples/minimal) - Simpler starting point
+- [Routing](/core-concepts/routing) - File-based routing details
+- [Data Loading](/core-concepts/data-loading) - Loader patterns
+- [Caching](/core-concepts/caching) - Cache strategies
+- [Tailwind Plugin](/api/plugins/tailwind) - Tailwind CSS integration

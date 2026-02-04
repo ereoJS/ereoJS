@@ -49,10 +49,10 @@ export const securityMiddleware: MiddlewareHandler = async (request, next) => {
 
 ### 3. Error Pages
 
-Create a root error page at `src/routes/_error.tsx`:
+Create a root error page at `app/routes/_error.tsx`:
 
 ```tsx
-// src/routes/_error.tsx
+// app/routes/_error.tsx
 import { useRouteError, isRouteErrorResponse } from '@ereo/client'
 import { Link } from '@ereo/client'
 
@@ -97,7 +97,7 @@ export default function RootError() {
 
 ### 4. Meta Tags
 
-Add SEO meta tags. Update `src/routes/_layout.tsx`:
+Add SEO meta tags. Update `app/routes/_layout.tsx`:
 
 ```tsx
 export default function RootLayout({ children }) {
@@ -240,7 +240,7 @@ fly deploy
 
 ## Add a Health Check
 
-Create `src/routes/api/health.ts`:
+Create `app/routes/api/health.ts`:
 
 ```ts
 export function GET() {

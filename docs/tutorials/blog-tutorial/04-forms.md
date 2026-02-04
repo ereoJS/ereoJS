@@ -4,10 +4,10 @@ In this chapter, we'll add edit and delete functionality, handle multiple action
 
 ## Edit Post Page
 
-Create `src/routes/posts/[slug]/edit.tsx`:
+Create `app/routes/posts/[slug]/edit.tsx`:
 
 ```tsx
-// src/routes/posts/[slug]/edit.tsx
+// app/routes/posts/[slug]/edit.tsx
 import { createLoader, createAction, redirect } from '@ereo/data'
 import { Form, Link, useActionData, useNavigation } from '@ereo/client'
 import { getPost, db } from '../../../lib/db'
@@ -171,7 +171,7 @@ export default function EditPost({ loaderData }) {
 
 ## Add Edit Link to Post Page
 
-Update `src/routes/posts/[slug].tsx` to add an edit link:
+Update `app/routes/posts/[slug].tsx` to add an edit link:
 
 ```tsx
 // Add after the post header in the PostPage component
@@ -239,10 +239,10 @@ db.exec(`
 })
 ```
 
-Create an API route for likes at `src/routes/api/posts/[id]/like.ts`:
+Create an API route for likes at `app/routes/api/posts/[id]/like.ts`:
 
 ```ts
-// src/routes/api/posts/[id]/like.ts
+// app/routes/api/posts/[id]/like.ts
 import { db } from '../../../../lib/db'
 
 export async function POST(request: Request, { params }) {
@@ -310,7 +310,7 @@ initClient()
 Use it in the post page:
 
 ```tsx
-// In src/routes/posts/[slug].tsx
+// In app/routes/posts/[slug].tsx
 import LikeButton from '../../islands/LikeButton'
 
 // In the component, after the title

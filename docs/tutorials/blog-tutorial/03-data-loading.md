@@ -4,10 +4,10 @@ In this chapter, we'll add the ability to create new posts using actions and han
 
 ## Create Post Page
 
-Create `src/routes/posts/new.tsx`:
+Create `app/routes/posts/new.tsx`:
 
 ```tsx
-// src/routes/posts/new.tsx
+// app/routes/posts/new.tsx
 import { createAction, redirect } from '@ereo/data'
 import { Form, useActionData, useNavigation } from '@ereo/client'
 import { createPost } from '../../lib/db'
@@ -195,10 +195,10 @@ Add to `public/styles.css`:
 
 ## Add Comment Form
 
-Update `src/routes/posts/[slug].tsx` to include a comment form:
+Update `app/routes/posts/[slug].tsx` to include a comment form:
 
 ```tsx
-// src/routes/posts/[slug].tsx
+// app/routes/posts/[slug].tsx
 import { createLoader, createAction } from '@ereo/data'
 import { Form, Link, useActionData, useNavigation } from '@ereo/client'
 import { getPost, getPostComments, createComment } from '../../lib/db'

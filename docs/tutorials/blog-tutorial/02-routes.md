@@ -4,10 +4,10 @@ In this chapter, we'll create the posts listing page and individual post pages u
 
 ## Posts Listing Page
 
-Create `src/routes/posts/index.tsx`:
+Create `app/routes/posts/index.tsx`:
 
 ```tsx
-// src/routes/posts/index.tsx
+// app/routes/posts/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
 import { getPosts } from '../../lib/db'
@@ -47,10 +47,10 @@ export default function Posts({ loaderData }) {
 
 ## Post Detail Page
 
-Create `src/routes/posts/[slug].tsx` for dynamic routing:
+Create `app/routes/posts/[slug].tsx` for dynamic routing:
 
 ```tsx
-// src/routes/posts/[slug].tsx
+// app/routes/posts/[slug].tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
 import { getPost, getPostComments } from '../../lib/db'
@@ -169,10 +169,10 @@ Add to `public/styles.css`:
 
 ## Error Page
 
-Create `src/routes/posts/_error.tsx` to handle errors:
+Create `app/routes/posts/_error.tsx` to handle errors:
 
 ```tsx
-// src/routes/posts/_error.tsx
+// app/routes/posts/_error.tsx
 import { useRouteError, isRouteErrorResponse } from '@ereo/client'
 import { Link } from '@ereo/client'
 
@@ -219,7 +219,7 @@ Add error styles:
 Let's review what we've created:
 
 ```
-src/routes/
+app/routes/
 ├── _layout.tsx         # Root layout (wraps everything)
 ├── index.tsx           # /
 └── posts/

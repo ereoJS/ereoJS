@@ -11,3 +11,9 @@ export {
   batch,
   createStore,
 } from './signals';
+
+export {
+  useSignal,
+  useStoreKey,
+  useStore,
+} from './react';

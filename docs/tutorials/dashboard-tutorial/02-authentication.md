@@ -4,7 +4,7 @@ Implement user authentication with login and registration.
 
 ## Login Page
 
-Create `src/routes/login.tsx`:
+Create `app/routes/login.tsx`:
 
 ```tsx
 import { createLoader, createAction } from '@ereo/data'
@@ -121,7 +121,7 @@ export default function LoginPage({ loaderData }) {
 
 ## Registration Page
 
-Create `src/routes/register.tsx`:
+Create `app/routes/register.tsx`:
 
 ```tsx
 import { createLoader, createAction } from '@ereo/data'
@@ -256,7 +256,7 @@ export default function RegisterPage() {
 
 ## Logout Action
 
-Create `src/routes/logout.tsx`:
+Create `app/routes/logout.tsx`:
 
 ```tsx
 import { createAction } from '@ereo/data'
@@ -287,7 +287,7 @@ export default function Logout() {
 
 ## Protected Dashboard Layout
 
-Create `src/routes/dashboard/_layout.tsx`:
+Create `app/routes/dashboard/_layout.tsx`:
 
 ```tsx
 import { createLoader } from '@ereo/data'

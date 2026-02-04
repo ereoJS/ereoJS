@@ -131,7 +131,7 @@ import { createServer } from '@ereo/server'
 const app = createApp()
 
 // Set up routes
-const router = await createFileRouter({ routesDir: './src/routes' })
+const router = await createFileRouter({ routesDir: './app/routes' })
 app.setRoutes(router.getRoutes())
 
 // Create and start server

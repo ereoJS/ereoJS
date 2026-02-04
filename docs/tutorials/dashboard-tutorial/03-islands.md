@@ -265,7 +265,7 @@ export default function ChartWidget({ data, title }: ChartWidgetProps) {
 
 ## Dashboard Page with Islands
 
-Update `src/routes/dashboard/index.tsx`:
+Update `app/routes/dashboard/index.tsx`:
 
 ```tsx
 import { createLoader } from '@ereo/data'

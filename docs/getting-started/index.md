@@ -20,6 +20,8 @@ The fastest way to start is with the `create-ereo` CLI:
 
 ```bash
 bunx create-ereo my-app
+cd my-app
+bun dev
 ```
 
 This creates a new project with:
@@ -47,31 +49,54 @@ mkdir my-app && cd my-app
 bun init -y
 bun add @ereo/core @ereo/router @ereo/client @ereo/data @ereo/server
 bun add react react-dom
-bun add -d @types/react @types/react-dom typescript
+bun add -d @ereo/cli @types/react @types/react-dom typescript
 ```
 
-Create the entry point:
+Create the configuration file:
 
 ```ts
-// src/index.ts
-import { createApp } from '@ereo/core'
-import { createFileRouter } from '@ereo/router'
-import { createServer } from '@ereo/server'
+// ereo.config.ts
+import { defineConfig } from '@ereo/core'
 
-const app = createApp()
-const router = await createFileRouter({ routesDir: './src/routes' })
-app.setRoutes(router.getRoutes())
-
-const server = createServer(app)
-server.listen(3000)
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
+})
 ```
 
 Create your first route:
 
 ```tsx
-// src/routes/index.tsx
-export default function Home() {
-  return <h1>Welcome to EreoJS</h1>
+// app/routes/index.tsx
+import type { LoaderArgs } from '@ereo/core'
+
+export async function loader({ request }: LoaderArgs) {
+  return { message: 'Hello from EreoJS!' }
+}
+
+export default function Home({ loaderData }: { loaderData: { message: string } }) {
+  return <h1>{loaderData.message}</h1>
+}
+```
+
+Create a root layout:
+
+```tsx
+// app/routes/_layout.tsx
+import type { RouteComponentProps } from '@ereo/core'
+
+export default function RootLayout({ children }: RouteComponentProps) {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>My EreoJS App</title>
+      </head>
+      <body>{children}</body>
+    </html>
+  )
 }
 ```
 
@@ -113,16 +138,14 @@ A typical EreoJS project looks like this:
 
 ```
 my-app/
-├── src/
-│   ├── routes/          # File-based routes
-│   │   ├── index.tsx    # Home page (/)
-│   │   ├── about.tsx    # About page (/about)
-│   │   └── posts/
-│   │       ├── index.tsx    # Posts list (/posts)
-│   │       └── [id].tsx     # Post detail (/posts/:id)
-│   ├── components/      # Shared components
-│   ├── islands/         # Interactive islands
-│   └── index.ts         # Application entry
+├── app/
+│   └── routes/          # File-based routes
+│       ├── _layout.tsx  # Root layout
+│       ├── index.tsx    # Home page (/)
+│       ├── about.tsx    # About page (/about)
+│       └── posts/
+│           ├── index.tsx    # Posts list (/posts)
+│           └── [id].tsx     # Post detail (/posts/:id)
 ├── public/              # Static assets
 ├── ereo.config.ts       # Framework configuration
 ├── package.json
