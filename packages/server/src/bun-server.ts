@@ -799,6 +799,11 @@ export class BunServer {
    * Handle errors.
    */
   private handleError(error: unknown, context: RequestContext): Response {
+    // Check if error is a thrown Response (e.g., for 404s thrown from loaders)
+    if (error instanceof Response) {
+      return error;
+    }
+
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     const stack = error instanceof Error ? error.stack : undefined;
 

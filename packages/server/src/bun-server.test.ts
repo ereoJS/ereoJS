@@ -148,6 +148,47 @@ describe('@ereo/server - BunServer', () => {
       const text = await response.text();
       expect(text).toBe('Internal Server Error');
     });
+
+    test('handles thrown Response objects for HTTP status codes', async () => {
+      server = createServer({
+        port: 4599,
+        logging: false,
+        handler: async () => {
+          // This is the common pattern for 404s in loaders
+          throw new Response('Post not found', { status: 404 });
+        },
+      });
+
+      await server.start();
+
+      const response = await fetch('http://localhost:4599/');
+
+      expect(response.status).toBe(404);
+      const text = await response.text();
+      expect(text).toBe('Post not found');
+    });
+
+    test('handles thrown Response objects with custom headers', async () => {
+      server = createServer({
+        port: 4600,
+        logging: false,
+        handler: async () => {
+          throw new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        },
+      });
+
+      await server.start();
+
+      const response = await fetch('http://localhost:4600/');
+
+      expect(response.status).toBe(403);
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+      const json = await response.json();
+      expect(json.error).toBe('Forbidden');
+    });
   });
 
   describe('serve helper', () => {
