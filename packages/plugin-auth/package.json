@@ -1,6 +1,6 @@
 {
   "name": "@ereo/auth",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "MIT",
   "author": "Ereo Team",
   "homepage": "https://ereo.dev",
@@ -37,8 +37,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "workspace:*",
-    "@ereo/router": "workspace:*"
+    "@ereo/core": "^0.1.7",
+    "@ereo/router": "^0.1.7"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

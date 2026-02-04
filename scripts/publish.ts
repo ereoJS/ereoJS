@@ -164,8 +164,8 @@ function updatePackageJson(
     const newDeps = { ...deps };
     for (const [name, version] of Object.entries(newDeps)) {
       if (allPackageNames.has(name) && version.startsWith("workspace:")) {
-        // Keep workspace: protocol for local development
-        // npm publish will automatically replace with actual version
+        // Replace workspace:* with actual version for npm publish
+        newDeps[name] = `^${newVersion}`;
       }
     }
     return newDeps;

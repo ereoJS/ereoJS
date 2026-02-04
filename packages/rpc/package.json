@@ -1,6 +1,6 @@
 {
   "name": "@ereo/rpc",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "MIT",
   "author": "Ereo Team",
   "homepage": "https://ereo.dev",
@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "workspace:*"
+    "@ereo/core": "^0.1.7"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

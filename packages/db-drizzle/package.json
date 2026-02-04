@@ -1,6 +1,6 @@
 {
   "name": "@ereo/db-drizzle",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "MIT",
   "author": "Ereo Team",
   "homepage": "https://ereo.dev",
@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/db": "workspace:*",
+    "@ereo/db": "^0.1.7",
     "drizzle-orm": "^0.30.0"
   },
   "peerDependencies": {

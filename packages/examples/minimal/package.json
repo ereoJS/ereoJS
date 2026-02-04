@@ -1,6 +1,6 @@
 {
   "name": "@ereo/example-minimal",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,12 +9,12 @@
     "start": "ereo start"
   },
   "dependencies": {
-    "@ereo/core": "workspace:*",
-    "@ereo/router": "workspace:*",
-    "@ereo/server": "workspace:*",
-    "@ereo/client": "workspace:*",
-    "@ereo/data": "workspace:*",
-    "@ereo/cli": "workspace:*",
+    "@ereo/core": "^0.1.7",
+    "@ereo/router": "^0.1.7",
+    "@ereo/server": "^0.1.7",
+    "@ereo/client": "^0.1.7",
+    "@ereo/data": "^0.1.7",
+    "@ereo/cli": "^0.1.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
