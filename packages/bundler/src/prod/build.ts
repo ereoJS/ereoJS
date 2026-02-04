@@ -526,12 +526,10 @@ async function buildServer(options: {
     };
   }
 
-  // Generate server entry point
-  const serverEntry = generateServerEntry(routes, root);
-  const serverEntryPath = join(outDir, '_entry.server.ts');
-  await Bun.write(serverEntryPath, serverEntry);
+  // Build route modules first to determine actual output paths
+  // (Bun's [dir] naming behavior varies based on directory structure)
+  const routeOutputMap: Map<string, string> = new Map(); // entrypoint -> output path relative to routesDir
 
-  // Build route modules
   try {
     const result = await Bun.build({
       entrypoints,
@@ -567,20 +565,34 @@ async function buildServer(options: {
 
       // Map route files to output files
       if (output.kind === 'entry-point') {
-        const sourcePath = entrypoints.find(e =>
-          output.path.includes(basename(e, extname(e)))
-        );
+        // Match entrypoint to output based on relative path structure
+        // Output path ends with the same relative structure as the entrypoint (with .js extension)
+        const sourcePath = entrypoints.find(e => {
+          const routeRelPath = relative(join(root, 'app/routes'), e)
+            .replace(/\\/g, '/')
+            .replace(/\.[^.]+$/, '.js');
+          // Check if output path ends with this relative path
+          return output.path.replace(/\\/g, '/').endsWith(routeRelPath);
+        });
         if (sourcePath) {
           const routeId = relative(join(root, 'app/routes'), sourcePath)
             .replace(/\.[^.]+$/, '')
             .replace(/\\/g, '/');
           routeModules[routeId] = relativePath;
+          // Store output path relative to routesDir for server entry imports
+          const outputRelativeToRoutesDir = relative(routesDir, output.path).replace(/\\/g, '/');
+          routeOutputMap.set(sourcePath, outputRelativeToRoutesDir);
         }
       }
     }
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }
+
+  // Generate server entry point using actual output paths from build
+  const serverEntry = generateServerEntry(routes, root, routeOutputMap);
+  const serverEntryPath = join(outDir, '_entry.server.ts');
+  await Bun.write(serverEntryPath, serverEntry);
 
   // Build the server entry
   try {
@@ -633,16 +645,22 @@ async function buildServer(options: {
 
 /**
  * Generate server entry point code.
+ * @param routes - The route definitions
+ * @param root - Project root directory
+ * @param routeOutputMap - Map of source file path to output path (relative to routes dir)
  */
-function generateServerEntry(routes: Route[], root: string): string {
+function generateServerEntry(routes: Route[], root: string, routeOutputMap: Map<string, string>): string {
   const imports: string[] = [];
   const routeRegistrations: string[] = [];
 
   const processRoute = (route: Route, index: number) => {
     const varName = `route_${index}`;
-    const relativePath = relative(root, route.file).replace(/\\/g, '/');
-    // Use relative import from server output dir back to source files
-    imports.push(`import * as ${varName} from './routes/${relative(join(root, 'app/routes'), route.file).replace(/\\/g, '/').replace(/\.[^.]+$/, '.js')}';`);
+    // Use actual output path from the build result, or fall back to computed path
+    const outputPath = routeOutputMap.get(route.file);
+    const importPath = outputPath
+      ? `./routes/${outputPath}`
+      : `./routes/${relative(join(root, 'app/routes'), route.file).replace(/\\/g, '/').replace(/\.[^.]+$/, '.js')}`;
+    imports.push(`import * as ${varName} from '${importPath}';`);
 
     routeRegistrations.push(`  {
     id: '${route.id}',
