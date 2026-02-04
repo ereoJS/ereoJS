@@ -233,21 +233,18 @@ export class RouteTree {
   }
 
   /**
+   * Middleware stored by path prefix.
+   * Separate from route nodes since middleware can exist without a route at that path.
+   */
+  private middlewareByPath: Map<string, { file: string; module?: { middleware?: any } }> = new Map();
+
+  /**
    * Attach middleware to a route segment.
    * Middleware applies to all routes in and below this segment.
    */
   attachMiddleware(path: string, middlewareFile: string): void {
-    // Find the node at this path or its parent
-    const node = this.findByPath(path);
-    if (node) {
-      node.middlewareFile = middlewareFile;
-      return;
-    }
-
-    // If no exact match, attach to root (for root _middleware.ts)
-    if (path === '/') {
-      this.root.middlewareFile = middlewareFile;
-    }
+    // Store middleware by path prefix - it applies to all routes under this path
+    this.middlewareByPath.set(path, { file: middlewareFile });
   }
 
   /**
@@ -257,34 +254,28 @@ export class RouteTree {
     const node = this.findById(routeId);
     if (!node) return [];
 
+    const routePath = node.path;
     const middlewares: Array<{ file: string; module?: { middleware?: any } }> = [];
 
-    // Collect middleware from root to the matched route
-    const collectMiddleware = (current: RouteNode | undefined): void => {
-      if (!current) return;
+    // Get all middleware paths, sorted by length (shortest first = root first)
+    const sortedPaths = Array.from(this.middlewareByPath.keys()).sort(
+      (a, b) => a.length - b.length
+    );
 
-      // Process parent first (root to leaf order)
-      if (current.parent) {
-        collectMiddleware(current.parent);
+    // Collect middleware whose path is a prefix of the route path
+    for (const middlewarePath of sortedPaths) {
+      // A middleware at "/" applies to all routes
+      // A middleware at "/api" applies to "/api", "/api/posts", etc.
+      if (
+        middlewarePath === '/' ||
+        routePath === middlewarePath ||
+        routePath.startsWith(middlewarePath + '/')
+      ) {
+        const mw = this.middlewareByPath.get(middlewarePath);
+        if (mw) {
+          middlewares.push(mw);
+        }
       }
-
-      // Add middleware if this node has one
-      if (current.middlewareFile) {
-        middlewares.push({
-          file: current.middlewareFile,
-          module: current.middlewareModule,
-        });
-      }
-    };
-
-    collectMiddleware(node);
-
-    // Also check root middleware
-    if (this.root.middlewareFile && !middlewares.find(m => m.file === this.root.middlewareFile)) {
-      middlewares.unshift({
-        file: this.root.middlewareFile,
-        module: this.root.middlewareModule,
-      });
     }
 
     return middlewares;
