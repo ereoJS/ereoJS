@@ -226,7 +226,9 @@ const themeAtom = atom<'light' | 'dark'>('light')
 
 ## batch
 
-Batches multiple signal updates into a single notification.
+Wraps multiple signal updates for future batching support.
+
+> **Note:** The current implementation executes the function immediately without batching. This is a placeholder API. Use it to mark code that should batch when the feature is fully implemented.
 
 ### Signature
 
@@ -234,7 +236,7 @@ Batches multiple signal updates into a single notification.
 function batch<T>(fn: () => T): T
 ```
 
-### Example
+### Current Behavior
 
 ```ts
 import { signal, batch } from '@ereo/state'
@@ -242,35 +244,25 @@ import { signal, batch } from '@ereo/state'
 const firstName = signal('John')
 const lastName = signal('Doe')
 
-// Without batch: subscribers notified twice
-firstName.set('Jane')
-lastName.set('Smith')
+firstName.subscribe(v => console.log('First:', v))
+lastName.subscribe(v => console.log('Last:', v))
 
-// With batch: subscribers notified once
+// Currently: still triggers two notifications
 batch(() => {
-  firstName.set('Jane')
-  lastName.set('Smith')
+  firstName.set('Jane') // Logs: "First: Jane"
+  lastName.set('Smith') // Logs: "Last: Smith"
 })
 ```
 
-### Prevents Glitches
+### Workaround for Atomic Updates
+
+Use a single signal with an object for truly atomic updates:
 
 ```ts
-const a = signal(1)
-const b = signal(2)
-const sum = computed(() => a.get() + b.get(), [a, b])
+const name = signal({ first: 'John', last: 'Doe' })
 
-// Without batch: sum briefly shows inconsistent state
-a.set(10) // sum = 12
-b.set(20) // sum = 30
-
-// With batch: sum updates atomically
-batch(() => {
-  a.set(10)
-  b.set(20)
-})
-// sum = 30 (no intermediate state)
-```
+// Single notification
+name.update(n => ({ ...n, first: 'Jane', last: 'Smith' }))
 
 ## Signal.map
 

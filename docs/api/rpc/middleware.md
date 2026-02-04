@@ -186,6 +186,62 @@ const normalProcedure = procedure.use(rateLimit({
 - Automatically cleans up expired entries every 60 seconds
 - For production with multiple servers, use Redis or similar
 
+### Rate Limit Store Behavior
+
+The rate limiting middleware uses a module-level singleton called `globalRateLimitStore` that manages all rate limit state. Understanding its behavior is important for production applications.
+
+#### Architecture
+
+```ts
+// Internal structure (simplified)
+class RateLimitStore {
+  private stores = new Map<string, Map<string, RateLimitEntry>>()
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null
+  private readonly CLEANUP_INTERVAL_MS = 60000 // 60 seconds
+}
+
+const globalRateLimitStore = new RateLimitStore()
+```
+
+#### Shared State
+
+Rate limit instances with the same `windowMs` share the same underlying store:
+
+```ts
+// These share state because they have the same windowMs
+const rateLimitA = rateLimit({ limit: 100, windowMs: 60000 })
+const rateLimitB = rateLimit({ limit: 50, windowMs: 60000 })
+
+// Different windowMs = separate stores
+const rateLimitC = rateLimit({ limit: 100, windowMs: 30000 })
+```
+
+This means if a client hits the limit on one procedure, it affects their count for all procedures using the same `windowMs` value.
+
+#### Automatic Cleanup
+
+The store automatically cleans up expired entries:
+
+- Cleanup runs every **60 seconds** (`CLEANUP_INTERVAL_MS`)
+- Entries are removed when `entry.resetAt < Date.now()`
+- Empty stores are removed to free memory
+- Cleanup interval stops automatically when all stores are empty
+
+#### Memory Implications
+
+For high-traffic applications, consider:
+
+- Each unique client key creates an entry (~50-100 bytes)
+- Entries persist until their window expires
+- With IP-based limiting and many unique IPs, memory can grow significantly
+- Consider Redis for production deployments with multiple server instances
+
+#### Example Memory Calculation
+
+```
+1 million unique IPs * 100 bytes = ~100MB per windowMs bucket
+```
+
 ## clearRateLimitStore
 
 Clears the global rate limit store. Useful for testing.
@@ -657,6 +713,75 @@ const productionErrorHandler = catchErrors((error) => {
       ? 'An unexpected error occurred'
       : error.message,
   }
+})
+```
+
+## Middleware Execution Order
+
+When you chain multiple middleware using `.use()`, they execute in **forward order** (first to last). Each middleware receives the context from the previous middleware and can transform it before passing to the next.
+
+### Execution Flow
+
+```
+Request → Middleware 1 → Middleware 2 → Middleware 3 → Handler → Response
+```
+
+### Example
+
+```ts
+const trackedProcedure = procedure
+  .use(async ({ ctx, next }) => {
+    console.log('1. Start - Adding requestId')
+    const result = await next({ ...ctx, requestId: crypto.randomUUID() })
+    console.log('1. End')
+    return result
+  })
+  .use(async ({ ctx, next }) => {
+    console.log('2. Start - requestId is:', ctx.requestId) // Available!
+    const result = await next({ ...ctx, timestamp: Date.now() })
+    console.log('2. End')
+    return result
+  })
+  .use(async ({ ctx, next }) => {
+    console.log('3. Start - Has requestId and timestamp')
+    return next(ctx)
+  })
+
+const myQuery = trackedProcedure.query(({ requestId, timestamp }) => {
+  console.log('Handler executing')
+  return { requestId, timestamp }
+})
+```
+
+**Console output:**
+```
+1. Start - Adding requestId
+2. Start - requestId is: abc-123
+3. Start - Has requestId and timestamp
+Handler executing
+3. End (implicitly via next)
+2. End
+1. End
+```
+
+### Context Accumulation
+
+Each middleware can:
+1. **Read** context from previous middleware
+2. **Extend** context for subsequent middleware
+3. **Short-circuit** by returning an error instead of calling `next()`
+
+```ts
+const fullProcedure = procedure
+  .use(loggingMiddleware)      // Adds: nothing, just logs
+  .use(timingMiddleware)       // Adds: { timing: { start, getDuration } }
+  .use(authMiddleware)         // Adds: { user: User }
+  .use(roleMiddleware)         // Reads: user, validates role
+
+// Handler has access to all accumulated context
+const handler = fullProcedure.query(({ user, timing }) => {
+  const duration = timing.getDuration()
+  return { userId: user.id, processingTime: duration }
 })
 ```
 

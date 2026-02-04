@@ -238,6 +238,93 @@ Bun.serve({
 })
 ```
 
+### WebSocket Authentication Pattern
+
+When upgrading to WebSocket, the original HTTP request is preserved in `ws.data.originalRequest`. This enables authentication in subscription middleware.
+
+#### How It Works
+
+```ts
+// During upgrade, the original request is stored
+const data: WSConnectionData = {
+  subscriptions: new Map(),
+  ctx,
+  originalRequest: request,  // Preserved for middleware access
+}
+
+server.upgrade(request, { data })
+```
+
+#### Accessing Auth in Subscriptions
+
+Subscription middleware receives the original request, allowing access to cookies and auth headers:
+
+```ts
+// Session-based auth middleware
+const sessionAuth = createAuthMiddleware(async (ctx) => {
+  // ctx.request is the original HTTP upgrade request
+  const cookies = ctx.request.headers.get('Cookie')
+  const sessionId = cookies?.match(/session=([^;]+)/)?.[1]
+
+  if (!sessionId) return null
+
+  const session = await db.sessions.findUnique({
+    where: { id: sessionId },
+    include: { user: true },
+  })
+
+  if (!session || session.expiresAt < new Date()) return null
+  return session.user
+})
+
+// Use in subscription
+const protectedSubscription = procedure
+  .use(sessionAuth)
+  .subscription(async function* ({ user }) {
+    // user is authenticated via session cookie
+    for await (const event of userEvents.on(user.id)) {
+      yield event
+    }
+  })
+```
+
+#### Cookie Behavior
+
+**Same-origin requests:** Cookies are automatically included in WebSocket upgrade requests when:
+- The WebSocket URL has the same origin as the page
+- Cookies are set with appropriate `SameSite` policy
+
+**Cross-origin requests:** Require explicit credential handling:
+
+```ts
+// Client-side: Include credentials
+const ws = new WebSocket(wsUrl)
+// Note: WebSocket API doesn't support credentials option directly
+// Use the same origin or token-based auth for cross-origin
+
+// Alternative: Token-based auth
+const wsUrl = `wss://api.example.com/rpc?token=${authToken}`
+```
+
+#### Example: Token-Based Auth for WebSocket
+
+```ts
+// Server middleware
+const tokenAuth = createAuthMiddleware(async (ctx) => {
+  // Check Authorization header first (HTTP requests)
+  let token = ctx.request.headers.get('Authorization')?.replace('Bearer ', '')
+
+  // Fall back to query parameter (WebSocket upgrade)
+  if (!token) {
+    const url = new URL(ctx.request.url)
+    token = url.searchParams.get('token')
+  }
+
+  if (!token) return null
+  return verifyJWT(token)
+})
+```
+
 ### Manual WebSocket Upgrade
 
 For more control, you can handle upgrades manually:

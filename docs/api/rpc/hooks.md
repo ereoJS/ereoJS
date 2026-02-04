@@ -626,6 +626,206 @@ function ResilientStream() {
 }
 ```
 
+## Subscription Error Handling
+
+Subscription generators can throw errors during iteration. Understanding how errors propagate helps build resilient applications.
+
+### How Subscription Errors Work
+
+On the server, when a subscription generator throws an error:
+
+```ts
+const riskySubscription = procedure.subscription(async function* () {
+  for (let i = 0; i < 10; i++) {
+    if (i === 5) {
+      throw new Error('Something went wrong at iteration 5')
+    }
+    yield { count: i }
+  }
+})
+```
+
+The error is caught and sent to the client:
+```ts
+// Server-side error handling (internal)
+try {
+  for await (const value of generator) {
+    ws.send({ type: 'data', id, data: value })
+  }
+} catch (error) {
+  const errorMsg = error instanceof Error ? error.message : 'Subscription error'
+  ws.send({ type: 'error', id, error: { code: 'SUBSCRIPTION_ERROR', message: errorMsg } })
+}
+```
+
+### Handling Errors in Components
+
+Use the `onError` callback and `error` state to handle subscription errors:
+
+```tsx
+function DataStream() {
+  const [retryCount, setRetryCount] = useState(0)
+
+  const { data, error, status, resubscribe } = useSubscription(
+    rpc.stream.data,
+    {
+      onError: (err) => {
+        console.error('Subscription error:', err.message)
+
+        // Auto-retry up to 3 times
+        if (retryCount < 3) {
+          setRetryCount((c) => c + 1)
+          setTimeout(() => resubscribe(), 1000 * retryCount)
+        }
+      },
+    }
+  )
+
+  if (error && retryCount >= 3) {
+    return (
+      <div className="error">
+        <p>Connection failed after {retryCount} retries</p>
+        <p>Error: {error.message}</p>
+        <button onClick={() => {
+          setRetryCount(0)
+          resubscribe()
+        }}>
+          Try Again
+        </button>
+      </div>
+    )
+  }
+
+  return <StreamDisplay data={data} status={status} />
+}
+```
+
+### Error Recovery Patterns
+
+#### Pattern 1: Exponential Backoff
+
+```tsx
+function useSubscriptionWithBackoff<T>(
+  procedure: SubscribeFn<void, T>,
+  maxRetries = 5
+) {
+  const [retries, setRetries] = useState(0)
+  const timeoutRef = useRef<NodeJS.Timeout>()
+
+  const result = useSubscription(procedure, {
+    onError: (error) => {
+      if (retries < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, retries), 30000)
+        console.log(`Retrying in ${delay}ms (attempt ${retries + 1})`)
+
+        timeoutRef.current = setTimeout(() => {
+          setRetries((r) => r + 1)
+          result.resubscribe()
+        }, delay)
+      }
+    },
+  })
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
+  return {
+    ...result,
+    retries,
+    resetRetries: () => setRetries(0),
+  }
+}
+```
+
+#### Pattern 2: Error Boundary Integration
+
+```tsx
+function SubscriptionErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  if (hasError) {
+    return (
+      <div className="error-boundary">
+        <h2>Something went wrong</h2>
+        <p>{errorMessage}</p>
+        <button onClick={() => setHasError(false)}>Retry</button>
+      </div>
+    )
+  }
+
+  return (
+    <SubscriptionErrorContext.Provider
+      value={{
+        onError: (error) => {
+          setErrorMessage(error.message)
+          setHasError(true)
+        },
+      }}
+    >
+      {children}
+    </SubscriptionErrorContext.Provider>
+  )
+}
+
+// Usage in child component
+function LiveFeed() {
+  const { onError } = useContext(SubscriptionErrorContext)
+
+  const { data } = useSubscription(rpc.feed.live, {
+    onError,
+  })
+
+  return <FeedDisplay data={data} />
+}
+```
+
+#### Pattern 3: Graceful Degradation
+
+```tsx
+function LiveOrPolledData() {
+  const [usePolling, setUsePolling] = useState(false)
+
+  // Try subscription first
+  const subscription = useSubscription(rpc.data.live, {
+    enabled: !usePolling,
+    onError: () => {
+      console.log('Falling back to polling')
+      setUsePolling(true)
+    },
+  })
+
+  // Fall back to polling
+  const query = useQuery(rpc.data.get, {
+    enabled: usePolling,
+    refetchInterval: 5000,
+  })
+
+  const data = usePolling ? query.data : subscription.data
+  const isLoading = usePolling ? query.isLoading : subscription.status === 'connecting'
+
+  return (
+    <div>
+      {usePolling && (
+        <div className="notice">
+          Using polling mode.
+          <button onClick={() => setUsePolling(false)}>
+            Try live updates
+          </button>
+        </div>
+      )}
+      <DataDisplay data={data} isLoading={isLoading} />
+    </div>
+  )
+}
+```
+
 ## Combining Hooks
 
 ```tsx

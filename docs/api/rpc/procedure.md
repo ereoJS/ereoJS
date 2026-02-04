@@ -466,6 +466,124 @@ export const adminProcedure = verifiedProcedure.use(requireRoles(['admin']))
 export const superAdminProcedure = verifiedProcedure.use(requireRoles(['super_admin']))
 ```
 
+## executeMiddleware
+
+Executes a middleware chain and returns the final context. Useful for testing middleware in isolation.
+
+### Signature
+
+```ts
+async function executeMiddleware<TContext extends BaseContext>(
+  middlewares: MiddlewareDef<any, any>[],
+  initialCtx: BaseContext
+): Promise<MiddlewareResult<TContext>>
+```
+
+### Type Definitions
+
+```ts
+interface MiddlewareDef<TIn, TOut> {
+  fn: MiddlewareFn<TIn, TOut>
+}
+
+type MiddlewareResult<TContext> =
+  | { ok: true; ctx: TContext }
+  | { ok: false; error: { code: string; message: string } }
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `middlewares` | `MiddlewareDef[]` | Array of middleware definitions to execute |
+| `initialCtx` | `BaseContext` | Initial context (must have `ctx` and `request` properties) |
+
+### Returns
+
+A `MiddlewareResult` that is either:
+- `{ ok: true, ctx: TContext }` - All middleware passed, final context returned
+- `{ ok: false, error: { code, message } }` - A middleware short-circuited with an error
+
+### Example: Testing Middleware
+
+```ts
+import { executeMiddleware, procedure } from '@ereo/rpc'
+
+// Create test context
+const mockRequest = new Request('http://localhost/api/rpc', {
+  headers: { Authorization: 'Bearer valid-token' },
+})
+
+const initialCtx = {
+  ctx: {},
+  request: mockRequest,
+}
+
+// Test auth middleware
+const authMiddleware = procedure.use(async ({ ctx, next }) => {
+  const token = ctx.request.headers.get('Authorization')
+  if (!token) {
+    return { ok: false, error: { code: 'UNAUTHORIZED', message: 'No token' } }
+  }
+  return next({ ...ctx, user: { id: '123', name: 'Test User' } })
+})
+
+// Execute and verify
+const result = await executeMiddleware(
+  [{ fn: authMiddleware }],
+  initialCtx
+)
+
+if (result.ok) {
+  console.log('User:', result.ctx.user)
+  // { id: '123', name: 'Test User' }
+} else {
+  console.log('Error:', result.error)
+}
+```
+
+### Example: Testing Middleware Chain
+
+```ts
+import { executeMiddleware } from '@ereo/rpc'
+import { logging, timing, createAuthMiddleware } from '@ereo/rpc'
+
+const middlewares = [
+  { fn: logging() },
+  { fn: timing() },
+  { fn: createAuthMiddleware(async () => ({ id: '1', role: 'admin' })) },
+]
+
+const result = await executeMiddleware(middlewares, {
+  ctx: {},
+  request: new Request('http://localhost'),
+})
+
+expect(result.ok).toBe(true)
+if (result.ok) {
+  expect(result.ctx.user).toBeDefined()
+  expect(result.ctx.timing).toBeDefined()
+}
+```
+
+### Example: Testing Error Conditions
+
+```ts
+import { executeMiddleware, createAuthMiddleware } from '@ereo/rpc'
+
+const authMiddleware = createAuthMiddleware(async () => null) // Always fails
+
+const result = await executeMiddleware(
+  [{ fn: authMiddleware }],
+  { ctx: {}, request: new Request('http://localhost') }
+)
+
+expect(result.ok).toBe(false)
+if (!result.ok) {
+  expect(result.error.code).toBe('UNAUTHORIZED')
+}
+```
+
 ## Legacy API (Deprecated)
 
 The following standalone functions are deprecated but kept for backwards compatibility:

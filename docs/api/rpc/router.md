@@ -458,6 +458,90 @@ const riskyOperation = procedure.mutation(async () => {
 })
 ```
 
+## Validation Error Sanitization
+
+When input validation fails, the router sanitizes error details before sending them to clients. This is a security feature that prevents information leakage through verbose error messages.
+
+### How It Works
+
+The `sanitizeValidationError` function processes validation errors:
+
+```ts
+function sanitizeValidationError(error: unknown): unknown
+```
+
+### Sanitization Rules
+
+**Zod-style errors** (errors with an `issues` array):
+- Only `path`, `message`, and `code` fields are extracted from each issue
+- All other fields are stripped
+
+```ts
+// Original Zod error
+{
+  issues: [
+    {
+      path: ['email'],
+      message: 'Invalid email',
+      code: 'invalid_string',
+      validation: 'email',  // stripped
+      received: 'not-an-email',  // stripped
+    }
+  ]
+}
+
+// Sanitized response
+{
+  details: [
+    { path: ['email'], message: 'Invalid email', code: 'invalid_string' }
+  ]
+}
+```
+
+**Generic Error instances**:
+- Only the `message` property is returned
+
+```ts
+// Original error
+new Error('Something went wrong')
+
+// Sanitized response
+{ message: 'Something went wrong' }
+```
+
+**Non-Error throws**:
+- Returns a generic message to prevent leaking arbitrary data
+
+```ts
+// Original throw
+throw 'unexpected string error'
+
+// Sanitized response
+{ message: 'Validation failed' }
+```
+
+### Security Considerations
+
+- **Stack traces are never exposed** - Internal implementation details remain hidden
+- **Sensitive field values are not returned** - User input that failed validation is not echoed back
+- **Internal error codes remain internal** - Only standardized error codes are exposed
+
+### Example Response
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Input validation failed",
+    "details": [
+      { "path": ["email"], "message": "Invalid email", "code": "invalid_string" },
+      { "path": ["age"], "message": "Expected number, received string", "code": "invalid_type" }
+    ]
+  }
+}
+```
+
 ## Server Integration
 
 ### Basic Bun Server

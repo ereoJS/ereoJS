@@ -25,7 +25,7 @@ Key features:
 - Fine-grained reactivity with minimal overhead
 - Automatic dependency tracking
 - Computed values that derive from other signals
-- Batched updates to prevent glitches
+- `batch()` API for future update batching (placeholder)
 - Store abstraction for grouped state
 - Framework-agnostic with React integration
 
@@ -221,7 +221,9 @@ console.log(fullName.get()) // "Jane Doe"
 
 ### batch
 
-Batches multiple signal updates into a single notification cycle.
+Wraps multiple signal updates for future batching support.
+
+> **Note:** The current implementation executes the function immediately without batching notifications. This is a placeholder for future optimization. Each `set()` call still triggers its own notification cycle. For now, use this to mark code that would benefit from batching when the feature is fully implemented.
 
 #### Signature
 
@@ -239,28 +241,46 @@ function batch<T>(fn: () => T): T
 
 The return value of the function.
 
-#### Example
+#### Current Behavior
 
 ```ts
-import { signal, computed, batch } from '@ereo/state'
+import { signal, batch } from '@ereo/state'
 
 const a = signal(1)
 const b = signal(2)
-const sum = computed(() => a.get() + b.get(), [a, b])
 
-sum.subscribe(value => console.log('Sum:', value))
+a.subscribe(value => console.log('A:', value))
+b.subscribe(value => console.log('B:', value))
 
-// Without batch: two notifications
-a.set(10) // Logs: "Sum: 12"
-b.set(20) // Logs: "Sum: 30"
+// Currently: still triggers two separate notifications
+batch(() => {
+  a.set(10) // Logs: "A: 10"
+  b.set(20) // Logs: "B: 20"
+})
+```
 
-// With batch: one notification
+#### Future Behavior (Planned)
+
+When batching is fully implemented, subscribers will only be notified once after all updates complete:
+
+```ts
+// Future: single notification after all updates
 batch(() => {
   a.set(100)
   b.set(200)
 })
-// Logs: "Sum: 300" (only once)
+// Will log once after both updates complete
 ```
+
+#### Workaround for Atomic Updates
+
+For truly atomic state changes, use a single signal with an object:
+
+```ts
+const state = signal({ a: 1, b: 2 })
+
+// Single notification for multiple value changes
+state.update(s => ({ ...s, a: 100, b: 200 }))
 
 ### Store Class
 
@@ -841,20 +861,23 @@ const items = signal<Item[]>([])
 const total = signal(0) // must be manually kept in sync
 ```
 
-### 3. Batch Related Updates
+### 3. Group Related State
 
-Prevent intermediate states:
+For truly atomic updates, use a single signal with an object:
 
 ```ts
-// Good: atomic update
+// Good: single signal for related values = single notification
+const name = signal({ first: 'John', last: 'Doe' })
+name.update(n => ({ ...n, first: 'Jane', last: 'Smith' }))
+
+// Alternative: use batch() to mark intent (batching coming soon)
+const firstName = signal('John')
+const lastName = signal('Doe')
 batch(() => {
   firstName.set('Jane')
   lastName.set('Smith')
 })
-
-// Avoid: separate updates cause multiple re-renders
-firstName.set('Jane')
-lastName.set('Smith')
+// Note: currently triggers two notifications, future versions will batch
 ```
 
 ### 4. Clean Up Subscriptions

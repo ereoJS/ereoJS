@@ -9,46 +9,41 @@ import {
   // Test Context
   createTestContext,
   createContextFactory,
+  type TestContextOptions,
+  type TestContext,
 
   // Loader Testing
   testLoader,
   createLoaderTester,
-  testLoadersParallel,
-  testLoaderMatrix,
-  testLoaderError,
+  type LoaderTestOptions,
+  type LoaderTestResult,
 
   // Action Testing
   testAction,
   createActionTester,
-  testActionMatrix,
-  testActionError,
-  testActionWithFile,
+  type ActionTestOptions,
+  type ActionTestResult,
 
   // Middleware Testing
   testMiddleware,
   createMiddlewareTester,
-  testMiddlewareChain,
-  testMiddlewareMatrix,
-  testMiddlewareError,
-  testMiddlewareContext,
+  type MiddlewareTestOptions,
+  type MiddlewareTestResult,
 
   // Request/Response Utilities
   createMockRequest,
   createFormRequest,
   createMockFormData,
   createMockHeaders,
-  createMockFile,
   parseJsonResponse,
   parseTextResponse,
-  extractCookies,
+  type MockRequestOptions,
 
   // Component Testing
   renderRoute,
   createRouteRenderer,
-  renderComponent,
-  renderRouteMatrix,
-  testRouteRenders,
-  getRouteMeta,
+  type RenderRouteOptions,
+  type RenderResult,
 
   // Assertions
   assertRedirect,
@@ -56,20 +51,17 @@ import {
   assertStatus,
   assertHeaders,
   assertCookies,
-  assertThrows,
-  assertSchema,
+  type AssertionOptions,
 
   // Test Server
   createTestServer,
-  createMockServer,
+  type TestServer,
+  type TestServerOptions,
 
   // Snapshot Testing
   snapshotLoader,
   snapshotAction,
-  createSnapshotMatrix,
-  commonReplacers,
-  applyReplacements,
-  deterministicSnapshot
+  type SnapshotOptions,
 } from '@ereo/testing'
 ```
 
@@ -83,17 +75,19 @@ bun add -D @ereo/testing
 
 The testing package is organized into several categories:
 
-| Category | Purpose |
-|----------|---------|
-| Context | Create mock contexts for testing |
-| Loader Testing | Test route loaders in isolation |
-| Action Testing | Test form actions and mutations |
-| Middleware Testing | Test middleware functions |
-| Request/Response | Create mock requests and parse responses |
-| Component Testing | Render routes with loader data |
-| Assertions | Common assertions for responses |
-| Test Server | Integration testing with real HTTP |
-| Snapshots | Snapshot testing for data |
+| Category | Functions | Purpose |
+|----------|-----------|---------|
+| Context | `createTestContext`, `createContextFactory` | Create mock contexts for testing |
+| Loader Testing | `testLoader`, `createLoaderTester` | Test route loaders in isolation |
+| Action Testing | `testAction`, `createActionTester` | Test form actions and mutations |
+| Middleware Testing | `testMiddleware`, `createMiddlewareTester` | Test middleware functions |
+| Request/Response | `createMockRequest`, `createFormRequest`, `createMockFormData`, `createMockHeaders`, `parseJsonResponse`, `parseTextResponse` | Create mock requests and parse responses |
+| Component Testing | `renderRoute`, `createRouteRenderer` | Render routes with loader data |
+| Assertions | `assertRedirect`, `assertJson`, `assertStatus`, `assertHeaders`, `assertCookies` | Common assertions for responses |
+| Test Server | `createTestServer` | Integration testing with real HTTP |
+| Snapshots | `snapshotLoader`, `snapshotAction` | Snapshot testing for data |
+
+> **Note:** Some sections below document planned features that are not yet implemented. Functions listed in the import section above are the currently available exports. Sections marked with "🚧 Planned" describe future functionality.
 
 ---
 
@@ -289,7 +283,9 @@ test('loads different post', async () => {
 })
 ```
 
-### testLoadersParallel
+### testLoadersParallel 🚧 Planned
+
+> **Not yet implemented.** This API is planned for a future release.
 
 Tests multiple loaders in parallel for combined loader scenarios.
 
@@ -318,7 +314,9 @@ expect(results[0].data.user).toBeDefined()
 expect(results[1].data.posts).toHaveLength(3)
 ```
 
-### testLoaderMatrix
+### testLoaderMatrix 🚧 Planned
+
+> **Not yet implemented.** This API is planned for a future release.
 
 Tests a loader with multiple parameter combinations.
 
@@ -351,7 +349,9 @@ expect(results[1].data).toBeDefined()
 expect(results[2].data).toBeNull()
 ```
 
-### testLoaderError
+### testLoaderError 🚧 Planned
+
+> **Not yet implemented.** This API is planned for a future release.
 
 Tests loader error handling.
 
@@ -510,7 +510,9 @@ test('requires content', async () => {
 })
 ```
 
-### testActionMatrix
+### testActionMatrix 🚧 Planned
+
+> **Not yet implemented.** This API is planned for a future release.
 
 Tests an action with multiple form submissions.
 
@@ -547,7 +549,9 @@ expect(results[1].data.success).toBe(true)
 expect(results[2].data.error).toBeDefined()
 ```
 
-### testActionError
+### testActionError 🚧 Planned
+
+> **Not yet implemented.**
 
 Tests action error handling.
 
@@ -576,7 +580,9 @@ test('handles validation error', async () => {
 })
 ```
 
-### testActionWithFile
+### testActionWithFile 🚧 Planned
+
+> **Not yet implemented.**
 
 Tests an action with file upload.
 
@@ -742,7 +748,9 @@ test('rejects invalid tokens', async () => {
 })
 ```
 
-### testMiddlewareChain
+### testMiddlewareChain 🚧 Planned
+
+> **Not yet implemented.**
 
 Tests a chain of middleware functions.
 
@@ -781,7 +789,9 @@ expect(result.middlewareResults[1].nextCalled).toBe(true)
 expect(result.middlewareResults[2].nextCalled).toBe(true)
 ```
 
-### testMiddlewareMatrix
+### testMiddlewareMatrix 🚧 Planned
+
+> **Not yet implemented.**
 
 Tests middleware with multiple request scenarios.
 
@@ -813,7 +823,9 @@ expect(results[1].response.status).toBe(200)
 expect(results[2].response.status).toBe(401)
 ```
 
-### testMiddlewareError
+### testMiddlewareError 🚧 Planned
+
+> **Not yet implemented.**
 
 Tests middleware error handling.
 
@@ -847,7 +859,9 @@ test('handles errors gracefully', async () => {
 })
 ```
 
-### testMiddlewareContext
+### testMiddlewareContext 🚧 Planned
+
+> **Not yet implemented.**
 
 Tests that middleware modifies context correctly.
 
@@ -1022,7 +1036,9 @@ const headers = createMockHeaders({
 })
 ```
 
-### createMockFile
+### createMockFile 🚧 Planned
+
+> **Not yet implemented.**
 
 Creates a mock File for testing file uploads.
 
@@ -1070,7 +1086,9 @@ Parses text from a Response.
 function parseTextResponse(response: Response): Promise<string>
 ```
 
-### extractCookies
+### extractCookies 🚧 Planned
+
+> **Not yet implemented.**
 
 Extracts cookies from a Response.
 
@@ -1199,7 +1217,9 @@ test('renders for authenticated user', async () => {
 })
 ```
 
-### renderComponent
+### renderComponent 🚧 Planned
+
+> **Not yet implemented.**
 
 Renders a standalone component with props.
 
@@ -1218,7 +1238,9 @@ function renderComponent<P extends object>(
 const element = renderComponent(Counter, { count: 5 })
 ```
 
-### renderRouteMatrix
+### renderRouteMatrix 🚧 Planned
+
+> **Not yet implemented.**
 
 Renders a route with multiple param sets.
 
@@ -1250,7 +1272,9 @@ renders.forEach((result, index) => {
 })
 ```
 
-### testRouteRenders
+### testRouteRenders 🚧 Planned
+
+> **Not yet implemented.**
 
 Tests that a route renders without throwing.
 
@@ -1280,7 +1304,9 @@ test('renders without errors', async () => {
 })
 ```
 
-### getRouteMeta
+### getRouteMeta 🚧 Planned
+
+> **Not yet implemented.**
 
 Gets the meta tags for a route.
 
@@ -1436,7 +1462,9 @@ assertCookies(result.response, {
 })
 ```
 
-### assertThrows
+### assertThrows 🚧 Planned
+
+> **Not yet implemented.**
 
 Asserts that a function throws an error.
 
@@ -1463,7 +1491,9 @@ await assertThrows(
 )
 ```
 
-### assertSchema
+### assertSchema 🚧 Planned
+
+> **Not yet implemented.**
 
 Asserts that a value matches a basic type schema.
 
@@ -1589,7 +1619,9 @@ describe('API routes', () => {
 })
 ```
 
-### createMockServer
+### createMockServer 🚧 Planned
+
+> **Not yet implemented.**
 
 Creates a simple mock server for external API testing.
 
@@ -1701,7 +1733,9 @@ test('action snapshot', async () => {
 })
 ```
 
-### createSnapshotMatrix
+### createSnapshotMatrix 🚧 Planned
+
+> **Not yet implemented.**
 
 Creates snapshots for multiple test scenarios.
 
@@ -1731,7 +1765,9 @@ const snapshots = await createSnapshotMatrix(loader, {
 expect(snapshots).toMatchSnapshot()
 ```
 
-### commonReplacers
+### commonReplacers 🚧 Planned
+
+> **Not yet implemented.**
 
 Common regex patterns for dynamic values.
 
@@ -1748,7 +1784,9 @@ const commonReplacers = {
 }
 ```
 
-### applyReplacements
+### applyReplacements 🚧 Planned
+
+> **Not yet implemented.**
 
 Applies string replacements for snapshot stability.
 
@@ -1770,7 +1808,9 @@ const stableData = applyReplacements(data, {
 })
 ```
 
-### deterministicSnapshot
+### deterministicSnapshot 🚧 Planned
+
+> **Not yet implemented.**
 
 Creates a deterministic snapshot by sorting object keys.
 

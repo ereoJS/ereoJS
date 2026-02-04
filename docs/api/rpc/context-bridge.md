@@ -279,6 +279,25 @@ function useSharedContext<T>(): T | null
 
 The shared context if available on the client, or `null`.
 
+### Current Implementation
+
+**Important:** `useSharedContext` is currently a placeholder implementation. It simply reads from `window.__EREO_SHARED_CONTEXT__` and does not integrate with React Context or provide reactivity.
+
+```ts
+// Actual implementation
+export function useSharedContext<T>(): T | null {
+  if (typeof window !== 'undefined') {
+    return window.__EREO_SHARED_CONTEXT__ ?? null
+  }
+  return null
+}
+```
+
+This means:
+- It only works on the client side
+- Changes to the context after initial load are not tracked
+- It returns `null` during SSR (server-side rendering)
+
 ### Example
 
 ```tsx
@@ -305,29 +324,74 @@ function UserMenu() {
 }
 ```
 
-### Server-Side Hydration
+### Required Server-Side Hydration Setup
 
-For `useSharedContext` to work, the server must hydrate the context:
+For `useSharedContext` to work, **you must hydrate the context from the server**. This involves injecting a script tag that sets `window.__EREO_SHARED_CONTEXT__` before your React app hydrates.
 
 ```tsx
-// In your server rendering
-const ctx = await createSharedContext(request)
+// In your server rendering (e.g., entry-server.tsx)
+import { renderToString } from 'react-dom/server'
+import { createSharedContext } from '@ereo/rpc'
 
-const html = renderToString(
-  <html>
-    <head>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `window.__EREO_SHARED_CONTEXT__ = ${JSON.stringify(ctx)}`,
-        }}
-      />
-    </head>
-    <body>
-      <App />
-    </body>
-  </html>
-)
+export async function render(request: Request) {
+  const ctx = await createSharedContext(request)
+
+  // IMPORTANT: Only serialize safe, non-sensitive data
+  const safeCtx = {
+    user: ctx.user ? { id: ctx.user.id, name: ctx.user.name } : null,
+    config: ctx.config,
+    // Do NOT include: tokens, passwords, internal IDs, etc.
+  }
+
+  const html = renderToString(
+    <html>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__EREO_SHARED_CONTEXT__ = ${JSON.stringify(safeCtx)}`
+          }}
+        />
+      </head>
+      <body>
+        <App />
+      </body>
+    </html>
+  )
+
+  return html
+}
 ```
+
+### Security Warning
+
+**Never serialize sensitive data** into `window.__EREO_SHARED_CONTEXT__`:
+
+```ts
+// DANGEROUS - Never do this!
+const ctx = await createSharedContext(request)
+const html = `window.__EREO_SHARED_CONTEXT__ = ${JSON.stringify(ctx)}`
+// This might expose: session tokens, API keys, database connections, etc.
+
+// SAFE - Only include what the client needs
+const safeCtx = {
+  user: ctx.user ? {
+    id: ctx.user.id,
+    name: ctx.user.name,
+    role: ctx.user.role,
+  } : null,
+  features: ctx.features,
+  publicConfig: ctx.config.public,
+}
+const html = `window.__EREO_SHARED_CONTEXT__ = ${JSON.stringify(safeCtx)}`
+```
+
+Data that should **never** be serialized:
+- Session tokens or JWTs
+- API keys or secrets
+- Database connection strings
+- Internal user IDs that shouldn't be exposed
+- Password hashes or security-related data
+- Server-only configuration
 
 ## Complete Example
 

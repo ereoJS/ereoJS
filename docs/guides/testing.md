@@ -2,6 +2,8 @@
 
 This guide covers testing strategies for EreoJS applications.
 
+> **Tip:** For testing loaders, actions, and middleware, consider using the [`@ereo/testing`](/api/testing/) package which provides purpose-built utilities like `testLoader()`, `testAction()`, `createMockRequest()`, and more.
+
 ## Setup
 
 EreoJS works with Bun's built-in test runner.
@@ -108,6 +110,38 @@ describe('Posts Repository', () => {
 
 ## Testing Loaders
 
+### Using @ereo/testing (Recommended)
+
+```ts
+// routes/posts/[id].test.ts
+import { expect, test, describe } from 'bun:test'
+import { testLoader, createLoaderTester } from '@ereo/testing'
+import { loader } from './[id]'
+
+describe('Post Loader', () => {
+  test('returns post data', async () => {
+    const result = await testLoader(loader, {
+      params: { id: '1' },
+    })
+
+    expect(result.data.post).toBeDefined()
+    expect(result.data.post.id).toBe(1)
+  })
+
+  // Create reusable tester with preset context
+  const testWithUser = createLoaderTester(loader, {
+    context: { store: { user: { id: '1', role: 'admin' } } },
+  })
+
+  test('loads post for authenticated user', async () => {
+    const result = await testWithUser({ params: { id: '1' } })
+    expect(result.data.canEdit).toBe(true)
+  })
+})
+```
+
+### Manual Approach
+
 ```ts
 // routes/posts/[id].test.ts
 import { expect, test, describe } from 'bun:test'
@@ -138,6 +172,43 @@ describe('Post Loader', () => {
 ```
 
 ## Testing Actions
+
+### Using @ereo/testing (Recommended)
+
+```ts
+// routes/posts/new.test.ts
+import { expect, test, describe } from 'bun:test'
+import { testAction, createActionTester, assertRedirect } from '@ereo/testing'
+import { action } from './new'
+
+describe('Create Post Action', () => {
+  test('creates post with valid data', async () => {
+    const result = await testAction(action, {
+      formData: {
+        title: 'Test Post',
+        content: 'This is test content',
+      },
+    })
+
+    // Use built-in assertions
+    assertRedirect(result.response, '/posts')
+  })
+
+  test('returns errors with invalid data', async () => {
+    const result = await testAction(action, {
+      formData: {
+        title: 'AB', // Too short
+        content: '',
+      },
+    })
+
+    expect(result.data.errors).toBeDefined()
+    expect(result.data.errors.title).toBeDefined()
+  })
+})
+```
+
+### Manual Approach
 
 ```ts
 // routes/posts/new.test.ts

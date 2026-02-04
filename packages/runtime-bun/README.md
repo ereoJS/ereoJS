@@ -54,6 +54,24 @@ Quick start helper that creates and starts the runtime.
 const runtime = await serve({ server: { port: 3000 } });
 ```
 
+### Runtime Methods
+
+```typescript
+const runtime = createBunRuntime({ server: { port: 3000 } });
+
+// Register plugins
+runtime.use(myPlugin);
+
+// Start the server
+const server = await runtime.start();
+
+// Handle requests directly (useful for testing)
+const response = await runtime.handle(new Request('http://localhost/api/health'));
+
+// Stop the server
+runtime.stop();
+```
+
 ## Bun-Specific Utilities
 
 The package includes optimized utilities that leverage Bun's built-in features:

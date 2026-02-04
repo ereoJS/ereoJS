@@ -97,13 +97,13 @@ The main runtime class that manages the application lifecycle.
 
 #### Methods
 
-| Method | Description |
-|--------|-------------|
-| `getApp()` | Returns the EreoJS app instance |
-| `use(plugin)` | Register a plugin |
-| `start()` | Start the server |
-| `stop()` | Stop the server |
-| `handle(request)` | Handle a request directly |
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getApp()` | `() => EreoApp` | Returns the EreoJS app instance |
+| `use(plugin)` | `(plugin: Plugin) => this` | Register a plugin (chainable) |
+| `start()` | `() => Promise<Server>` | Start the server, returns Bun server instance |
+| `stop()` | `() => void` | Stop the server |
+| `handle(request)` | `(request: Request) => Promise<Response>` | Handle a request directly |
 
 #### Example
 
@@ -111,18 +111,50 @@ The main runtime class that manages the application lifecycle.
 import { createBunRuntime } from '@ereo/runtime-bun'
 import { tailwindPlugin } from '@ereo/plugin-tailwind'
 
-const runtime = createBunRuntime()
+const runtime = createBunRuntime({
+  server: { port: 3000 }
+})
 
-// Register plugins
-runtime.use(tailwindPlugin())
+// Register plugins (chainable)
+runtime
+  .use(tailwindPlugin())
+  .use(anotherPlugin())
 
 // Start the server
-await runtime.start()
+const server = await runtime.start()
+console.log(`Server running on port ${server.port}`)
 
 // Handle a request directly (useful for testing)
 const response = await runtime.handle(
   new Request('http://localhost/api/users')
 )
+console.log(await response.json())
+
+// Stop the server when done
+runtime.stop()
+```
+
+#### Testing with handle()
+
+The `handle()` method is useful for testing without starting a real server:
+
+```ts
+import { describe, test, expect } from 'bun:test'
+import { createBunRuntime } from '@ereo/runtime-bun'
+
+describe('API', () => {
+  const runtime = createBunRuntime()
+
+  test('GET /api/health returns ok', async () => {
+    const response = await runtime.handle(
+      new Request('http://localhost/api/health')
+    )
+
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.status).toBe('ok')
+  })
+})
 ```
 
 ## Bun-Specific Utilities
@@ -140,8 +172,40 @@ const content = await readFile('./config.json')
 // Write content to a file
 await writeFile('./output.txt', 'Hello, World!')
 
-// Read and parse JSON
+// Read and parse JSON (with TypeScript generics)
 const config = await readJSON<Config>('./config.json')
+```
+
+#### Error Handling
+
+File operations can throw errors. Always handle them appropriately:
+
+```ts
+import { readFile, readJSON, requireEnv } from '@ereo/runtime-bun'
+
+// File not found
+try {
+  const content = await readFile('./missing-file.txt')
+} catch (error) {
+  // Error: ENOENT - file not found
+  console.error('File not found:', error.message)
+}
+
+// JSON parse error
+try {
+  const config = await readJSON('./invalid.json')
+} catch (error) {
+  // Error: JSON Parse error or ENOENT
+  console.error('Failed to read JSON:', error.message)
+}
+
+// Missing environment variable
+try {
+  const apiKey = requireEnv('MISSING_VAR')
+} catch (error) {
+  // Error: Missing required environment variable: MISSING_VAR
+  console.error(error.message)
+}
 ```
 
 ### Compression
@@ -149,11 +213,35 @@ const config = await readJSON<Config>('./config.json')
 ```ts
 import { gzip, gunzip } from '@ereo/runtime-bun'
 
-// Compress data
+// Compress string data (returns Uint8Array)
 const compressed = gzip('Hello, World!')
 
-// Decompress data
+// Compress ArrayBuffer
+const buffer = new TextEncoder().encode('Hello, World!')
+const compressedBuffer = gzip(buffer)
+
+// Decompress data (returns Uint8Array)
 const decompressed = gunzip(compressed)
+
+// Convert back to string
+const text = new TextDecoder().decode(decompressed)
+console.log(text) // "Hello, World!"
+```
+
+#### Full Compression Workflow
+
+```ts
+import { gzip, gunzip } from '@ereo/runtime-bun'
+
+// Compress for storage or transmission
+const originalData = JSON.stringify({ users: [...] })
+const compressed = gzip(originalData)
+
+// Store or send compressed bytes...
+
+// Later: decompress and parse
+const decompressed = gunzip(compressed)
+const data = JSON.parse(new TextDecoder().decode(decompressed))
 ```
 
 ### Password Hashing
@@ -170,12 +258,30 @@ const isValid = await verifyPassword('mysecretpassword', hash)
 
 ### Database
 
+Access Bun's native SQLite database:
+
 ```ts
 import { getDatabase } from '@ereo/runtime-bun'
 
-// Get a SQLite database instance
+// Get a SQLite database instance (uses bun:sqlite)
 const db = await getDatabase('./data.db')
+
+// Use Bun's SQLite API
+db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)')
+
+// Prepared statements for better performance
+const insert = db.prepare('INSERT INTO users (name) VALUES (?)')
+insert.run('Alice')
+
+// Query data
+const users = db.query('SELECT * FROM users').all()
+console.log(users) // [{ id: 1, name: 'Alice' }]
+
+// Close when done
+db.close()
 ```
+
+> **Note:** `getDatabase()` uses dynamic import internally to avoid bundling issues in non-Bun environments. For full SQLite documentation, see [Bun's SQLite docs](https://bun.sh/docs/api/sqlite).
 
 ### Environment Variables
 
@@ -213,13 +319,26 @@ await sleep(1000) // 1 second
 
 // Spawn a shell command
 const proc = spawn(['ls', '-la'], { cwd: './src' })
+
+// The returned Subprocess has these properties:
+// proc.stdout - ReadableStream for stdout
+// proc.stderr - ReadableStream for stderr
+// proc.exited - Promise<number> that resolves to exit code
+
+// Example: Capture output
+const result = spawn(['echo', 'hello'])
+const output = await new Response(result.stdout).text()
+console.log(output) // "hello\n"
+
+// Wait for process to complete
+const exitCode = await result.exited
 ```
 
 ## Configuration
 
 ### Server Options
 
-The server configuration accepts standard Bun server options:
+The server configuration accepts `ServerOptions` from `@ereo/server`:
 
 ```ts
 import { serve } from '@ereo/runtime-bun'
@@ -229,10 +348,18 @@ const runtime = await serve({
     port: 3000,
     hostname: '0.0.0.0',
     development: true,
-    maxRequestBodySize: 1024 * 1024 * 50, // 50MB
+    logging: true,
+    cors: true,  // or CorsOptions object
+    security: true,  // or SecurityHeadersOptions object
+    tls: {
+      cert: './certs/cert.pem',
+      key: './certs/key.pem',
+    },
   }
 })
 ```
+
+See [BunServer documentation](/api/server/bun-server) for full `ServerOptions` reference.
 
 ### Framework Configuration
 

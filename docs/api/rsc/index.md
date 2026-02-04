@@ -298,6 +298,35 @@ const renderConfig = createRSCRenderConfig({
 // renderConfig.streaming.enabled === true
 ```
 
+## Error Handling
+
+### Serialization Errors
+
+`serializeRSC` may throw errors during serialization. Common causes:
+
+- **Circular references**: Objects with circular references cannot be JSON serialized
+- **Non-serializable values**: BigInt, Symbol, and certain object types
+
+Example error handling:
+
+```ts
+const stream = serializeRSC(element);
+const reader = stream.getReader();
+
+try {
+  const { value } = await reader.read();
+} catch (error) {
+  console.error('Serialization failed:', error);
+}
+```
+
+### Stream Consumption Errors
+
+`parseRSCStream` collects all chunks before parsing. Errors may occur if:
+
+- The stream contains invalid JSON
+- The stream is interrupted before completion
+
 ## Types
 
 ### RSCConfig
@@ -315,20 +344,57 @@ interface RSCConfig {
 }
 ```
 
+#### Client Manifest Structure
+
+Maps component paths to bundle info:
+
+```ts
+const config: RSCConfig = {
+  enabled: true,
+  clientManifest: {
+    'components/Button.tsx': {
+      id: 'Button',
+      chunks: ['client-Button-abc123.js'],
+      name: 'default'
+    }
+  }
+}
+```
+
+#### Server Manifest Structure
+
+Maps server action identifiers:
+
+```ts
+const config: RSCConfig = {
+  enabled: true,
+  serverManifest: {
+    'actions/submit': {
+      id: 'submitForm',
+      handler: 'src/actions/submit.ts#submitForm'
+    }
+  }
+}
+```
+
 ### RSCChunk
+
+Represents an individual chunk in an RSC stream for custom stream processing:
 
 ```ts
 interface RSCChunk {
-  /** Chunk ID */
+  /** Unique identifier */
   id: string
 
-  /** Chunk data */
+  /** Chunk payload */
   data: unknown
 
-  /** Whether this is the final chunk */
+  /** True if final chunk */
   done: boolean
 }
 ```
+
+**Note:** Current `serializeRSC` sends a single chunk. `RSCChunk` is for advanced incremental streaming use cases.
 
 ## Serialization and Data Flow
 
@@ -340,6 +406,26 @@ When a server component tree is serialized:
 2. **Server components** are rendered and their output is serialized
 3. **Client components** become references that the client resolves
 4. **Props** are serialized, with functions becoming client references
+
+### Function Props
+
+Functions cannot be serialized. When `serializeRSC` encounters function props, they become client references:
+
+```ts
+// Input
+<Button onClick={() => handleClick()} />
+
+// Serialized as
+{
+  type: 'element',
+  tag: 'Button',
+  props: {
+    onClick: { type: 'client-ref', id: 'onClick' }
+  }
+}
+```
+
+Event handlers must be provided by client components.
 
 ### Payload Structure
 
@@ -606,6 +692,70 @@ export function Page() {
   )
 }
 ```
+
+### 6. Name Your Components
+
+Anonymous components serialize with `'anonymous'` as their identifier, making debugging difficult:
+
+```tsx
+// Avoid: anonymous
+export default function() {
+  'use client'
+  return <button>Click</button>
+}
+
+// Better: named
+export default function ClickButton() {
+  'use client'
+  return <button>Click</button>
+}
+```
+
+## Edge Cases
+
+### Null and Undefined Children
+
+Null and undefined values in children arrays are preserved:
+
+```tsx
+<div>{condition ? <Component /> : null}</div>
+```
+
+### Mixed Children Types
+
+Arrays can contain mixed types (strings, numbers, elements):
+
+```tsx
+<div>
+  {'Text'}
+  {42}
+  <span>Element</span>
+</div>
+```
+
+### Multiple Stream Chunks
+
+`parseRSCStream` automatically handles streams arriving in multiple chunks, concatenating before parsing.
+
+### Client Reference Deduplication
+
+Using the same client component multiple times - references are automatically deduplicated.
+
+## Debugging RSC
+
+### Inspecting Serialized Payloads
+
+```ts
+const stream = serializeRSC(element);
+const payload = await parseRSCStream(stream);
+console.log(JSON.stringify(payload, null, 2));
+```
+
+### Performance Considerations
+
+- Large component trees increase serialization time
+- Deep nesting creates larger payloads
+- Consider paginating large lists
 
 ## Integration with EreoJS
 

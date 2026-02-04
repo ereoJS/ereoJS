@@ -45,20 +45,54 @@ export default defineConfig({
 })
 ```
 
-### Compression Middleware
+### CorsOptions
 
 ```ts
-import { compression } from '@ereo/server'
+interface CorsOptions {
+  /** Allowed origins - string, array, or function for dynamic validation */
+  origin?: string | string[] | ((origin: string) => boolean)
+  /** Allowed HTTP methods (default: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']) */
+  methods?: string[]
+  /** Allowed request headers (default: ['Content-Type', 'Authorization']) */
+  allowedHeaders?: string[]
+  /** Headers exposed to the client */
+  exposedHeaders?: string[]
+  /** Allow credentials (default: false) */
+  credentials?: boolean
+  /** Preflight cache max age in seconds (default: 86400) */
+  maxAge?: number
+}
+```
+
+#### Dynamic Origin Validation
+
+```ts
+cors({
+  origin: (requestOrigin) => {
+    // Allow any subdomain of example.com
+    return requestOrigin.endsWith('.example.com')
+  },
+  credentials: true
+})
+```
+
+### Compression Middleware
+
+Uses Bun's built-in gzip compression for text-based content (HTML, JSON, JavaScript, CSS).
+
+```ts
+import { compress } from '@ereo/server'
 
 export default defineConfig({
   middleware: [
-    compression({
-      threshold: 1024,  // Minimum size to compress
-      level: 6          // Compression level (1-9)
-    })
+    compress()
   ]
 })
 ```
+
+The middleware automatically compresses responses when:
+- The client accepts gzip encoding (`Accept-Encoding: gzip`)
+- The content type is text-based (`text/*`, `application/json`, `application/javascript`)
 
 ### Rate Limiting
 
@@ -68,13 +102,33 @@ import { rateLimit } from '@ereo/server'
 export default defineConfig({
   middleware: [
     rateLimit({
-      windowMs: 60 * 1000,  // 1 minute
-      max: 100,              // 100 requests per window
-      message: 'Too many requests'
+      windowMs: 60 * 1000,  // 1 minute window (default: 60000)
+      max: 100,              // Max requests per window (default: 100)
+      keyGenerator: (request) => {
+        // Custom key for rate limiting (default: X-Forwarded-For IP)
+        return request.headers.get('X-API-Key') || 'anonymous'
+      }
     })
   ]
 })
 ```
+
+### RateLimitOptions
+
+```ts
+interface RateLimitOptions {
+  /** Time window in milliseconds (default: 60000) */
+  windowMs?: number
+  /** Max requests per window (default: 100) */
+  max?: number
+  /** Custom function to generate rate limit key from request */
+  keyGenerator?: (request: Request) => string
+}
+```
+
+When rate limited, returns a `429 Too Many Requests` response with:
+- `Retry-After` header indicating seconds until reset
+- `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` headers
 
 ### Security Headers
 
@@ -84,17 +138,34 @@ import { securityHeaders } from '@ereo/server'
 export default defineConfig({
   middleware: [
     securityHeaders({
-      contentSecurityPolicy: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"]
-      },
-      xFrameOptions: 'DENY',
-      xContentTypeOptions: 'nosniff',
-      referrerPolicy: 'strict-origin-when-cross-origin'
+      // CSP as a string (default: "default-src 'self'")
+      contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+      // Or disable CSP
+      // contentSecurityPolicy: false,
+      xFrameOptions: 'DENY',           // 'DENY' | 'SAMEORIGIN' | false (default: 'SAMEORIGIN')
+      xContentTypeOptions: true,        // Adds 'nosniff' (default: true)
+      referrerPolicy: 'strict-origin-when-cross-origin',  // Or false to disable
+      permissionsPolicy: 'camera=(), microphone=()'       // Or false to disable
     })
   ]
 })
+```
+
+### SecurityHeadersOptions
+
+```ts
+interface SecurityHeadersOptions {
+  /** Content-Security-Policy header value (string) or false to disable */
+  contentSecurityPolicy?: string | false
+  /** X-Frame-Options: 'DENY', 'SAMEORIGIN', or false (default: 'SAMEORIGIN') */
+  xFrameOptions?: 'DENY' | 'SAMEORIGIN' | false
+  /** Add X-Content-Type-Options: nosniff (default: true) */
+  xContentTypeOptions?: boolean
+  /** Referrer-Policy header value or false to disable */
+  referrerPolicy?: string | false
+  /** Permissions-Policy header value or false to disable */
+  permissionsPolicy?: string | false
+}
 ```
 
 ## Custom Middleware
