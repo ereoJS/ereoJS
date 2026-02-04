@@ -32,9 +32,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "^0.1.7",
-    "@ereo/router": "^0.1.7",
-    "@ereo/data": "^0.1.7"
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/data": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

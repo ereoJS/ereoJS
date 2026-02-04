@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "^0.1.7"
+    "@ereo/core": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.0.0"

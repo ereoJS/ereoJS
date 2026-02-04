@@ -9,12 +9,12 @@
     "start": "ereo start"
   },
   "dependencies": {
-    "@ereo/core": "^0.1.7",
-    "@ereo/router": "^0.1.7",
-    "@ereo/server": "^0.1.7",
-    "@ereo/client": "^0.1.7",
-    "@ereo/data": "^0.1.7",
-    "@ereo/cli": "^0.1.7",
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/server": "workspace:*",
+    "@ereo/client": "workspace:*",
+    "@ereo/data": "workspace:*",
+    "@ereo/cli": "workspace:*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

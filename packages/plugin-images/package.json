@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "^0.1.7",
+    "@ereo/core": "workspace:*",
     "sharp": "^0.33.0"
   },
   "devDependencies": {

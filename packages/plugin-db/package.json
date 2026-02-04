@@ -20,7 +20,7 @@
   },
   "deprecated": "This package is deprecated. Please migrate to @ereo/db and @ereo/db-drizzle",
   "dependencies": {
-    "@ereo/core": "^0.1.7"
+    "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

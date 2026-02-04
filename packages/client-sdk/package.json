@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "^0.1.7"
+    "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

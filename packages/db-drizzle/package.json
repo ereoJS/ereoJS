@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/db": "^0.1.7",
+    "@ereo/db": "workspace:*",
     "drizzle-orm": "^0.30.0"
   },
   "peerDependencies": {

@@ -150,16 +150,20 @@ async function getPackages(): Promise<PackageInfo[]> {
   return packages;
 }
 
-// Update version in a package.json and update workspace dependencies
-function updatePackageJson(
+// Update version in a package.json (keeps workspace: protocol intact)
+function updateVersionOnly(packageJson: PackageJson, newVersion: string): PackageJson {
+  return { ...packageJson, version: newVersion };
+}
+
+// Transform workspace dependencies to actual versions for npm publish
+function transformForPublish(
   packageJson: PackageJson,
   newVersion: string,
   allPackageNames: Set<string>
 ): PackageJson {
-  const updated = { ...packageJson, version: newVersion };
+  const transformed = { ...packageJson };
 
-  // Update workspace dependencies to use the new version
-  const updateDeps = (deps: Record<string, string> | undefined) => {
+  const transformDeps = (deps: Record<string, string> | undefined) => {
     if (!deps) return deps;
     const newDeps = { ...deps };
     for (const [name, version] of Object.entries(newDeps)) {
@@ -171,11 +175,11 @@ function updatePackageJson(
     return newDeps;
   };
 
-  updated.dependencies = updateDeps(updated.dependencies);
-  updated.devDependencies = updateDeps(updated.devDependencies);
-  updated.peerDependencies = updateDeps(updated.peerDependencies);
+  transformed.dependencies = transformDeps(transformed.dependencies);
+  transformed.devDependencies = transformDeps(transformed.devDependencies);
+  transformed.peerDependencies = transformDeps(transformed.peerDependencies);
 
-  return updated;
+  return transformed;
 }
 
 // Sort packages by dependency order (packages with no internal deps first)
@@ -266,15 +270,17 @@ async function main() {
   // Collect all package names for dependency updates
   const allPackageNames = new Set(packages.map((p) => p.packageJson.name));
 
-  // Update all package.json files
-  console.log("📝 Updating package.json files...");
+  // Update all package.json files with new version (keeping workspace: protocol)
+  console.log("📝 Updating package.json versions...");
   for (const pkg of packages) {
-    const updated = updatePackageJson(pkg.packageJson, newVersion, allPackageNames);
+    const updated = updateVersionOnly(pkg.packageJson, newVersion);
     const pkgJsonPath = join(pkg.path, "package.json");
 
     if (!options.dryRun) {
       await writeFile(pkgJsonPath, JSON.stringify(updated, null, 2) + "\n");
     }
+    // Update in-memory packageJson for later use
+    pkg.packageJson = updated;
 
     console.log(`   ✓ ${pkg.packageJson.name}`);
   }
@@ -302,6 +308,16 @@ async function main() {
     const sortedPackages = sortByDependencyOrder(publishablePackages);
 
     for (const pkg of sortedPackages) {
+      const pkgJsonPath = join(pkg.path, "package.json");
+
+      // Transform workspace:* to actual versions for publishing
+      const publishReady = transformForPublish(pkg.packageJson, newVersion, allPackageNames);
+
+      if (!options.dryRun) {
+        // Write transformed package.json for publish
+        await writeFile(pkgJsonPath, JSON.stringify(publishReady, null, 2) + "\n");
+      }
+
       const publishCmd = ["npm", "publish", "--access", "public", "--tag", options.tag];
 
       if (options.otp) {
@@ -316,8 +332,12 @@ async function main() {
           console.error(`   ✗ ${pkg.packageJson.name} - publish failed`);
           // Continue with other packages
         }
+
+        // Restore original package.json with workspace: protocol
+        await writeFile(pkgJsonPath, JSON.stringify(pkg.packageJson, null, 2) + "\n");
       } else {
         console.log(`   (dry-run) ${pkg.packageJson.name}@${newVersion}`);
+        console.log(`      Would transform: workspace:* → ^${newVersion}`);
       }
     }
   }

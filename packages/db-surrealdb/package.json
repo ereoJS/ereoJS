@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/db": "^0.1.7"
+    "@ereo/db": "workspace:*"
   },
   "peerDependencies": {
     "surrealdb": "^1.0.0"

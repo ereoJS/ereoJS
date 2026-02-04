@@ -35,10 +35,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "^0.1.7",
-    "@ereo/router": "^0.1.7",
-    "@ereo/server": "^0.1.7",
-    "@ereo/bundler": "^0.1.7"
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/server": "workspace:*",
+    "@ereo/bundler": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",
