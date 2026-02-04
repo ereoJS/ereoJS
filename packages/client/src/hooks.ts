@@ -145,8 +145,7 @@ export function useLoaderData<T>(): T {
 /**
  * Access action results in components.
  *
- * @returns The action data (undefined if no action has been submitted)
- * @throws Error if used outside of EreoProvider
+ * @returns The action data (undefined if no action has been submitted or during SSR without context)
  *
  * @example
  * ```tsx
@@ -170,11 +169,10 @@ export function useLoaderData<T>(): T {
 export function useActionData<T>(): T | undefined {
   const context = useContext(ActionDataContext);
 
+  // During SSR or when EreoProvider is not present, return undefined gracefully
+  // This allows the hook to be used in components that are server-rendered
   if (context === null) {
-    throw new Error(
-      'useActionData must be used within an EreoProvider. ' +
-        'Make sure your component is wrapped with <EreoProvider>.'
-    );
+    return undefined;
   }
 
   return context.data as T | undefined;

@@ -170,7 +170,9 @@ export function Form({
   const formContext = useFormContext();
 
   // Get the action URL, defaulting to current path
-  const resolvedAction = action || (typeof window !== 'undefined' ? window.location.pathname : '/');
+  // In SSR context, use empty string which means "submit to current URL" in HTML
+  // On the client, use the current pathname
+  const resolvedAction = action ?? (typeof window !== 'undefined' ? window.location.pathname : '');
 
   // Handle form submission with JavaScript
   const handleSubmit = useCallback(

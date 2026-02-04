@@ -17,8 +17,10 @@ export type PrefetchStrategy = 'none' | 'intent' | 'render' | 'viewport';
  * Link component props.
  */
 export interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
-  /** URL to navigate to */
-  to: string;
+  /** URL to navigate to (alias: href) */
+  to?: string;
+  /** URL to navigate to (alias: to) - for Next.js-style API compatibility */
+  href?: string;
   /** Prefetch strategy (default: 'intent') */
   prefetch?: PrefetchStrategy;
   /** Replace history instead of push */
@@ -91,6 +93,7 @@ function shouldNavigate(event: React.MouseEvent<HTMLAnchorElement>): boolean {
 export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link(
   {
     to,
+    href,
     prefetch: prefetchStrategy = 'intent',
     replace = false,
     preventScrollReset = false,
@@ -108,8 +111,11 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
   const resolvedRef = (ref || internalRef) as React.RefObject<HTMLAnchorElement>;
   const hasPrefetched = React.useRef(false);
 
+  // Support both 'to' and 'href' props - 'to' takes precedence
+  const destination = to ?? href ?? '/';
+
   // Determine if URL is external
-  const isExternal = isExternalUrl(to);
+  const isExternal = isExternalUrl(destination);
 
   // Trigger prefetch
   const triggerPrefetch = React.useCallback(() => {
@@ -117,8 +123,8 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
       return;
     }
     hasPrefetched.current = true;
-    prefetch(to);
-  }, [to, isExternal, prefetchStrategy]);
+    prefetch(destination);
+  }, [destination, isExternal, prefetchStrategy]);
 
   // Handle click for client-side navigation
   const handleClick = React.useCallback(
@@ -143,14 +149,14 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
 
       // Prevent default and navigate
       event.preventDefault();
-      navigate(to, { replace, state });
+      navigate(destination, { replace, state });
 
       // Handle scroll reset
       if (!preventScrollReset && typeof window !== 'undefined') {
         window.scrollTo(0, 0);
       }
     },
-    [onClick, to, replace, state, isExternal, reloadDocument, preventScrollReset]
+    [onClick, destination, replace, state, isExternal, reloadDocument, preventScrollReset]
   );
 
   // Handle hover for 'intent' prefetch
@@ -215,7 +221,7 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
     <a
       {...rest}
       ref={resolvedRef}
-      href={to}
+      href={destination}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onFocus={handleFocus}
@@ -269,9 +275,12 @@ export interface NavLinkProps extends Omit<LinkProps, 'className' | 'style'> {
  * ```
  */
 export const NavLink = React.forwardRef<HTMLAnchorElement, NavLinkProps>(function NavLink(
-  { className, style, end = false, to, ...rest },
+  { className, style, end = false, to, href, ...rest },
   ref
 ) {
+  // Support both 'to' and 'href' props - 'to' takes precedence
+  const destination = to ?? href ?? '/';
+
   const [navigationState, setNavigationState] = React.useState<NavigationState>(() => {
     if (typeof window !== 'undefined') {
       return router.getState();
@@ -289,13 +298,13 @@ export const NavLink = React.forwardRef<HTMLAnchorElement, NavLinkProps>(functio
 
   // Determine active state
   const isActive = React.useMemo(() => {
-    const toPath = to.split('?')[0].split('#')[0]; // Remove query and hash
+    const toPath = destination.split('?')[0].split('#')[0]; // Remove query and hash
     if (end) {
       return navigationState.pathname === toPath;
     }
     return navigationState.pathname.startsWith(toPath) &&
            (toPath === '/' ? navigationState.pathname === '/' : true);
-  }, [to, end, navigationState.pathname]);
+  }, [destination, end, navigationState.pathname]);
 
   // For pending state, we would need a pending navigation context
   // For now, we'll just set it to false
@@ -317,7 +326,7 @@ export const NavLink = React.forwardRef<HTMLAnchorElement, NavLinkProps>(functio
     <Link
       {...rest}
       ref={ref}
-      to={to}
+      to={destination}
       className={resolvedClassName}
       style={resolvedStyle}
       aria-current={isActive ? 'page' : undefined}
