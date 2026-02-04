@@ -9,7 +9,7 @@ import { dev, type DevOptions } from './commands/dev';
 import { build, type BuildCommandOptions } from './commands/build';
 import { start, type StartOptions } from './commands/start';
 import { create, type CreateOptions } from './commands/create';
-import { deploy, printDeployHelp, type DeployOptions, type DeployTarget } from './commands/deploy';
+import { deploy, printDeployHelp, type DeployOptions, type DeployTarget, type DeployResult } from './commands/deploy';
 import {
   dbMigrate,
   dbGenerate,
@@ -296,7 +296,7 @@ async function main(): Promise<void> {
 // Export commands for programmatic use
 export { dev, build, start, create, deploy };
 export { dbMigrate, dbGenerate, dbStudio, dbPush, dbSeed };
-export type { DevOptions, BuildCommandOptions, StartOptions, CreateOptions, DeployOptions, DeployTarget };
+export type { DevOptions, BuildCommandOptions, StartOptions, CreateOptions, DeployOptions, DeployTarget, DeployResult };
 export type { DbMigrateOptions, DbGenerateOptions, DbStudioOptions, DbPushOptions, DbSeedOptions };
 
 // Run CLI
