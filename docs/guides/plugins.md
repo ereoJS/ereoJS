@@ -196,44 +196,26 @@ interface PluginContext {
   // Framework configuration
   config: FrameworkConfig
 
-  // Project root directory
+  // Project root directory (process.cwd())
   root: string
 
   // Environment mode
-  mode: 'development' | 'production' | 'test'
-
-  // Logger instance
-  logger: {
-    info(msg: string): void
-    warn(msg: string): void
-    error(msg: string): void
-  }
-
-  // Add routes dynamically
-  addRoute(route: Route): void
-
-  // Add global middleware
-  addMiddleware(handler: MiddlewareHandler): void
+  mode: 'development' | 'production'
 }
 ```
 
 ### Using Context
 
 ```ts
-export function dynamicRoutesPlugin(routes: RouteConfig[]) {
+export function configLoggerPlugin() {
   return definePlugin({
-    name: 'dynamic-routes',
+    name: 'config-logger',
 
     setup(context) {
-      for (const route of routes) {
-        context.addRoute({
-          path: route.path,
-          component: route.component,
-          loader: route.loader
-        })
-      }
-
-      context.logger.info(`Added ${routes.length} dynamic routes`)
+      console.log('Running in', context.mode, 'mode')
+      console.log('Project root:', context.root)
+      console.log('Server port:', context.config.server?.port)
+      console.log('Build target:', context.config.build?.target)
     }
   })
 }

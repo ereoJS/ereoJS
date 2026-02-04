@@ -11,6 +11,37 @@ import {
   useNavigation,
   useError
 } from '@ereo/client'
+
+// Types
+import type {
+  NavigationStatus,
+  NavigationStateHook,
+  LoaderDataContextValue,
+  ActionDataContextValue,
+  NavigationContextValue,
+  ErrorContextValue,
+  LoaderDataProviderProps,
+  ActionDataProviderProps,
+  NavigationProviderProps,
+  ErrorProviderProps,
+  EreoProviderProps
+} from '@ereo/client'
+```
+
+## Types
+
+```ts
+// Navigation status for useNavigation hook
+type NavigationStatus = 'idle' | 'loading' | 'submitting'
+
+// Navigation state returned by useNavigation
+interface NavigationStateHook {
+  status: NavigationStatus
+  location?: string          // The location being navigated to
+  formData?: FormData        // Form data being submitted
+  formMethod?: string        // Form method being used
+  formAction?: string        // Form action URL
+}
 ```
 
 ## useLoaderData
@@ -306,21 +337,68 @@ export function ErrorBoundary() {
 
 ## Context Providers
 
-For testing or custom setups, EreoJS exports context providers:
+EreoJS exports context providers for testing, custom setups, and direct context access.
+
+### Import
 
 ```ts
 import {
+  // Providers
   LoaderDataProvider,
   ActionDataProvider,
   NavigationProvider,
   ErrorProvider,
-  EreoProvider
+  EreoProvider,
+
+  // Contexts (for useContext)
+  LoaderDataContext,
+  ActionDataContext,
+  NavigationContext,
+  ErrorContext,
+
+  // Internal context accessors
+  useLoaderDataContext,
+  useActionDataContext,
+  useNavigationContext,
+  useErrorContext,
 } from '@ereo/client'
+```
+
+### Provider Props
+
+```ts
+interface LoaderDataProviderProps {
+  children: ReactNode
+  initialData?: unknown
+}
+
+interface ActionDataProviderProps {
+  children: ReactNode
+  initialData?: unknown
+}
+
+interface NavigationProviderProps {
+  children: ReactNode
+  initialState?: NavigationStateHook
+}
+
+interface ErrorProviderProps {
+  children: ReactNode
+  initialError?: Error
+}
+
+interface EreoProviderProps {
+  children: ReactNode
+  loaderData?: unknown       // Initial loader data (typically from SSR)
+  actionData?: unknown       // Initial action data
+  navigationState?: NavigationStateHook
+  error?: Error              // Initial error (if rendering error boundary)
+}
 ```
 
 ### EreoProvider
 
-Combines all providers:
+Combines all providers into a single wrapper:
 
 ```tsx
 import { EreoProvider } from '@ereo/client'
@@ -334,6 +412,22 @@ function App({ loaderData, actionData }) {
 }
 ```
 
+### Individual Providers
+
+```tsx
+import { LoaderDataProvider, ActionDataProvider } from '@ereo/client'
+
+function App() {
+  return (
+    <LoaderDataProvider initialData={{ posts: [] }}>
+      <ActionDataProvider>
+        <MyComponent />
+      </ActionDataProvider>
+    </LoaderDataProvider>
+  )
+}
+```
+
 ### Testing with Providers
 
 ```tsx
@@ -342,20 +436,32 @@ import { LoaderDataProvider } from '@ereo/client'
 import PostList from './PostList'
 
 test('renders posts', () => {
-  const loaderData = {
-    posts: [
-      { id: 1, title: 'Test Post' }
-    ]
-  }
-
   render(
-    <LoaderDataProvider value={loaderData}>
+    <LoaderDataProvider initialData={{ posts: [{ id: 1, title: 'Test Post' }] }}>
       <PostList />
     </LoaderDataProvider>
   )
 
   expect(screen.getByText('Test Post')).toBeInTheDocument()
 })
+```
+
+### Context Accessors (Internal)
+
+These hooks provide direct access to the full context value including setters:
+
+```ts
+// Get full loader data context with setter
+const { data, setData } = useLoaderDataContext()
+
+// Get full action data context with setter and clear
+const { data, setData, clearData } = useActionDataContext()
+
+// Get full navigation context with state controls
+const { state, setState, startLoading, startSubmitting, complete } = useNavigationContext()
+
+// Get full error context with setter and clear
+const { error, setError, clearError } = useErrorContext()
 ```
 
 ## Custom Hooks

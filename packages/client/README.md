@@ -18,13 +18,13 @@ initClient();
 
 // Use loader data in components
 function UserProfile() {
-  const { user } = useLoaderData<typeof loader>();
+  const { user } = useLoaderData<{ user: { name: string } }>();
   return <h1>{user.name}</h1>;
 }
 
 // Client-side navigation with prefetching
 function Nav() {
-  return <Link to="/dashboard" prefetch="hover">Dashboard</Link>;
+  return <Link to="/dashboard" prefetch="intent">Dashboard</Link>;
 }
 ```
 
@@ -64,11 +64,20 @@ function ContactForm() {
 
 ```tsx
 import { createIsland } from '@ereo/client';
+import Chart from './Chart';
 
-// Only hydrate this component on the client
-const InteractiveChart = createIsland(() => import('./Chart'), {
-  hydrate: 'visible', // 'load' | 'idle' | 'visible' | 'media'
-});
+// Create an island wrapper for selective hydration
+const InteractiveChart = createIsland(Chart, 'Chart');
+
+// Use with hydration directives
+function Page() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <InteractiveChart client:visible data={chartData} />
+    </div>
+  );
+}
 ```
 
 ## Documentation

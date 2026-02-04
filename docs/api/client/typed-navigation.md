@@ -8,6 +8,7 @@ Type-safe programmatic navigation utilities for client-side and server-side navi
 import {
   typedNavigate,
   typedRedirect,
+  redirect,           // Alias for typedRedirect
   useTypedNavigate,
   buildTypedUrl,
   parseTypedSearchParams,
@@ -17,6 +18,13 @@ import {
   goForward,
   go,
   isCurrentPath,
+} from '@ereo/client'
+
+// Types
+import type {
+  TypedNavigateOptions,
+  TypedRedirectOptions,
+  TypedNavigateFunction,
 } from '@ereo/client'
 ```
 

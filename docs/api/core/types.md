@@ -99,12 +99,9 @@ Server configuration options.
 
 ```ts
 interface ServerConfig {
-  port?: number
-  host?: string
-  https?: {
-    key: string
-    cert: string
-  }
+  port?: number             // Default: 3000
+  hostname?: string         // Default: 'localhost'
+  development?: boolean     // Default: process.env.NODE_ENV !== 'production'
 }
 ```
 
@@ -114,12 +111,10 @@ Build configuration options.
 
 ```ts
 interface BuildConfig {
-  target?: BuildTarget
-  outDir?: string
-  minify?: boolean
-  sourcemap?: boolean | 'inline' | 'external'
-  splitting?: boolean
-  external?: string[]
+  target?: BuildTarget      // Default: 'bun'
+  outDir?: string           // Default: '.ereo'
+  minify?: boolean          // Default: true
+  sourcemap?: boolean       // Default: true
 }
 ```
 
@@ -132,10 +127,8 @@ interface FrameworkConfig {
   server?: ServerConfig
   build?: BuildConfig
   plugins?: Plugin[]
-  routes?: {
-    dir?: string
-    extensions?: string[]
-  }
+  basePath?: string         // Base path for all routes (e.g., '/app')
+  routesDir?: string        // Default: 'app/routes'
 }
 ```
 
@@ -169,27 +162,125 @@ Route-level cache configuration.
 
 ```ts
 interface RouteCacheConfig {
-  maxAge?: number
-  staleWhileRevalidate?: number
+  edge?: {
+    maxAge: number
+    staleWhileRevalidate?: number
+    vary?: string[]
+    keyGenerator?: (args: { request: Request; params: RouteParams }) => string
+  }
+  browser?: {
+    maxAge: number
+    private?: boolean
+  }
+  data?: {
+    key?: string | ((params: RouteParams) => string)
+    tags?: string[] | ((params: RouteParams) => string[])
+  }
+}
+```
+
+### PrerenderConfig
+
+SSG/ISR configuration.
+
+```ts
+interface PrerenderConfig {
+  enabled: boolean
+  paths?: string[] | (() => Promise<string[]> | string[])
   revalidate?: number
-  tags?: string[]
-  private?: boolean
+  tags?: string[] | ((params: RouteParams) => string[])
+  fallback?: 'blocking' | 'static' | '404'
+}
+```
+
+### AuthConfig
+
+Authentication/authorization configuration.
+
+```ts
+interface AuthConfig {
+  required?: boolean
+  roles?: string[]
+  permissions?: string[]
+  check?: (args: { request: Request; context: AppContext; params: RouteParams }) => boolean | Promise<boolean>
+  redirect?: string
+  unauthorized?: { status: number; body: unknown }
+}
+```
+
+### ErrorConfig
+
+Error recovery and resilience configuration.
+
+```ts
+interface ErrorConfig {
+  retry?: { count: number; delay: number }
+  fallback?: ComponentType
+  onError?: 'boundary' | 'toast' | 'redirect' | 'silent'
+  maxCaptures?: number
+  reportError?: (error: Error, context: { route: string; phase: string }) => void
+}
+```
+
+### RuntimeConfig
+
+Runtime configuration for edge/Node environments.
+
+```ts
+interface RuntimeConfig {
+  runtime?: 'node' | 'edge' | 'auto'
+  regions?: string[]
+  memory?: number
+  timeout?: number
 }
 ```
 
 ### RouteConfig
 
-Complete route configuration.
+Complete route-level configuration export.
 
 ```ts
 interface RouteConfig {
-  render?: RenderConfig['mode'] | RenderConfig
-  cache?: RouteCacheConfig
-  islands?: IslandsConfig
   middleware?: MiddlewareReference[]
-  auth?: AuthConfig
+  render?: RenderConfig
+  islands?: IslandsConfig
+  cache?: RouteCacheConfig
   progressive?: ProgressiveConfig
+  route?: RouteCompositionConfig
+  auth?: AuthConfig
+  dev?: DevConfig
   error?: ErrorConfig
+  runtime?: RuntimeConfig
+  variants?: RouteVariant[]
+}
+```
+
+### RouteModuleWithConfig
+
+Extended RouteModule that includes a config export.
+
+```ts
+interface RouteModuleWithConfig extends RouteModule {
+  config?: RouteConfig
+}
+```
+
+### RouteModule
+
+Standard route module exports.
+
+```ts
+interface RouteModule {
+  default?: ComponentType<RouteComponentProps>
+  loader?: LoaderFunction
+  action?: ActionFunction
+  meta?: MetaFunction
+  headers?: HeadersFunction
+  handle?: RouteHandle
+  ErrorBoundary?: ComponentType<RouteErrorComponentProps>
+  config?: RouteConfig
+  params?: ParamValidationSchema
+  searchParams?: SearchParamValidationSchema
 }
 ```
 
@@ -312,57 +403,145 @@ interface RouteErrorComponentProps {
 
 ### MiddlewareHandler
 
-Function signature for middleware.
+Core middleware handler signature used throughout EreoJS.
 
 ```ts
 type MiddlewareHandler = (
   request: Request,
-  next: NextFunction,
-  context: AppContext
+  context: AppContext,
+  next: NextFunction
 ) => Response | Promise<Response>
 ```
 
+Note: Parameter order is `(request, context, next)`, not `(request, next, context)`.
+
 ### NextFunction
 
-Function to call the next middleware.
+Function to continue the middleware chain.
 
 ```ts
-type NextFunction = () => Response | Promise<Response>
+type NextFunction = () => Promise<Response>
 ```
 
 ### MiddlewareReference
 
-Reference to named middleware.
+Reference to named middleware (from app/middleware/) or inline function.
 
 ```ts
 type MiddlewareReference =
-  | string
-  | MiddlewareHandler
-  | { name: string; options?: Record<string, unknown> }
+  | string              // Named middleware from app/middleware/
+  | MiddlewareHandler   // Inline middleware function
+```
+
+### Middleware
+
+Named middleware definition with optional path matching.
+
+```ts
+interface Middleware {
+  name?: string                     // Used in logging/debugging
+  handler: MiddlewareHandler        // The middleware function
+  paths?: string[]                  // Path patterns to match (default: all)
+}
+```
+
+## Parameter Validation Types
+
+Types for validating route parameters and search parameters.
+
+### ParamValidationSchema
+
+Schema for validating route parameters.
+
+```ts
+interface ParamValidationSchema {
+  [key: string]: ParamValidator<unknown>
+}
+```
+
+### SearchParamValidationSchema
+
+Schema for validating search/query parameters.
+
+```ts
+interface SearchParamValidationSchema {
+  [key: string]: ParamValidator<unknown> | {
+    default: unknown
+    validator?: ParamValidator<unknown>
+  }
+}
+```
+
+### ParamValidator
+
+Validator function or schema for parameters.
+
+```ts
+type ParamValidator<T> = {
+  parse: (value: string | string[] | undefined) => T
+  optional?: boolean
+  default?: T
+}
+```
+
+Example usage:
+
+```ts
+// In a route module
+export const params: ParamValidationSchema = {
+  id: {
+    parse: (value) => {
+      if (!value || Array.isArray(value)) throw new Error('Invalid id')
+      return value
+    }
+  }
+}
+
+export const searchParams: SearchParamValidationSchema = {
+  page: {
+    default: 1,
+    validator: {
+      parse: (value) => parseInt(value as string) || 1
+    }
+  }
+}
 ```
 
 ## Cache Types
 
 ### CacheOptions
 
-Cache configuration options.
+Cache configuration options (for request-level caching).
 
 ```ts
 interface CacheOptions {
-  maxSize?: number
-  ttl?: number
-  tagged?: boolean
+  maxAge?: number
+  staleWhileRevalidate?: number
+  tags?: string[]
+  private?: boolean
 }
 ```
 
 ### CacheSetOptions
 
-Options when setting cache values.
+Options when setting cache values (for CacheAdapter).
 
 ```ts
 interface CacheSetOptions {
-  ttl?: number
-  tags?: string[]
+  ttl?: number          // Time to live in seconds
+  tags?: string[]       // Cache tags for grouped invalidation
+}
+```
+
+### CacheAdapterOptions
+
+Options for creating cache instances.
+
+```ts
+interface CacheAdapterOptions {
+  maxSize?: number      // Maximum entries (default: Infinity)
+  defaultTtl?: number   // Default TTL in seconds
+  tagged?: boolean      // Enable tag support
 }
 ```
 
@@ -377,20 +556,129 @@ interface CacheAdapter {
   delete(key: string): Promise<boolean>
   has(key: string): Promise<boolean>
   clear(): Promise<void>
-  keys(): Promise<string[]>
 }
 ```
 
 ### TaggedCache
 
-Extended cache with tag support.
+Extended cache with tag-based invalidation support.
 
 ```ts
 interface TaggedCache extends CacheAdapter {
   invalidateTag(tag: string): Promise<void>
   invalidateTags(tags: string[]): Promise<void>
   getByTag(tag: string): Promise<string[]>
-  getStats(): { size: number; tags: number }
+}
+```
+
+### CacheControl
+
+Request-scoped cache control interface.
+
+```ts
+interface CacheControl {
+  set(options: CacheOptions): void
+  get(): CacheOptions | undefined
+  getTags(): string[]
+}
+```
+
+## Plugin Types
+
+### Plugin
+
+Plugin interface for extending EreoJS.
+
+```ts
+interface Plugin {
+  name: string
+  setup?: (context: PluginContext) => void | Promise<void>
+  transform?: (code: string, id: string) => string | null | Promise<string | null>
+  configureServer?: (server: DevServer) => void | Promise<void>
+  resolveId?: (id: string) => string | null
+  load?: (id: string) => string | null | Promise<string | null>
+  buildStart?: () => void | Promise<void>
+  buildEnd?: () => void | Promise<void>
+  extendConfig?: (config: FrameworkConfig) => FrameworkConfig
+  transformRoutes?: (routes: Route[]) => Route[]
+  runtimeMiddleware?: MiddlewareHandler[]
+  virtualModules?: Record<string, string>
+}
+```
+
+### PluginContext
+
+Context passed to plugin setup functions.
+
+```ts
+interface PluginContext {
+  config: FrameworkConfig
+  mode: 'development' | 'production'
+  root: string
+}
+```
+
+### DevServer
+
+Development server interface available in plugins.
+
+```ts
+interface DevServer {
+  ws: {
+    send: (data: unknown) => void
+    on: (event: string, callback: (data: unknown) => void) => void
+  }
+  restart: () => Promise<void>
+  middlewares: MiddlewareHandler[]
+  watcher?: {
+    add: (path: string) => void
+    on: (event: string, callback: (file: string) => void) => void
+  }
+}
+```
+
+## Application Types
+
+### ApplicationOptions
+
+Options for creating an EreoApp instance.
+
+```ts
+interface ApplicationOptions {
+  config?: FrameworkConfig
+  routes?: Route[]
+}
+```
+
+### Application
+
+Interface implemented by EreoApp.
+
+```ts
+interface Application {
+  config: FrameworkConfig
+  routes: Route[]
+  plugins: Plugin[]
+  handle: (request: Request) => Promise<Response>
+  use: (plugin: Plugin) => Application
+  dev: () => Promise<void>
+  build: () => Promise<void>
+  start: () => Promise<void>
+}
+```
+
+### AppContext
+
+Request context interface available in loaders, actions, and middleware.
+
+```ts
+interface AppContext {
+  cache: CacheControl
+  get: <T>(key: string) => T | undefined
+  set: <T>(key: string, value: T) => void
+  responseHeaders: Headers
+  url: URL
+  env: Record<string, string | undefined>
 }
 ```
 
@@ -621,23 +909,86 @@ type BrandedPath<Path extends string> = string & { readonly __path: Path }
 
 ## Utility Types
 
-### Awaited
+### MaybePromise
 
-Unwraps Promise types (built into TypeScript).
+Represents a value that may be sync or async.
 
 ```ts
-// If T is Promise<U>, returns U
-type Awaited<T> = T extends Promise<infer U> ? U : T
+type MaybePromise<T> = T | Promise<T>
 ```
 
-### Prettify
+### DeepPartial
 
-Flattens intersection types for better IDE display.
+Makes all properties optional recursively.
 
 ```ts
-type Prettify<T> = {
-  [K in keyof T]: T[K]
-} & {}
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P]
+}
+```
+
+### InferLoaderData
+
+Extracts loader data type from a route module.
+
+```ts
+type InferLoaderData<T extends RouteModule> =
+  T['loader'] extends LoaderFunction<infer D> ? D : never
+
+// Usage
+type Data = InferLoaderData<typeof import('./routes/posts')>
+```
+
+### InferActionData
+
+Extracts action data type from a route module.
+
+```ts
+type InferActionData<T extends RouteModule> =
+  T['action'] extends ActionFunction<infer D> ? D : never
+```
+
+## Island Types
+
+Types for selective hydration (islands architecture).
+
+### HydrationStrategy
+
+When to hydrate an island component.
+
+```ts
+type HydrationStrategy =
+  | 'load'      // Hydrate immediately on page load
+  | 'idle'      // Hydrate when browser is idle
+  | 'visible'   // Hydrate when element is visible
+  | 'media'     // Hydrate when media query matches
+  | 'none'      // Never hydrate (static only)
+```
+
+### IslandProps
+
+Props available for island components.
+
+```ts
+interface IslandProps {
+  'client:load'?: boolean
+  'client:idle'?: boolean
+  'client:visible'?: boolean
+  'client:media'?: string
+  'data-island'?: string
+}
+```
+
+### IslandStrategy
+
+Component-specific hydration configuration.
+
+```ts
+interface IslandStrategy {
+  component: string
+  strategy: HydrationStrategy
+  mediaQuery?: string  // For 'media' strategy
+}
 ```
 
 ## Example Usage

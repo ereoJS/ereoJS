@@ -31,13 +31,13 @@ Or via package.json:
 
 ## Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--prod` | Deploy to production | `false` |
-| `--dry-run` | Preview deployment without executing | `false` |
-| `--name` | Project name for new deployments | Auto-detected |
-| `--no-build` | Skip the build step | `false` |
-| `--help`, `-h` | Show deploy help | |
+| Option | Alias | Description | Default |
+|--------|-------|-------------|---------|
+| `--prod` | `--production` | Deploy to production | `false` |
+| `--dry-run` | `--dryRun` | Preview deployment without executing | `false` |
+| `--name` | | Project name for new deployments | Auto-detected |
+| `--no-build` | | Skip the build step | `false` |
+| `--help` | `-h` | Show deploy help | |
 
 ## Examples
 

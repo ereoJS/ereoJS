@@ -1,6 +1,6 @@
 # Navigation
 
-Programmatic navigation API.
+Programmatic navigation API for client-side SPA navigation.
 
 ## Import
 
@@ -11,8 +11,30 @@ import {
   goForward,
   onNavigate,
   getNavigationState,
+  fetchLoaderData,
+  submitAction,
+  setupScrollRestoration,
   router
 } from '@ereo/client'
+```
+
+## Types
+
+```ts
+interface NavigationState {
+  pathname: string
+  search: string
+  hash: string
+  state?: unknown
+}
+
+interface NavigationEvent {
+  type: 'push' | 'replace' | 'pop'
+  from: NavigationState
+  to: NavigationState
+}
+
+type NavigationListener = (event: NavigationEvent) => void
 ```
 
 ## navigate
@@ -23,20 +45,9 @@ Programmatically navigate to a URL.
 
 ```ts
 function navigate(
-  href: string,
-  options?: NavigationOptions
+  to: string,
+  options?: { replace?: boolean; state?: unknown }
 ): Promise<void>
-
-interface NavigationOptions {
-  // Replace history instead of push
-  replace?: boolean
-
-  // Scroll behavior
-  scroll?: boolean
-
-  // State to pass to the new location
-  state?: any
-}
 ```
 
 ### Examples
@@ -142,16 +153,14 @@ Subscribe to navigation events.
 ### Signature
 
 ```ts
-function onNavigate(
-  listener: NavigationListener
-): () => void
+function onNavigate(listener: NavigationListener): () => void
 
 type NavigationListener = (event: NavigationEvent) => void
 
 interface NavigationEvent {
-  type: 'start' | 'complete' | 'error'
-  url: string
-  state?: any
+  type: 'push' | 'replace' | 'pop'
+  from: NavigationState
+  to: NavigationState
 }
 ```
 
@@ -164,9 +173,8 @@ import { useEffect } from 'react'
 function Analytics() {
   useEffect(() => {
     const unsubscribe = onNavigate((event) => {
-      if (event.type === 'complete') {
-        analytics.pageView(event.url)
-      }
+      // Track page views
+      analytics.pageView(event.to.pathname)
     })
 
     return unsubscribe
@@ -176,27 +184,25 @@ function Analytics() {
 }
 ```
 
-### Loading Indicator
+### Track Navigation Direction
 
 ```tsx
-function GlobalLoadingIndicator() {
-  const [isNavigating, setIsNavigating] = useState(false)
-
+function NavigationTracker() {
   useEffect(() => {
     const unsubscribe = onNavigate((event) => {
-      if (event.type === 'start') {
-        setIsNavigating(true)
-      } else {
-        setIsNavigating(false)
+      if (event.type === 'pop') {
+        console.log('Browser back/forward navigation')
+      } else if (event.type === 'push') {
+        console.log('Navigation to new page')
+      } else if (event.type === 'replace') {
+        console.log('History replacement')
       }
     })
 
     return unsubscribe
   }, [])
 
-  if (!isNavigating) return null
-
-  return <div className="loading-bar" />
+  return null
 }
 ```
 
@@ -210,11 +216,10 @@ Get the current navigation state.
 function getNavigationState(): NavigationState
 
 interface NavigationState {
-  state: 'idle' | 'loading' | 'submitting'
-  location?: Location
-  formData?: FormData
-  formMethod?: string
-  formAction?: string
+  pathname: string
+  search: string
+  hash: string
+  state?: unknown
 }
 ```
 
@@ -225,34 +230,40 @@ import { getNavigationState } from '@ereo/client'
 
 function checkNavigation() {
   const state = getNavigationState()
-
-  if (state.state === 'loading') {
-    console.log('Currently navigating to:', state.location?.pathname)
-  }
+  console.log('Current path:', state.pathname)
+  console.log('Search params:', state.search)
+  console.log('Hash:', state.hash)
 }
 ```
 
 ## router
 
-The underlying router instance for advanced use cases.
+The global client router instance for advanced use cases.
 
-### Properties
+### Methods
 
 ```ts
-interface Router {
-  // Current location
-  location: Location
+interface ClientRouter {
+  // Navigate to a new URL
+  navigate(to: string, options?: { replace?: boolean; state?: unknown }): Promise<void>
 
-  // Navigation methods
-  navigate(href: string, options?: NavigationOptions): Promise<void>
+  // Go back in history
   back(): void
+
+  // Go forward in history
   forward(): void
 
-  // Event subscription
-  subscribe(listener: (location: Location) => void): () => void
+  // Go to a specific history entry
+  go(delta: number): void
 
-  // Prefetch
-  prefetch(href: string): Promise<void>
+  // Subscribe to navigation events
+  subscribe(listener: NavigationListener): () => void
+
+  // Get current state
+  getState(): NavigationState
+
+  // Check if a URL is active
+  isActive(path: string, exact?: boolean): boolean
 }
 ```
 
@@ -261,16 +272,98 @@ interface Router {
 ```ts
 import { router } from '@ereo/client'
 
-// Access current location
-console.log(router.location.pathname)
+// Get current state
+const state = router.getState()
+console.log('Current path:', state.pathname)
 
 // Subscribe to location changes
-const unsubscribe = router.subscribe((location) => {
-  console.log('Location changed:', location.pathname)
+const unsubscribe = router.subscribe((event) => {
+  console.log('Navigated to:', event.to.pathname)
 })
 
-// Prefetch a route
-await router.prefetch('/posts')
+// Check if path is active
+const isPostsActive = router.isActive('/posts')
+const isExactMatch = router.isActive('/posts', true)
+```
+
+## fetchLoaderData
+
+Fetch loader data for a route programmatically.
+
+### Signature
+
+```ts
+function fetchLoaderData<T = unknown>(
+  pathname: string,
+  params?: Record<string, string | undefined>
+): Promise<T>
+```
+
+### Example
+
+```ts
+import { fetchLoaderData } from '@ereo/client'
+
+// Fetch data for a route
+const data = await fetchLoaderData<{ posts: Post[] }>('/posts')
+
+// Fetch with params
+const userData = await fetchLoaderData<{ user: User }>('/users', {
+  id: '123'
+})
+```
+
+## submitAction
+
+Submit an action programmatically.
+
+### Signature
+
+```ts
+function submitAction<T = unknown>(
+  pathname: string,
+  formData: FormData,
+  options?: { method?: string }
+): Promise<T>
+```
+
+### Example
+
+```ts
+import { submitAction } from '@ereo/client'
+
+const formData = new FormData()
+formData.append('title', 'New Post')
+formData.append('content', 'Post content')
+
+const result = await submitAction('/posts/create', formData, {
+  method: 'POST'
+})
+```
+
+## setupScrollRestoration
+
+Setup scroll restoration for SPA navigation.
+
+### Signature
+
+```ts
+function setupScrollRestoration(): void
+```
+
+This function:
+- Disables browser's default scroll restoration
+- Stores scroll positions per pathname
+- Restores scroll position on back/forward navigation
+- Scrolls to top on push/replace navigation
+
+### Example
+
+```ts
+import { setupScrollRestoration } from '@ereo/client'
+
+// Usually called by initClient(), but can be called manually
+setupScrollRestoration()
 ```
 
 ## Patterns
@@ -295,64 +388,6 @@ function useProtectedNavigation() {
 }
 ```
 
-### Confirmation Before Leave
-
-```tsx
-import { onNavigate } from '@ereo/client'
-
-function UnsavedChangesWarning({ hasChanges }) {
-  useEffect(() => {
-    if (!hasChanges) return
-
-    const unsubscribe = onNavigate((event) => {
-      if (event.type === 'start') {
-        if (!confirm('You have unsaved changes. Leave anyway?')) {
-          event.preventDefault?.()
-        }
-      }
-    })
-
-    return unsubscribe
-  }, [hasChanges])
-
-  return null
-}
-```
-
-### Scroll Restoration
-
-```tsx
-import { onNavigate } from '@ereo/client'
-
-function ScrollRestoration() {
-  const scrollPositions = useRef(new Map())
-
-  useEffect(() => {
-    const unsubscribe = onNavigate((event) => {
-      if (event.type === 'start') {
-        // Save scroll position
-        scrollPositions.current.set(
-          location.pathname,
-          window.scrollY
-        )
-      }
-
-      if (event.type === 'complete') {
-        // Restore scroll position
-        const savedPosition = scrollPositions.current.get(event.url)
-        if (savedPosition !== undefined) {
-          window.scrollTo(0, savedPosition)
-        }
-      }
-    })
-
-    return unsubscribe
-  }, [])
-
-  return null
-}
-```
-
 ### Route Change Animation
 
 ```tsx
@@ -363,12 +398,9 @@ function PageTransition({ children }) {
 
   useEffect(() => {
     const unsubscribe = onNavigate((event) => {
-      if (event.type === 'start') {
-        setIsTransitioning(true)
-      }
-      if (event.type === 'complete') {
-        setTimeout(() => setIsTransitioning(false), 300)
-      }
+      setIsTransitioning(true)
+      // Reset after animation
+      setTimeout(() => setIsTransitioning(false), 300)
     })
 
     return unsubscribe
@@ -379,6 +411,38 @@ function PageTransition({ children }) {
       {children}
     </div>
   )
+}
+```
+
+### Custom Scroll Behavior
+
+```tsx
+import { onNavigate } from '@ereo/client'
+import { useRef, useEffect } from 'react'
+
+function CustomScrollRestoration() {
+  const scrollPositions = useRef(new Map<string, number>())
+
+  useEffect(() => {
+    const unsubscribe = onNavigate((event) => {
+      // Save scroll position before leaving
+      scrollPositions.current.set(event.from.pathname, window.scrollY)
+
+      // Restore scroll position on back/forward
+      if (event.type === 'pop') {
+        const savedPosition = scrollPositions.current.get(event.to.pathname)
+        if (savedPosition !== undefined) {
+          requestAnimationFrame(() => {
+            window.scrollTo(0, savedPosition)
+          })
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [])
+
+  return null
 }
 ```
 

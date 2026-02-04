@@ -11,38 +11,86 @@ import {
   useFormContext,
   useSubmit,
   useFetcher,
+  useActionData,      // Form-specific
+  useNavigation,      // Form-specific
   serializeFormData,
   parseFormData,
   formDataToObject,
   objectToFormData
 } from '@ereo/client'
+
+// Types
+import type {
+  FormProps,
+  ActionResult,
+  SubmissionState,
+  SubmitOptions,
+  FetcherState,
+  Fetcher,
+  FormContextValue,
+  FormNavigationState
+} from '@ereo/client'
+```
+
+## Types
+
+```ts
+// Result from a form action submission
+interface ActionResult<T = unknown> {
+  data?: T
+  error?: Error
+  status: number
+  ok: boolean
+}
+
+// Submission state for tracking form submissions
+type SubmissionState = 'idle' | 'submitting' | 'loading' | 'error'
+
+// Submit options for programmatic submission
+interface SubmitOptions {
+  method?: 'get' | 'post' | 'put' | 'patch' | 'delete'
+  action?: string
+  replace?: boolean
+  preventScrollReset?: boolean
+  encType?: 'application/x-www-form-urlencoded' | 'multipart/form-data'
+  fetcherKey?: string
+}
 ```
 
 ## Form
 
-A form component that works with and without JavaScript.
+A form component with progressive enhancement. Works without JavaScript as a standard HTML form and enhances with client-side submission when JS is available.
 
 ### Props
 
 ```ts
-interface FormProps extends React.FormHTMLAttributes<HTMLFormElement> {
+interface FormProps extends Omit<FormHTMLAttributes<HTMLFormElement>, 'method' | 'action' | 'encType'> {
   // HTTP method (default: 'post')
   method?: 'get' | 'post' | 'put' | 'patch' | 'delete'
 
   // Action URL (default: current route)
   action?: string
 
+  // Called when submission starts
+  onSubmitStart?: () => void
+
+  // Called when submission completes
+  onSubmitEnd?: (result: ActionResult) => void
+
   // Replace history instead of push
   replace?: boolean
 
-  // Callback after successful submission
-  onSuccess?: (data: unknown) => void
+  // Prevent scroll reset after navigation
+  preventScrollReset?: boolean
 
-  // Callback on submission error
-  onError?: (error: Error) => void
+  // Encoding type
+  encType?: 'application/x-www-form-urlencoded' | 'multipart/form-data'
 
-  // Prevent default navigation
-  preventNavigation?: boolean
+  // Fetcher key for non-navigation submissions
+  fetcherKey?: string
+
+  // Form children
+  children?: ReactNode
 }
 ```
 
@@ -76,13 +124,17 @@ export default function NewPost() {
 ```tsx
 <Form
   method="post"
-  onSuccess={(data) => {
-    console.log('Success:', data)
-    toast.success('Saved!')
+  onSubmitStart={() => {
+    console.log('Submission started')
   }}
-  onError={(error) => {
-    console.error('Error:', error)
-    toast.error('Failed to save')
+  onSubmitEnd={(result) => {
+    if (result.ok) {
+      console.log('Success:', result.data)
+      toast.success('Saved!')
+    } else {
+      console.error('Error:', result.error)
+      toast.error('Failed to save')
+    }
   }}
 >
   ...
@@ -99,24 +151,18 @@ export default function NewPost() {
 
 ## useSubmit
 
-Programmatic form submission.
+Hook for programmatic form submission.
 
 ### Signature
 
 ```ts
-function useSubmit(): SubmitFunction
-
-type SubmitFunction = (
-  target: HTMLFormElement | FormData | Record<string, any>,
+function useSubmit(): (
+  target: HTMLFormElement | FormData | URLSearchParams | Record<string, string>,
   options?: SubmitOptions
-) => void
-
-interface SubmitOptions {
-  method?: 'get' | 'post' | 'put' | 'patch' | 'delete'
-  action?: string
-  replace?: boolean
-}
+) => Promise<ActionResult>
 ```
+
+The returned function submits form data and returns a Promise with the result.
 
 ### Example
 
@@ -171,22 +217,37 @@ export default function AutoSaveForm() {
 
 ## useFetcher
 
-Non-navigating form submission for inline updates.
+Hook for non-navigation form submissions. Useful for inline updates that don't require page navigation.
 
 ### Signature
 
 ```ts
-function useFetcher<T = unknown>(): Fetcher<T>
+function useFetcher<T = unknown>(key?: string): Fetcher<T>
 
-interface Fetcher<T> {
-  state: 'idle' | 'loading' | 'submitting'
-  data: T | undefined
-  formData: FormData | undefined
-  formAction: string | undefined
-  formMethod: string | undefined
-  Form: React.ComponentType<FetcherFormProps>
-  submit: SubmitFunction
-  load: (href: string) => void
+interface FetcherState<T = unknown> {
+  state: SubmissionState
+  data?: T
+  error?: Error
+  formData?: FormData
+  formMethod?: string
+  formAction?: string
+}
+
+interface Fetcher<T = unknown> extends FetcherState<T> {
+  // Form component for the fetcher
+  Form: (props: Omit<FormProps, 'fetcherKey'>) => ReactElement
+
+  // Submit function for programmatic submission
+  submit: (
+    target: HTMLFormElement | FormData | URLSearchParams | Record<string, string>,
+    options?: SubmitOptions
+  ) => Promise<void>
+
+  // Load data from a URL
+  load: (href: string) => Promise<void>
+
+  // Reset fetcher state
+  reset: () => void
 }
 ```
 
@@ -270,22 +331,43 @@ function PostActions({ postId }) {
 
 Share form state across components.
 
+### FormContextValue
+
+```ts
+interface FormContextValue {
+  // Current action data from the last submission
+  actionData: unknown
+
+  // Current submission state
+  state: SubmissionState
+
+  // Update action data
+  setActionData: (data: unknown) => void
+
+  // Update submission state
+  setState: (state: SubmissionState) => void
+}
+```
+
+### Example
+
 ```tsx
-import { FormProvider, useFormContext } from '@ereo/client'
+import { FormProvider, useFormContext, Form } from '@ereo/client'
 
 function FormFields() {
-  const { isSubmitting, errors } = useFormContext()
+  const context = useFormContext()
+  const isSubmitting = context?.state === 'submitting'
 
   return (
     <>
       <input name="email" disabled={isSubmitting} />
-      {errors.email && <span>{errors.email}</span>}
     </>
   )
 }
 
 function SubmitButton() {
-  const { isSubmitting } = useFormContext()
+  const context = useFormContext()
+  const isSubmitting = context?.state === 'submitting'
 
   return (
     <button type="submit" disabled={isSubmitting}>
@@ -310,39 +392,68 @@ export default function MyForm() {
 
 ### serializeFormData
 
-Converts an object to FormData.
+Serialize FormData to a URL-encoded string.
 
 ```ts
-function serializeFormData(data: Record<string, any>): FormData
+function serializeFormData(formData: FormData): string
 ```
 
 ```ts
-const formData = serializeFormData({
-  title: 'Hello',
-  tags: ['a', 'b', 'c']
-})
+const formData = new FormData()
+formData.append('name', 'John')
+formData.append('email', 'john@example.com')
+
+const serialized = serializeFormData(formData)
+// 'name=John&email=john%40example.com'
 ```
 
 ### parseFormData
 
-Parses FormData to an object.
+Parse a URL-encoded string to FormData.
 
 ```ts
-function parseFormData(formData: FormData): Record<string, any>
+function parseFormData(data: string): FormData
 ```
 
 ```ts
-const data = parseFormData(formData)
-// { title: 'Hello', tags: ['a', 'b', 'c'] }
+const formData = parseFormData('name=John&email=john%40example.com')
+// FormData with name and email entries
 ```
 
-### formDataToObject / objectToFormData
+### formDataToObject
 
-Convert between FormData and objects.
+Convert FormData to a plain object. Handles multiple values for the same key by creating arrays.
 
 ```ts
-function formDataToObject(formData: FormData): Record<string, any>
-function objectToFormData(obj: Record<string, any>): FormData
+function formDataToObject(formData: FormData): Record<string, string | string[]>
+```
+
+```ts
+const formData = new FormData()
+formData.append('name', 'John')
+formData.append('tags', 'react')
+formData.append('tags', 'typescript')
+
+const obj = formDataToObject(formData)
+// { name: 'John', tags: ['react', 'typescript'] }
+```
+
+### objectToFormData
+
+Convert a plain object to FormData. Handles arrays by appending multiple values.
+
+```ts
+function objectToFormData(obj: Record<string, string | string[] | number | boolean>): FormData
+```
+
+```ts
+const formData = objectToFormData({
+  name: 'John',
+  tags: ['react', 'typescript'],
+  count: 5,
+  active: true
+})
+// FormData with name, tags (twice), count, active entries
 ```
 
 ## Patterns

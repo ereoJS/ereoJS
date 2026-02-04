@@ -31,6 +31,11 @@ ereo create my-app
 
 # Deploy to production
 ereo deploy vercel --prod
+
+# Database commands
+ereo db:generate --name add_users
+ereo db:migrate
+ereo db:studio
 ```
 
 ## Commands
@@ -61,14 +66,6 @@ Options:
 - `--minify` - Enable minification (default: true)
 - `--sourcemap` - Generate sourcemaps (default: true)
 
-### `ereo start`
-
-Start the production server.
-
-```bash
-ereo start --port 3001
-```
-
 ### `ereo create`
 
 Scaffold a new EreoJS project.
@@ -89,6 +86,67 @@ Deploy to production platforms.
 ereo deploy vercel --prod
 ereo deploy cloudflare --dry-run
 ```
+
+Options:
+- `--prod` - Deploy to production
+- `--dry-run` - Preview deployment without executing
+- `--name` - Project name for new deployments
+- `--no-build` - Skip build step
+
+### `ereo start`
+
+Start the production server (requires prior build).
+
+```bash
+ereo start --port 3001
+```
+
+Options:
+- `--port, -p` - Port number (default: 3000)
+- `--host, -h` - Host name (default: 0.0.0.0)
+
+### Database Commands
+
+Commands for database management using Drizzle Kit.
+
+```bash
+# Generate migration from schema changes
+ereo db:generate --name add_users_table
+
+# Run pending migrations
+ereo db:migrate
+
+# Open Drizzle Studio GUI
+ereo db:studio
+
+# Push schema directly (dev only)
+ereo db:push
+
+# Run database seeders
+ereo db:seed
+```
+
+#### db:migrate Options
+- `--config` - Path to drizzle config file
+- `--verbose, -v` - Enable verbose output
+
+#### db:generate Options
+- `--name` - Migration name (required)
+- `--config` - Path to drizzle config file
+- `--out` - Output directory for migrations
+
+#### db:studio Options
+- `--port` - Port for Drizzle Studio
+- `--config` - Path to drizzle config file
+
+#### db:push Options
+- `--config` - Path to drizzle config file
+- `--force, -f` - Skip confirmation prompts
+- `--verbose, -v` - Enable verbose output
+
+#### db:seed Options
+- `--file` - Path to seed file
+- `--reset, -r` - Reset database before seeding
 
 ## Key Features
 

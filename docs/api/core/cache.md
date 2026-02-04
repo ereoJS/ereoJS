@@ -28,11 +28,14 @@ function createCache(options?: CacheOptions): CacheAdapter
 
 ```ts
 interface CacheOptions {
-  // Maximum number of entries
+  // Maximum number of entries (default: Infinity)
   maxSize?: number
 
-  // Default TTL in seconds
-  ttl?: number
+  // Default TTL in seconds for all entries
+  defaultTtl?: number
+
+  // Enable tag support (used internally)
+  tagged?: boolean
 }
 ```
 
@@ -45,7 +48,6 @@ interface CacheAdapter {
   delete(key: string): Promise<boolean>
   has(key: string): Promise<boolean>
   clear(): Promise<void>
-  keys(): Promise<string[]>
 }
 ```
 
@@ -54,7 +56,7 @@ interface CacheAdapter {
 ```ts
 const cache = createCache({
   maxSize: 1000,
-  ttl: 3600
+  defaultTtl: 3600
 })
 
 // Store a value
@@ -135,7 +137,7 @@ console.log(`Cache size: ${stats.size}, Tags: ${stats.tags}`)
 
 ## MemoryCacheAdapter
 
-The built-in memory cache implementation.
+The built-in memory cache implementation. Implements both `CacheAdapter` and `TaggedCache` interfaces.
 
 ### Constructor
 
@@ -143,14 +145,24 @@ The built-in memory cache implementation.
 new MemoryCacheAdapter(options?: CacheOptions)
 ```
 
-### Additional Methods
+### Methods
 
 ```ts
 class MemoryCacheAdapter implements TaggedCache {
-  // Get all keys
-  keys(): Promise<string[]>
+  // CacheAdapter methods
+  get<T>(key: string): Promise<T | undefined>
+  set<T>(key: string, value: T, options?: CacheSetOptions): Promise<void>
+  delete(key: string): Promise<boolean>
+  has(key: string): Promise<boolean>
+  clear(): Promise<void>
 
-  // Get statistics
+  // TaggedCache methods
+  invalidateTag(tag: string): Promise<void>
+  invalidateTags(tags: string[]): Promise<void>
+  getByTag(tag: string): Promise<string[]>
+
+  // Additional methods
+  keys(): Promise<string[]>
   getStats(): { size: number; tags: number }
 }
 ```
@@ -160,7 +172,7 @@ class MemoryCacheAdapter implements TaggedCache {
 ```ts
 const cache = new MemoryCacheAdapter({
   maxSize: 5000,
-  ttl: 1800
+  defaultTtl: 1800
 })
 
 // Use like any other cache
@@ -170,6 +182,10 @@ const value = await cache.get('key')
 // Get all keys
 const keys = await cache.keys()
 console.log(`Cached keys: ${keys.join(', ')}`)
+
+// Get statistics
+const stats = cache.getStats()
+console.log(`Size: ${stats.size}, Tags: ${stats.tags}`)
 ```
 
 ## CacheSetOptions
@@ -188,18 +204,56 @@ interface CacheSetOptions {
 
 ## wrapCacheAdapter
 
-Wraps a custom cache implementation to conform to the CacheAdapter interface.
+Wraps a custom cache implementation to conform to the CacheAdapter interface. Useful for adapting existing cache implementations.
 
 ### Signature
 
 ```ts
-function wrapCacheAdapter(impl: CacheImplementation): CacheAdapter
+function wrapCacheAdapter(impl: {
+  get: <T>(key: string) => Promise<T | undefined> | T | undefined
+  set: <T>(key: string, value: T, options?: CacheSetOptions) => Promise<void> | void
+  delete: (key: string) => Promise<boolean> | boolean
+  has: (key: string) => Promise<boolean> | boolean
+  clear: () => Promise<void> | void
+}): CacheAdapter
 ```
 
 ### Example
 
 ```ts
-// Wrap a Redis client
+// Wrap a Map-based cache
+const mapCache = new Map<string, unknown>()
+
+const cache = wrapCacheAdapter({
+  get(key) {
+    return mapCache.get(key)
+  },
+
+  set(key, value) {
+    mapCache.set(key, value)
+  },
+
+  delete(key) {
+    return mapCache.delete(key)
+  },
+
+  has(key) {
+    return mapCache.has(key)
+  },
+
+  clear() {
+    mapCache.clear()
+  }
+})
+
+// Now use the standard CacheAdapter interface
+await cache.set('key', 'value')
+const value = await cache.get('key')
+```
+
+### Redis Example
+
+```ts
 import Redis from 'ioredis'
 
 const redis = new Redis()
@@ -213,13 +267,6 @@ const cache = wrapCacheAdapter({
   async set(key, value, options) {
     const ttl = options?.ttl || 3600
     await redis.setex(key, ttl, JSON.stringify(value))
-
-    // Store tags
-    if (options?.tags) {
-      for (const tag of options.tags) {
-        await redis.sadd(`tag:${tag}`, key)
-      }
-    }
   },
 
   async delete(key) {
@@ -234,14 +281,6 @@ const cache = wrapCacheAdapter({
 
   async clear() {
     await redis.flushdb()
-  },
-
-  async invalidateTag(tag) {
-    const keys = await redis.smembers(`tag:${tag}`)
-    if (keys.length > 0) {
-      await redis.del(...keys)
-    }
-    await redis.del(`tag:${tag}`)
   }
 })
 ```

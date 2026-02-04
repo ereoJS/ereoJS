@@ -24,34 +24,37 @@ bun run build
 
 ## Options
 
-| Option | Alias | Description | Default |
-|--------|-------|-------------|---------|
-| `--outDir` | `-o` | Output directory | `dist` |
-| `--minify` | `-m` | Minify output | `true` |
-| `--sourcemap` | `-s` | Generate source maps | `false` |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--outDir` | Output directory | `.ereo` |
+| `--minify` | Minify output (`true` or `false`) | `true` |
+| `--sourcemap` | Generate source maps (`true` or `false`) | `true` |
 
 ## Examples
 
 ### Basic Build
 
 ```bash
-# Build with defaults
+# Build with defaults (output to .ereo/, minified, with sourcemaps)
 bun ereo build
 
 # Custom output directory
-bun ereo build --outDir build
+bun ereo build --outDir dist
 
-# Include source maps
-bun ereo build --sourcemap
+# Disable source maps
+bun ereo build --sourcemap=false
 
 # Disable minification (for debugging)
-bun ereo build --minify false
+bun ereo build --minify=false
+
+# Production build with all optimizations
+bun ereo build --outDir dist --minify --sourcemap=false
 ```
 
 ## Output Structure
 
 ```
-dist/
+.ereo/
 ├── server/
 │   └── index.js         # Server bundle
 ├── client/
@@ -90,13 +93,13 @@ export default defineConfig({
     target: 'bun', // 'bun' | 'node' | 'cloudflare' | 'deno'
 
     // Output directory
-    outDir: 'dist',
+    outDir: '.ereo',
 
     // Minification
     minify: true,
 
     // Source maps
-    sourcemap: false, // true | false | 'inline' | 'external'
+    sourcemap: true, // true | false
 
     // Code splitting
     splitting: true,

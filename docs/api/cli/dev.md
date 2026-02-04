@@ -94,6 +94,18 @@ function Counter() {
 }
 ```
 
+### Keyboard Shortcuts
+
+While the dev server is running, press these keys in the terminal:
+
+| Key | Action |
+|-----|--------|
+| `h` | Show help with available shortcuts |
+| `r` | Reload all routes |
+| `c` | Clear the console |
+| `q` | Quit the dev server |
+| `Ctrl+C` | Quit the dev server |
+
 ## Configuration
 
 Configure dev server in `ereo.config.ts`:

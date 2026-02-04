@@ -24,20 +24,19 @@ The `@ereo/core` package provides essential building blocks for EreoJS applicati
 ```tsx
 import { createApp, defineConfig } from '@ereo/core';
 
-// Define configuration
-const config = defineConfig({
-  server: {
-    port: 3000,
-    hostname: 'localhost',
-  },
-  build: {
-    target: 'bun',
-    outDir: '.ereo',
-  },
+// Create app with configuration
+const app = createApp({
+  config: defineConfig({
+    server: {
+      port: 3000,
+      hostname: 'localhost',
+    },
+    build: {
+      target: 'bun',
+      outDir: '.ereo',
+    },
+  }),
 });
-
-// Create app instance
-const app = createApp(config);
 
 // Start server
 await app.start();
@@ -75,30 +74,23 @@ export default defineConfig({
   server: {
     port: 3000,
     hostname: '0.0.0.0',
-    https: {
-      key: './certs/key.pem',
-      cert: './certs/cert.pem',
-    },
+    development: process.env.NODE_ENV !== 'production',
   },
-  
+
   // Build settings
   build: {
     target: 'bun',
     outDir: '.ereo',
     minify: true,
     sourcemap: true,
-    splitting: true,
   },
-  
-  // Development settings
-  dev: {
-    hmr: true,
-    errorOverlay: true,
-  },
-  
+
   // Routes location
   routesDir: 'app/routes',
-  
+
+  // Base path for all routes
+  basePath: '',
+
   // Plugins
   plugins: [
     // Add plugins here
@@ -114,38 +106,38 @@ See [create-app](/api/core/create-app) for complete configuration options.
 
 ### createContext()
 
-Creates a request-scoped async context.
+Creates a request-scoped context.
 
 ```tsx
-import { createContext, getContext } from '@ereo/core';
+import { createContext, getContext, attachContext } from '@ereo/core';
 
-// Create a context for the current request
-const context = createContext({
-  requestId: generateId(),
-  startTime: Date.now(),
-  user: await getCurrentUser(request),
-});
+// Create a context for an incoming request
+const context = createContext(request);
 
-// Access context anywhere in the request lifecycle
-type Context = { user: User; requestId: string };
-const ctx = getContext<Context>();
-console.log(ctx.user.id);
+// Store values in the context
+context.set('requestId', crypto.randomUUID());
+context.set('startTime', Date.now());
+
+// Retrieve values
+const requestId = context.get<string>('requestId');
 ```
 
 ### Context Usage
 
 ```tsx
+import type { MiddlewareHandler, LoaderArgs } from '@ereo/core';
+
 // Middleware that sets context
-export async function authMiddleware({ request, context }: MiddlewareArgs) {
+const authMiddleware: MiddlewareHandler = async (request, context, next) => {
   const user = await verifyAuth(request);
   context.set('user', user);
-  return context.next();
-}
+  return next();
+};
 
 // Access in loader
 export async function loader({ context }: LoaderArgs) {
-  const user = context.get('user');
-  return json({ posts: await getUserPosts(user.id) });
+  const user = context.get<User>('user');
+  return { posts: await getUserPosts(user.id) };
 }
 ```
 
@@ -157,29 +149,35 @@ See [context](/api/core/context) for detailed documentation.
 
 ### definePlugin()
 
-Creates a strongly-typed plugin.
+Creates a plugin with proper typing.
 
 ```tsx
 import { definePlugin } from '@ereo/core';
 
 const myPlugin = definePlugin({
   name: 'my-plugin',
-  version: '1.0.0',
-  
-  setup(app) {
+
+  setup(context) {
     // Plugin initialization
-    console.log('Plugin initialized');
-    
-    // Hook into build lifecycle
-    app.on('build:start', () => {
-      console.log('Build starting...');
-    });
-    
-    // Add middleware
-    app.use(async (ctx, next) => {
-      // Custom middleware logic
-      await next();
-    });
+    console.log('Plugin initialized in', context.mode, 'mode');
+    console.log('Project root:', context.root);
+  },
+
+  // Transform code during build
+  transform(code, id) {
+    if (id.endsWith('.tsx')) {
+      return code.replace(/console\.log/g, 'logger.log');
+    }
+    return null;
+  },
+
+  // Build lifecycle hooks
+  buildStart() {
+    console.log('Build starting...');
+  },
+
+  buildEnd() {
+    console.log('Build complete!');
   },
 });
 ```
@@ -187,20 +185,17 @@ const myPlugin = definePlugin({
 ### Plugin Configuration
 
 ```tsx
-import { defineConfig } from '@ereo/core';
-import { dbPlugin } from '@ereo/db';
-import { authPlugin } from '@ereo/auth';
+import { defineConfig, definePlugin } from '@ereo/core';
+
+const loggingPlugin = definePlugin({
+  name: 'logging',
+  setup(context) {
+    console.log('App running in', context.mode, 'mode');
+  },
+});
 
 export default defineConfig({
-  plugins: [
-    dbPlugin({
-      database: 'postgresql',
-      url: process.env.DATABASE_URL,
-    }),
-    authPlugin({
-      provider: 'github',
-    }),
-  ],
+  plugins: [loggingPlugin],
 });
 ```
 
@@ -213,19 +208,23 @@ See [plugins](/api/core/plugins) for the complete plugin API.
 ### Type-safe Environment
 
 ```tsx
-import { env, typedEnv } from '@ereo/core';
+import { env, setupEnv, typedEnv } from '@ereo/core';
 
-// Access with defaults
-const port = env.PORT.number(3000);
-const debug = env.DEBUG.boolean(false);
-const apiUrl = env.API_URL.string('https://api.example.com');
+// Define environment schema
+const envSchema = {
+  PORT: env.port().default(3000),
+  DATABASE_URL: env.string().required(),
+  DEBUG: env.boolean().default(false),
+  NODE_ENV: env.enum(['development', 'production', 'test']).default('development'),
+};
 
-// Validated environment
-const config = typedEnv({
-  PORT: { type: 'number', default: 3000 },
-  DATABASE_URL: { type: 'string', required: true },
-  DEBUG: { type: 'boolean', default: false },
-});
+// Validate and load environment
+const result = await setupEnv('.', envSchema, 'development');
+
+if (result.valid) {
+  // Access typed environment variables
+  const port = typedEnv.PORT;  // number
+}
 ```
 
 ### Loading Environment Files
@@ -233,15 +232,12 @@ const config = typedEnv({
 ```tsx
 import { loadEnvFiles, validateEnv } from '@ereo/core';
 
-// Load .env files
-await loadEnvFiles(['.env', '.env.local']);
+// Load .env files (returns merged key-value pairs)
+const loaded = await loadEnvFiles('./project', 'production');
+// Loads: .env, .env.production, .env.production.local, .env.local
 
-// Validate required variables
-validateEnv([
-  'DATABASE_URL',
-  'API_SECRET',
-  'STRIPE_KEY',
-]);
+// Validate against schema
+const result = validateEnv(envSchema, { ...loaded, ...process.env });
 ```
 
 ### Public Environment Variables
@@ -249,9 +245,15 @@ validateEnv([
 ```tsx
 import { getPublicEnv } from '@ereo/core';
 
-// Variables prefixed with EREO_PUBLIC_ are available client-side
-const publicEnv = getPublicEnv();
-// { API_URL: 'https://api.example.com', APP_NAME: 'My App' }
+// Define schema with public variables
+const envSchema = {
+  PUBLIC_API_URL: env.string().required().public(),
+  PUBLIC_APP_NAME: env.string().default('My App').public(),
+};
+
+// Get only public variables (safe for client)
+const publicEnv = getPublicEnv(envSchema);
+// { PUBLIC_API_URL: 'https://api.example.com', PUBLIC_APP_NAME: 'My App' }
 ```
 
 See [env](/api/core/env) for complete environment handling.
@@ -263,16 +265,16 @@ See [env](/api/core/env) for complete environment handling.
 ### Unified Cache Interface
 
 ```tsx
-import { createCache, MemoryCacheAdapter } from '@ereo/core';
+import { createCache } from '@ereo/core';
 
-// Create cache with memory adapter
+// Create cache with options
 const cache = createCache({
-  adapter: new MemoryCacheAdapter(),
-  ttl: 60 * 1000, // 1 minute default TTL
+  maxSize: 1000,       // Maximum entries
+  defaultTtl: 3600,    // Default TTL in seconds
 });
 
 // Basic operations
-await cache.set('key', { data: 'value' }, { ttl: 5000 });
+await cache.set('key', { data: 'value' }, { ttl: 300 });
 const value = await cache.get('key');
 await cache.delete('key');
 await cache.clear();
@@ -284,28 +286,37 @@ await cache.clear();
 import { createTaggedCache } from '@ereo/core';
 
 const cache = createTaggedCache({
-  adapter: new MemoryCacheAdapter(),
+  maxSize: 1000,
 });
 
-// Set with tags
-await cache.set('post:1', post, { tags: ['posts', 'user:123'] });
+// Set with tags for grouped invalidation
+await cache.set('post:1', post, {
+  ttl: 3600,
+  tags: ['posts', 'user:123']
+});
 
-// Invalidate by tag
+// Invalidate all entries with a tag
 await cache.invalidateTag('user:123');
-// All entries tagged with 'user:123' are removed
+
+// Invalidate multiple tags
+await cache.invalidateTags(['posts', 'comments']);
+
+// Get all keys for a tag
+const postKeys = await cache.getByTag('posts');
 ```
 
 ### Cache Adapters
 
 ```tsx
-// Memory (development)
-import { MemoryCacheAdapter } from '@ereo/core';
+// Built-in memory cache
+import { MemoryCacheAdapter, createCache, createTaggedCache } from '@ereo/core';
 
-// Redis (production)
-import { RedisCacheAdapter } from '@ereo/cache-redis';
+// Direct instantiation
+const cache = new MemoryCacheAdapter({ maxSize: 5000 });
 
-// Cloudflare Workers
-import { KVCacheAdapter } from '@ereo/cache-kv';
+// Or use factory functions
+const simpleCache = createCache({ maxSize: 1000 });
+const taggedCache = createTaggedCache({ maxSize: 1000 });
 ```
 
 See [cache](/api/core/cache) for complete caching documentation.
@@ -376,54 +387,71 @@ See [types](/api/core/types) and [type-safe-routing](/api/core/type-safe-routing
 
 ```tsx
 // ereo.config.ts
-import { defineConfig } from '@ereo/core';
-import { dbPlugin } from '@ereo/db';
-import { authPlugin } from '@ereo/auth';
+import { defineConfig, definePlugin } from '@ereo/core';
+
+const loggingPlugin = definePlugin({
+  name: 'logging',
+  setup(context) {
+    console.log(`Starting in ${context.mode} mode`);
+  },
+});
 
 export default defineConfig({
   server: {
-    port: parseInt(process.env.PORT || '3000'),
+    port: 3000,
     hostname: '0.0.0.0',
+    development: process.env.NODE_ENV !== 'production',
   },
-  
+
   build: {
     target: 'bun',
     outDir: '.ereo',
     minify: true,
   },
-  
-  dev: {
-    hmr: true,
-    errorOverlay: true,
-  },
-  
-  plugins: [
-    dbPlugin({ url: process.env.DATABASE_URL }),
-    authPlugin({
-      providers: ['github', 'google'],
-    }),
-  ],
+
+  routesDir: 'app/routes',
+
+  plugins: [loggingPlugin],
 });
 ```
 
 ```tsx
 // app/routes/index.tsx
-import { json } from '@ereo/core';
 import type { LoaderArgs, MetaFunction } from '@ereo/core';
 
-export async function loader({ context }: LoaderArgs) {
-  const db = context.get('db');
-  const posts = await db.posts.findMany({ limit: 10 });
-  return json({ posts });
+interface Post {
+  id: string;
+  title: string;
 }
 
-export const meta: MetaFunction<typeof loader> = ({ data }) => [
+export async function loader({ context }: LoaderArgs) {
+  // Access data from context (set by middleware)
+  const db = context.get<Database>('db');
+  const posts = await db.posts.findMany({ limit: 10 });
+
+  // Set cache control
+  context.cache.set({
+    maxAge: 300,
+    tags: ['posts'],
+  });
+
+  return { posts };
+}
+
+export const meta: MetaFunction<{ posts: Post[] }> = ({ data }) => [
   { title: 'Home' },
   { name: 'description', content: `Latest posts: ${data.posts.length}` },
 ];
 
-export default function HomePage() {
-  // Component implementation
+export default function HomePage({ loaderData }: { loaderData: { posts: Post[] } }) {
+  return (
+    <div>
+      <h1>Latest Posts</h1>
+      {loaderData.posts.map(post => (
+        <article key={post.id}>{post.title}</article>
+      ))}
+    </div>
+  );
 }
 ```
 

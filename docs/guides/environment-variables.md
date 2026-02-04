@@ -242,41 +242,38 @@ FEATURE_FLAGS: env.json<{ beta: boolean; newUI: boolean }>()
 ### Required vs Optional
 
 ```ts
-// Required (throws if missing)
-DATABASE_URL: env.string()
+// Required (throws validation error if missing)
+DATABASE_URL: env.string().required()
 
-// Optional (undefined if missing)
-SENTRY_DSN: env.string().optional()
+// Optional (undefined if missing, no error)
+SENTRY_DSN: env.string()
 
 // With default (uses default if missing)
 PORT: env.port().default(3000)
 ```
 
+Note: Variables are optional by default. Use `.required()` to make them mandatory.
+
 ### Custom Validation
 
 ```ts
-// Minimum length
-SESSION_SECRET: env.string().validate(s => s.length >= 32)
+// Minimum length (return true for valid, or error message string)
+SESSION_SECRET: env.string()
+  .required()
+  .validate(s => s.length >= 32 || 'Must be at least 32 characters')
 
 // Pattern matching
-API_KEY: env.string().validate(s => /^sk_/.test(s))
+API_KEY: env.string()
+  .required()
+  .validate(s => /^sk_/.test(s) || 'Must start with sk_')
 
-// Custom error message
-DATABASE_URL: env.string().validate(
-  s => s.startsWith('postgres://'),
-  'Must be a PostgreSQL connection string'
-)
+// PostgreSQL connection check
+DATABASE_URL: env.string()
+  .required()
+  .validate(s => s.startsWith('postgres://') || 'Must be a PostgreSQL connection string')
 ```
 
-### Transform
-
-```ts
-// Parse to number
-TIMEOUT_MS: env.string().transform(s => parseInt(s) * 1000)
-
-// Parse JSON
-CONFIG: env.string().transform(s => JSON.parse(s))
-```
+Note: The `validate` function should return `true` for valid values, or a string error message for invalid values.
 
 ## Generate TypeScript Types
 

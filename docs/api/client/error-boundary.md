@@ -19,22 +19,20 @@ import {
 
 ## ErrorBoundary
 
-A React error boundary component.
+A React error boundary component that catches JavaScript errors in child components.
 
 ### Props
 
 ```ts
 interface ErrorBoundaryProps {
-  children: React.ReactNode
+  children: ReactNode
 
   // Fallback UI when an error occurs
-  fallback?: React.ReactNode | ((error: Error) => React.ReactNode)
+  // Can be a static ReactNode or a function receiving error and reset function
+  fallback?: ReactNode | ((error: Error, reset: () => void) => ReactNode)
 
   // Callback when an error is caught
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void
-
-  // Reset keys - boundary resets when these change
-  resetKeys?: any[]
+  onError?: (error: Error, errorInfo: ErrorInfo) => void
 }
 ```
 
@@ -66,16 +64,16 @@ function App() {
 </ErrorBoundary>
 ```
 
-### Dynamic Fallback
+### Dynamic Fallback with Reset
 
 ```tsx
 <ErrorBoundary
-  fallback={(error) => (
+  fallback={(error, reset) => (
     <div>
       <h1>Error</h1>
       <p>{error.message}</p>
-      <button onClick={() => window.location.reload()}>
-        Reload
+      <button onClick={reset}>
+        Try Again
       </button>
     </div>
   )}
@@ -84,30 +82,28 @@ function App() {
 </ErrorBoundary>
 ```
 
-### Reset Keys
-
-```tsx
-function PostPage({ postId }) {
-  return (
-    <ErrorBoundary
-      fallback={<ErrorMessage />}
-      resetKeys={[postId]} // Resets when postId changes
-    >
-      <PostContent postId={postId} />
-    </ErrorBoundary>
-  )
-}
-```
-
 ## RouteErrorBoundary
 
-An error boundary specifically for route errors.
+An error boundary specifically for route-level error handling. Integrates with route configuration and supports error recovery strategies.
 
 ### Props
 
 ```ts
 interface RouteErrorBoundaryProps {
-  children: React.ReactNode
+  // Route identifier
+  routeId: string
+
+  // Error configuration from route
+  errorConfig?: ErrorConfig
+
+  // Children to render
+  children: ReactNode
+
+  // Fallback component from route module
+  fallbackComponent?: ComponentType<{ error: Error; params: RouteParams }>
+
+  // Route params
+  params?: RouteParams
 }
 ```
 
@@ -236,7 +232,7 @@ export const loader = createLoader(async ({ params }) => {
 
 ## useErrorBoundary
 
-Hook for programmatic error boundary control.
+Hook for programmatic error boundary control. Provides access to error state and functions to reset or trigger errors.
 
 ### Signature
 
@@ -244,8 +240,13 @@ Hook for programmatic error boundary control.
 function useErrorBoundary(): UseErrorBoundaryReturn
 
 interface UseErrorBoundaryReturn {
-  error: Error | null
-  resetBoundary: () => void
+  // Current error (undefined if no error)
+  error: Error | undefined
+
+  // Reset the error boundary
+  reset: () => void
+
+  // Programmatically trigger an error in the boundary
   showBoundary: (error: Error) => void
 }
 ```
@@ -273,13 +274,13 @@ function DataLoader() {
 
 ```tsx
 function ErrorFallback() {
-  const { error, resetBoundary } = useErrorBoundary()
+  const { error, reset } = useErrorBoundary()
 
   return (
     <div>
       <h1>Error</h1>
       <p>{error?.message}</p>
-      <button onClick={resetBoundary}>Try Again</button>
+      <button onClick={reset}>Try Again</button>
     </div>
   )
 }
@@ -312,37 +313,47 @@ const SafeComponent = withErrorBoundary(RiskyComponent, {
 
 ## RouteError
 
-Custom error class for route errors.
+Custom error class for route errors with HTTP status codes.
 
 ### Constructor
 
 ```ts
 class RouteError extends Error {
-  constructor(
-    message: string,
-    public status?: number,
-    public data?: any
-  )
+  status: number
+  statusText: string
+  data: unknown
+
+  constructor(status: number, statusText: string, data?: unknown)
+
+  // Convert to RouteErrorResponse
+  toResponse(): RouteErrorResponse
 }
 ```
 
 ### Example
 
 ```tsx
+import { RouteError } from '@ereo/client'
+
 // In a loader
-export const loader = createLoader(async ({ params }) => {
+export async function loader({ params }) {
   const post = await db.posts.find(params.id)
 
   if (!post) {
-    throw new RouteError('Post not found', 404)
+    throw new RouteError(404, 'Not Found', { message: 'Post not found' })
   }
 
   if (!post.published) {
-    throw new RouteError('Post not published', 403, { postId: params.id })
+    throw new RouteError(403, 'Forbidden', { postId: params.id })
   }
 
   return { post }
-})
+}
+
+// Converting to response
+const error = new RouteError(404, 'Not Found')
+const response = error.toResponse()
+// { status: 404, statusText: 'Not Found', data: undefined }
 ```
 
 ## Error Boundary Patterns

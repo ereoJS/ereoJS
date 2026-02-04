@@ -38,6 +38,7 @@ Or via package.json scripts:
 | [`start`](/api/cli/start) | Start production server |
 | [`create`](/api/cli/create) | Create a new project |
 | [`deploy`](/api/cli/deploy) | Deploy to production platforms |
+| [`db:*`](/api/cli/db) | Database commands (migrate, generate, studio, push, seed) |
 
 ## Global Options
 
@@ -95,6 +96,25 @@ bun ereo create my-app
 
 # With specific template
 bun ereo create my-app --template minimal
+```
+
+### Database Commands
+
+```bash
+# Generate migration from schema changes
+bun ereo db:generate --name add_users_table
+
+# Run pending migrations
+bun ereo db:migrate
+
+# Open Drizzle Studio
+bun ereo db:studio
+
+# Push schema directly (dev only)
+bun ereo db:push
+
+# Run database seeders
+bun ereo db:seed
 ```
 
 ## Configuration File
@@ -174,7 +194,18 @@ const apiUrl = process.env.EREO_PUBLIC_API_URL;
 All CLI commands can be used programmatically:
 
 ```ts
-import { dev, build, start, create, deploy } from '@ereo/cli';
+import {
+  dev,
+  build,
+  start,
+  create,
+  deploy,
+  dbMigrate,
+  dbGenerate,
+  dbStudio,
+  dbPush,
+  dbSeed,
+} from '@ereo/cli';
 
 // Development server
 await dev({ port: 3000, open: true });
@@ -190,6 +221,13 @@ await create('my-app', { template: 'tailwind' });
 
 // Deploy
 const result = await deploy({ target: 'vercel', production: true });
+
+// Database commands
+await dbMigrate({ verbose: true });
+await dbGenerate({ name: 'add_users' });
+await dbStudio({ port: 4000 });
+await dbPush({ force: true });
+await dbSeed({ reset: true });
 ```
 
 ## Type Exports
@@ -203,6 +241,11 @@ import type {
   DeployOptions,
   DeployTarget,
   DeployResult,
+  DbMigrateOptions,
+  DbGenerateOptions,
+  DbStudioOptions,
+  DbPushOptions,
+  DbSeedOptions,
 } from '@ereo/cli';
 ```
 
@@ -236,3 +279,4 @@ Debug categories:
 - [create-ereo](/api/create-ereo) - Project scaffolding tool
 - [Configuration](/api/core/create-app) - App configuration
 - [Plugins](/api/core/plugins) - Plugin system
+- [Database Commands](/api/cli/db) - Database migration and seeding

@@ -1,6 +1,6 @@
 # @ereo/core
 
-Core framework package for EreoJS providing the application container, request context, plugin system, caching, and type definitions.
+Core framework package for EreoJS providing the application container, request context, plugin system, caching, environment variables, and type definitions.
 
 ## Installation
 
@@ -13,22 +13,29 @@ bun add @ereo/core
 ```typescript
 import { createApp, defineConfig, definePlugin } from '@ereo/core';
 
-// Create your application
-const app = createApp(defineConfig({
-  server: {
-    port: 3000,
-  },
-}));
+// Create application with configuration
+const app = createApp({
+  config: defineConfig({
+    server: {
+      port: 3000,
+      hostname: 'localhost',
+    },
+  }),
+});
 
 // Define a custom plugin
 const analyticsPlugin = definePlugin({
   name: 'analytics',
-  setup(app) {
-    console.log('Analytics initialized');
+  setup(context) {
+    console.log('Analytics initialized in', context.mode, 'mode');
   },
 });
 
+// Register the plugin
 app.use(analyticsPlugin);
+
+// Start the server
+await app.start();
 ```
 
 ## Key Features
@@ -36,23 +43,47 @@ app.use(analyticsPlugin);
 - **Application Container** - Create and configure EreoJS applications with `createApp` and `defineConfig`
 - **Request Context** - Access request-scoped data with `createContext`, `getContext`, and `attachContext`
 - **Plugin System** - Extend functionality with `definePlugin` and `composePlugins`
-- **Environment Variables** - Type-safe env management with `env`, `validateEnv`, and `typedEnv`
-- **Unified Cache Interface** - Flexible caching with `createCache`, `createTaggedCache`, and adapters
+- **Environment Variables** - Type-safe env management with schema builders (`env.string()`, `env.number()`, etc.)
+- **Unified Cache Interface** - Flexible caching with `createCache`, `createTaggedCache`, and tag-based invalidation
 - **Full TypeScript Support** - Comprehensive type definitions for routes, loaders, actions, middleware, and more
 
 ## Environment Variables
 
 ```typescript
-import { env, validateEnv, typedEnv } from '@ereo/core';
+import { env, setupEnv, typedEnv } from '@ereo/core';
 
-// Access environment variables
-const dbUrl = env('DATABASE_URL');
+// Define environment schema
+const envSchema = {
+  DATABASE_URL: env.string().required(),
+  PORT: env.port().default(3000),
+  DEBUG: env.boolean().default(false),
+  NODE_ENV: env.enum(['development', 'production', 'test']).default('development'),
+};
 
-// Typed environment access
-const config = typedEnv({
-  PORT: { type: 'number', default: 3000 },
-  NODE_ENV: { type: 'string', required: true },
+// Validate and load environment
+const result = await setupEnv('.', envSchema, 'development');
+
+if (result.valid) {
+  // Access typed environment variables
+  const port = typedEnv.PORT; // number
+}
+```
+
+## Caching
+
+```typescript
+import { createTaggedCache } from '@ereo/core';
+
+const cache = createTaggedCache({ maxSize: 1000 });
+
+// Set with tags for grouped invalidation
+await cache.set('user:123', userData, {
+  ttl: 3600,
+  tags: ['users', 'user:123']
 });
+
+// Invalidate all entries with a tag
+await cache.invalidateTag('users');
 ```
 
 ## Documentation

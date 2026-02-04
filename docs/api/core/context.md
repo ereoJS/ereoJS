@@ -88,6 +88,32 @@ context.delete('temporaryData')
 
 ## Properties
 
+### url
+
+The parsed URL of the current request.
+
+```ts
+url: URL
+```
+
+```ts
+// Access URL components
+console.log(context.url.pathname)   // '/users/123'
+console.log(context.url.searchParams.get('sort'))  // 'asc'
+```
+
+### env
+
+Environment variables available in the current context.
+
+```ts
+env: Record<string, string | undefined>
+```
+
+```ts
+const dbUrl = context.env.DATABASE_URL
+```
+
 ### cache
 
 Access cache control for the current request.
@@ -96,6 +122,14 @@ Access cache control for the current request.
 interface CacheControl {
   set(options: CacheOptions): void
   get(): CacheOptions | undefined
+  getTags(): string[]
+}
+
+interface CacheOptions {
+  maxAge?: number
+  staleWhileRevalidate?: number
+  tags?: string[]
+  private?: boolean
 }
 ```
 
@@ -103,11 +137,16 @@ interface CacheControl {
 // Set cache headers
 context.cache.set({
   maxAge: 3600,
-  tags: ['posts']
+  staleWhileRevalidate: 600,
+  tags: ['posts', 'user:123']
 })
 
 // Get current cache settings
 const cacheOptions = context.cache.get()
+
+// Get all cache tags (accumulated from multiple set() calls)
+const tags = context.cache.getTags()
+// ['posts', 'user:123']
 ```
 
 ### responseHeaders

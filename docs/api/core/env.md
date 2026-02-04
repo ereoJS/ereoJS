@@ -44,22 +44,24 @@ Each type returns a builder with these methods:
 
 ```ts
 interface EnvSchemaBuilder<T> {
-  // Make the variable optional
-  optional(): EnvSchemaBuilder<T | undefined>
+  // Make the variable required (no default allowed)
+  required(): EnvSchemaBuilder<T>
 
-  // Set a default value
+  // Set a default value (makes variable optional)
   default(value: T): EnvSchemaBuilder<T>
+
+  // Add a description for documentation
+  description(desc: string): EnvSchemaBuilder<T>
+
+  // Add custom validation (return true or error message string)
+  validate(fn: (value: T) => boolean | string): EnvSchemaBuilder<T>
 
   // Mark as public (exposed to client)
   public(): EnvSchemaBuilder<T>
-
-  // Add custom validation
-  validate(fn: (value: T) => boolean): EnvSchemaBuilder<T>
-
-  // Transform the value
-  transform<U>(fn: (value: T) => U): EnvSchemaBuilder<U>
 }
 ```
+
+Note: Variables are optional by default unless `.required()` is called. Using `.default()` also makes a variable optional.
 
 ### Example Schema
 
@@ -68,32 +70,39 @@ interface EnvSchemaBuilder<T> {
 import { env } from '@ereo/core'
 
 export const envSchema = {
-  // Required string
-  DATABASE_URL: env.string(),
+  // Required string (throws validation error if missing)
+  DATABASE_URL: env.string().required(),
 
-  // Optional with default
+  // With default (optional, uses default if missing)
   PORT: env.port().default(3000),
 
-  // Boolean
+  // Boolean with default
   DEBUG: env.boolean().default(false),
 
-  // Enum
+  // Enum with restricted values
   NODE_ENV: env.enum(['development', 'production', 'test']).default('development'),
 
-  // Public (exposed to client)
-  PUBLIC_API_URL: env.string().public(),
+  // Public (exposed to client) and required
+  PUBLIC_API_URL: env.string().required().public(),
 
-  // JSON object
+  // JSON object with default
   FEATURE_FLAGS: env.json<{ beta: boolean }>().default({ beta: false }),
 
-  // Array
+  // Array (comma-separated values)
   ALLOWED_ORIGINS: env.array().default([]),
 
-  // With custom validation
-  API_KEY: env.string().validate(key => key.length >= 32),
+  // With custom validation (return true or error message)
+  API_KEY: env.string()
+    .required()
+    .validate(key => key.length >= 32 || 'API_KEY must be at least 32 characters'),
 
-  // Optional
-  SENTRY_DSN: env.url().optional()
+  // URL validation
+  SENTRY_DSN: env.url().description('Sentry DSN for error tracking'),
+
+  // With description for documentation
+  SESSION_SECRET: env.string()
+    .required()
+    .description('Secret key for session encryption')
 }
 ```
 
@@ -122,29 +131,31 @@ const parsed = parseEnvFile(content)
 
 ## loadEnvFiles
 
-Loads environment variables from `.env` files.
+Loads environment variables from `.env` files. Later files override earlier ones.
 
 ### Signature
 
 ```ts
 function loadEnvFiles(
   root: string,
-  mode?: string
+  mode?: 'development' | 'production' | 'test'
 ): Promise<Record<string, string>>
 ```
 
-### Loading Order
+### Loading Order (lowest to highest priority)
 
-1. `.env` - Always loaded
-2. `.env.local` - Local overrides (gitignored)
-3. `.env.{mode}` - Mode-specific (e.g., `.env.production`)
-4. `.env.{mode}.local` - Mode-specific local overrides
+1. `.env` - Base configuration
+2. `.env.{mode}` - Mode-specific (e.g., `.env.production`)
+3. `.env.{mode}.local` - Mode-specific local overrides
+4. `.env.local` - Local overrides (highest priority)
+
+Note: `process.env` values take precedence over all loaded files.
 
 ### Example
 
 ```ts
 const env = await loadEnvFiles('./project', 'production')
-// Loads: .env, .env.local, .env.production, .env.production.local
+// Loads: .env, .env.production, .env.production.local, .env.local
 ```
 
 ## validateEnv
@@ -164,9 +175,17 @@ function validateEnv(
 
 ```ts
 interface EnvValidationResult {
-  success: boolean
-  data: ParsedEnv
+  valid: boolean
+  env: ParsedEnv
   errors: EnvValidationError[]
+  warnings: string[]
+}
+
+interface EnvValidationError {
+  key: string
+  message: string
+  expected?: string
+  received?: string
 }
 ```
 
@@ -175,15 +194,22 @@ interface EnvValidationResult {
 ```ts
 const result = validateEnv(envSchema, process.env)
 
-if (!result.success) {
+if (!result.valid) {
   console.error('Environment validation failed:')
   for (const error of result.errors) {
     console.error(`  ${error.key}: ${error.message}`)
+    if (error.expected) console.error(`    Expected: ${error.expected}`)
+    if (error.received) console.error(`    Received: ${error.received}`)
   }
   process.exit(1)
 }
 
-const validatedEnv = result.data
+// Log any warnings
+for (const warning of result.warnings) {
+  console.warn(`Warning: ${warning}`)
+}
+
+const validatedEnv = result.env
 ```
 
 ## setupEnv
@@ -206,13 +232,13 @@ function setupEnv(
 import { setupEnv } from '@ereo/core'
 import { envSchema } from './env.config'
 
-const result = await setupEnv('.', envSchema, process.env.NODE_ENV)
+const result = await setupEnv('.', envSchema, process.env.NODE_ENV as 'development' | 'production' | 'test')
 
-if (!result.success) {
+if (!result.valid) {
   throw new Error('Invalid environment configuration')
 }
 
-// Environment is ready
+// Environment is initialized and ready to use
 ```
 
 ## initializeEnv
@@ -229,7 +255,10 @@ function initializeEnv(validatedEnv: ParsedEnv): void
 
 ```ts
 const result = await setupEnv('.', envSchema)
-initializeEnv(result.data)
+// setupEnv already calls initializeEnv if valid, but you can also call manually:
+if (result.valid) {
+  initializeEnv(result.env)
+}
 
 // Now getEnv and requireEnv work
 ```
@@ -360,40 +389,52 @@ const debug: boolean = env.DEBUG
 
 ```ts
 // src/env.ts
-import { env, setupEnv, initializeEnv } from '@ereo/core'
+import { env, setupEnv, initializeEnv, getEnv, requireEnv } from '@ereo/core'
 
 export const envSchema = {
-  DATABASE_URL: env.string(),
+  DATABASE_URL: env.string().required(),
   PORT: env.port().default(3000),
-  NODE_ENV: env.enum(['development', 'production', 'test']),
-  PUBLIC_API_URL: env.string().public(),
-  JWT_SECRET: env.string().validate(s => s.length >= 32)
+  NODE_ENV: env.enum(['development', 'production', 'test']).default('development'),
+  PUBLIC_API_URL: env.string().required().public(),
+  JWT_SECRET: env.string()
+    .required()
+    .validate(s => s.length >= 32 || 'JWT_SECRET must be at least 32 characters')
 }
 
 export type Env = typeof envSchema
 
 export async function initEnv() {
-  const result = await setupEnv('.', envSchema, process.env.NODE_ENV)
+  const mode = (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'test'
+  const result = await setupEnv('.', envSchema, mode)
 
-  if (!result.success) {
+  if (!result.valid) {
     console.error('Environment validation failed:')
-    result.errors.forEach(e => console.error(`  ${e.key}: ${e.message}`))
+    result.errors.forEach(e => {
+      console.error(`  ${e.key}: ${e.message}`)
+      if (e.expected) console.error(`    Expected: ${e.expected}`)
+      if (e.received) console.error(`    Received: ${e.received}`)
+    })
     process.exit(1)
   }
 
-  initializeEnv(result.data)
-  return result.data
+  // setupEnv already calls initializeEnv, but explicit is fine too
+  return result.env
 }
 ```
 
 ```ts
 // src/index.ts
 import { initEnv } from './env'
+import { requireEnv } from '@ereo/core'
 
 await initEnv()
 
 // Now safe to use environment
+const dbUrl = requireEnv<string>('DATABASE_URL')
+const port = requireEnv<number>('PORT')
+
 import { createApp } from '@ereo/core'
+// ... start your app
 ```
 
 ## Related

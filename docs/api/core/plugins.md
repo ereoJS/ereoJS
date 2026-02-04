@@ -143,28 +143,19 @@ console.log(`${plugins.length} plugins registered`)
 
 ### securityHeadersPlugin
 
-Adds security headers to responses.
+A built-in plugin that adds sensible security defaults to responses. The plugin is pre-configured with no options required.
 
 ```ts
-import { securityHeadersPlugin } from '@ereo/core'
+import { securityHeadersPlugin, createApp, defineConfig } from '@ereo/core'
 
 const app = createApp({
-  plugins: [
-    securityHeadersPlugin({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
-          styleSrc: ["'self'", "'unsafe-inline'"]
-        }
-      },
-      xFrameOptions: 'DENY',
-      xContentTypeOptions: 'nosniff',
-      referrerPolicy: 'strict-origin-when-cross-origin'
-    })
-  ]
+  config: defineConfig({
+    plugins: [securityHeadersPlugin]
+  })
 })
 ```
+
+Note: For custom security header configuration, create a custom plugin using `definePlugin`.
 
 ## Creating Custom Plugins
 
@@ -292,21 +283,25 @@ interface PluginContext {
   // Framework configuration
   config: FrameworkConfig
 
-  // Root directory
+  // Project root directory (process.cwd())
   root: string
 
   // Environment mode
-  mode: 'development' | 'production' | 'test'
-
-  // Logger
-  logger: Logger
-
-  // Add routes dynamically
-  addRoute(route: Route): void
-
-  // Add middleware
-  addMiddleware(handler: MiddlewareHandler): void
+  mode: 'development' | 'production'
 }
+```
+
+Example usage:
+
+```ts
+const myPlugin = definePlugin({
+  name: 'my-plugin',
+  setup(context) {
+    console.log('Running in', context.mode, 'mode')
+    console.log('Project root:', context.root)
+    console.log('Server port:', context.config.server?.port)
+  }
+})
 ```
 
 ## isPlugin

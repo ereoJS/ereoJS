@@ -136,7 +136,7 @@ import { Link, NavLink } from '@ereo/client';
 <Link to="/dashboard" prefetch="intent">Dashboard</Link>
 
 // Active state styling
-<NavLink 
+<NavLink
   to="/profile"
   className={({ isActive }) => isActive ? 'active' : ''}
 >
@@ -156,8 +156,8 @@ await navigate('/dashboard');
 await navigate('/login', { replace: true });
 
 // Typed navigation (with autocomplete)
-const navigate = useTypedNavigate();
-navigate('/users/:id', { params: { id: '123' } });
+const typedNav = useTypedNavigate();
+typedNav('/users/[id]', { params: { id: '123' } });
 ```
 
 ### Prefetching
@@ -347,13 +347,13 @@ Link component with compile-time path validation.
 import { TypedLink } from '@ereo/client';
 
 // TypeScript validates the path exists
-<TypedLink to="/users/:id" params={{ id: '123' }}>
+<TypedLink to="/users/[id]" params={{ id: '123' }}>
   View User
 </TypedLink>
 
 // Search params are also typed
-<TypedLink 
-  to="/search" 
+<TypedLink
+  to="/search"
   search={{ q: 'query', page: 1 }}
 >
   Search
@@ -370,7 +370,7 @@ import { useTypedNavigate } from '@ereo/client';
 const navigate = useTypedNavigate();
 
 // Autocomplete for paths
-navigate('/users/:id', { 
+navigate('/users/[id]', {
   params: { id: '123' },
   search: { tab: 'profile' }
 });

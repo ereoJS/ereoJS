@@ -493,6 +493,32 @@ type Params = PathParams<'/api/posts/[id]/comments/[commentId]'>
 // { id: string; commentId: string }
 ```
 
+### MethodsFor
+
+Gets all supported HTTP methods for a path:
+
+```ts
+type PostMethods = MethodsFor<'/api/posts'>
+// 'GET' | 'POST' (if defined in ApiRoutes)
+
+// For unregistered paths, returns all HTTP methods
+type UnknownMethods = MethodsFor<'/unknown'>
+// HttpMethod ('GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS')
+```
+
+### QueryParams
+
+Gets the query parameters type for a path and method:
+
+```ts
+type PostsQuery = QueryParams<'/api/posts', 'GET'>
+// { limit?: number; offset?: number } (if defined in ApiRoutes)
+
+// For unregistered paths, returns a generic record type
+type UnknownQuery = QueryParams<'/unknown', 'GET'>
+// Record<string, string | number | boolean | undefined>
+```
+
 ### ResponseType
 
 Gets the response type for a path and method:

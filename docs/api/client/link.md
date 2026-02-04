@@ -10,26 +10,32 @@ import { Link, NavLink, useIsActive } from '@ereo/client'
 
 ## Link
 
-A component for client-side navigation that enhances standard anchor tags.
+A component for client-side navigation that renders an anchor tag for accessibility and SEO while intercepting clicks for client-side navigation.
 
 ### Props
 
 ```ts
-interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
-  // The URL to navigate to
-  href: string
+interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+  // URL to navigate to
+  to: string
 
-  // Prefetch strategy
+  // Prefetch strategy (default: 'intent')
   prefetch?: 'none' | 'intent' | 'render' | 'viewport'
 
   // Replace history instead of push
   replace?: boolean
 
-  // Scroll to top on navigation
-  scroll?: boolean
+  // Prevent scroll reset after navigation
+  preventScrollReset?: boolean
 
   // State to pass to the new location
-  state?: any
+  state?: unknown
+
+  // Reload the document instead of client navigation
+  reloadDocument?: boolean
+
+  // Children elements
+  children?: React.ReactNode
 }
 ```
 
@@ -41,9 +47,9 @@ import { Link } from '@ereo/client'
 export default function Navigation() {
   return (
     <nav>
-      <Link href="/">Home</Link>
-      <Link href="/about">About</Link>
-      <Link href="/posts">Posts</Link>
+      <Link to="/">Home</Link>
+      <Link to="/about">About</Link>
+      <Link to="/posts">Posts</Link>
     </nav>
   )
 }
@@ -52,23 +58,23 @@ export default function Navigation() {
 ### With Prefetching
 
 ```tsx
-// Prefetch on hover/focus
-<Link href="/posts/123" prefetch="intent">
+// Prefetch on hover/focus (default behavior)
+<Link to="/posts/123" prefetch="intent">
   Read Post
 </Link>
 
 // Prefetch when link renders
-<Link href="/dashboard" prefetch="render">
+<Link to="/dashboard" prefetch="render">
   Dashboard
 </Link>
 
 // Prefetch when visible in viewport
-<Link href="/contact" prefetch="viewport">
+<Link to="/contact" prefetch="viewport">
   Contact
 </Link>
 
 // No prefetching
-<Link href="/external" prefetch="none">
+<Link to="/external" prefetch="none">
   External Link
 </Link>
 ```
@@ -77,7 +83,7 @@ export default function Navigation() {
 
 ```tsx
 // Replace current history entry instead of pushing
-<Link href="/step-2" replace>
+<Link to="/step-2" replace>
   Next Step
 </Link>
 ```
@@ -86,33 +92,39 @@ export default function Navigation() {
 
 ```tsx
 <Link
-  href="/posts"
+  to="/posts"
   state={{ from: 'search', query: 'react' }}
 >
   Back to Results
 </Link>
-
-// Access in the target route
-const location = useLocation()
-console.log(location.state.from) // 'search'
 ```
 
-### Scroll Behavior
+### Prevent Scroll Reset
 
 ```tsx
-// Prevent scrolling to top
-<Link href="/posts#comments" scroll={false}>
+// Prevent scrolling to top after navigation
+<Link to="/posts#comments" preventScrollReset>
   Jump to Comments
+</Link>
+```
+
+### Reload Document
+
+Force a full page reload instead of client-side navigation:
+
+```tsx
+<Link to="/legacy-page" reloadDocument>
+  Legacy Page
 </Link>
 ```
 
 ### External Links
 
-Link automatically detects external URLs and renders a standard anchor:
+Link automatically detects external URLs and uses standard anchor behavior:
 
 ```tsx
-// Renders as regular <a> with target="_blank"
-<Link href="https://github.com">
+// External URLs navigate normally without client-side routing
+<Link to="https://github.com">
   GitHub
 </Link>
 ```
@@ -120,12 +132,12 @@ Link automatically detects external URLs and renders a standard anchor:
 ### Styling
 
 ```tsx
-<Link href="/posts" className="nav-link">
+<Link to="/posts" className="nav-link">
   Posts
 </Link>
 
 <Link
-  href="/posts"
+  to="/posts"
   style={{ color: 'blue', fontWeight: 'bold' }}
 >
   Posts
@@ -134,19 +146,24 @@ Link automatically detects external URLs and renders a standard anchor:
 
 ## NavLink
 
-A Link variant that knows when it's active.
+A Link variant that provides active state for styling navigation links.
 
 ### Props
 
 ```ts
-interface NavLinkProps extends LinkProps {
-  // Class name when active (string or function)
-  className?: string | ((props: { isActive: boolean }) => string)
+interface NavLinkActiveProps {
+  isActive: boolean
+  isPending: boolean
+}
 
-  // Style when active
-  style?: CSSProperties | ((props: { isActive: boolean }) => CSSProperties)
+interface NavLinkProps extends Omit<LinkProps, 'className' | 'style'> {
+  // Class name - can be a function that receives active state
+  className?: string | ((props: NavLinkActiveProps) => string)
 
-  // Match end of URL only
+  // Style - can be a function that receives active state
+  style?: React.CSSProperties | ((props: NavLinkActiveProps) => React.CSSProperties)
+
+  // Match exact path only (default: false)
   end?: boolean
 }
 ```
@@ -160,7 +177,7 @@ export default function Navigation() {
   return (
     <nav>
       <NavLink
-        href="/"
+        to="/"
         className={({ isActive }) => isActive ? 'active' : ''}
         end
       >
@@ -168,7 +185,7 @@ export default function Navigation() {
       </NavLink>
 
       <NavLink
-        href="/posts"
+        to="/posts"
         className={({ isActive }) => isActive ? 'active' : ''}
       >
         Posts
@@ -182,7 +199,7 @@ export default function Navigation() {
 
 ```tsx
 <NavLink
-  href="/dashboard"
+  to="/dashboard"
   className={({ isActive }) =>
     `px-4 py-2 rounded ${isActive
       ? 'bg-blue-500 text-white'
@@ -198,7 +215,7 @@ export default function Navigation() {
 
 ```tsx
 <NavLink
-  href="/settings"
+  to="/settings"
   style={({ isActive }) => ({
     fontWeight: isActive ? 'bold' : 'normal',
     color: isActive ? 'blue' : 'inherit'
@@ -210,21 +227,21 @@ export default function Navigation() {
 
 ### End Matching
 
-By default, NavLink is active when the URL starts with the href. Use `end` to match exactly:
+By default, NavLink is active when the URL starts with the `to` path. Use `end` to match exactly:
 
 ```tsx
 // Active only on "/" exactly
-<NavLink href="/" end>
+<NavLink to="/" end>
   Home
 </NavLink>
 
 // Active on "/posts", "/posts/123", "/posts/new", etc.
-<NavLink href="/posts">
+<NavLink to="/posts">
   Posts
 </NavLink>
 
 // Active only on "/posts" exactly
-<NavLink href="/posts" end>
+<NavLink to="/posts" end>
   All Posts
 </NavLink>
 ```
@@ -232,14 +249,14 @@ By default, NavLink is active when the URL starts with the href. Use `end` to ma
 ### Custom Active Logic
 
 ```tsx
-import { NavLink, useIsActive } from '@ereo/client'
+import { Link, useIsActive } from '@ereo/client'
 
-function CustomNavLink({ href, children }) {
-  const isActive = useIsActive(href, { exact: true })
+function CustomNavLink({ to, children }) {
+  const isActive = useIsActive(to, true) // true = end matching
 
   return (
     <Link
-      href={href}
+      to={to}
       className={isActive ? 'active' : ''}
       aria-current={isActive ? 'page' : undefined}
     >
@@ -252,16 +269,18 @@ function CustomNavLink({ href, children }) {
 
 ## useIsActive
 
-Hook to check if a path is active.
+Hook to check if a path is currently active.
 
 ### Signature
 
 ```ts
-function useIsActive(
-  to: string,
-  options?: { exact?: boolean }
-): boolean
+function useIsActive(path: string, end?: boolean): boolean
 ```
+
+### Parameters
+
+- `path` - The path to check against current location
+- `end` - If `true`, match exactly. If `false` (default), match if current path starts with the given path
 
 ### Example
 
@@ -269,8 +288,8 @@ function useIsActive(
 import { useIsActive } from '@ereo/client'
 
 function Sidebar() {
-  const isPostsActive = useIsActive('/posts')
-  const isSettingsActive = useIsActive('/settings', { exact: true })
+  const isPostsActive = useIsActive('/posts')       // matches /posts, /posts/123, etc.
+  const isSettingsActive = useIsActive('/settings', true)  // matches only /settings
 
   return (
     <aside>
@@ -298,12 +317,12 @@ function Breadcrumbs({ items }) {
     <nav aria-label="Breadcrumb">
       <ol className="flex gap-2">
         {items.map((item, index) => (
-          <li key={item.href} className="flex items-center gap-2">
+          <li key={item.to} className="flex items-center gap-2">
             {index > 0 && <span>/</span>}
             {index === items.length - 1 ? (
               <span aria-current="page">{item.label}</span>
             ) : (
-              <Link href={item.href}>{item.label}</Link>
+              <Link to={item.to}>{item.label}</Link>
             )}
           </li>
         ))}
@@ -321,13 +340,12 @@ function Tabs({ tabs }) {
     <div className="tabs" role="tablist">
       {tabs.map(tab => (
         <NavLink
-          key={tab.href}
-          href={tab.href}
+          key={tab.to}
+          to={tab.to}
           role="tab"
           className={({ isActive }) =>
             `tab ${isActive ? 'tab-active' : ''}`
           }
-          aria-selected={({ isActive }) => isActive}
         >
           {tab.label}
         </NavLink>
@@ -344,14 +362,14 @@ function MobileMenu({ isOpen, onClose }) {
   return (
     <nav className={`mobile-menu ${isOpen ? 'open' : ''}`}>
       <NavLink
-        href="/"
+        to="/"
         onClick={onClose}
         className={({ isActive }) => isActive ? 'active' : ''}
       >
         Home
       </NavLink>
       <NavLink
-        href="/posts"
+        to="/posts"
         onClick={onClose}
         className={({ isActive }) => isActive ? 'active' : ''}
       >
@@ -365,7 +383,7 @@ function MobileMenu({ isOpen, onClose }) {
 ### Disabled Link
 
 ```tsx
-function ConditionalLink({ href, disabled, children }) {
+function ConditionalLink({ to, disabled, children }) {
   if (disabled) {
     return (
       <span className="text-gray-400 cursor-not-allowed">
@@ -374,9 +392,22 @@ function ConditionalLink({ href, disabled, children }) {
     )
   }
 
-  return <Link href={href}>{children}</Link>
+  return <Link to={to}>{children}</Link>
 }
 ```
+
+## PrefetchStrategy Type
+
+```ts
+type PrefetchStrategy = 'none' | 'intent' | 'render' | 'viewport'
+```
+
+| Strategy | Description |
+|----------|-------------|
+| `none` | No prefetching |
+| `intent` | Prefetch on hover/focus (default) |
+| `render` | Prefetch when link renders |
+| `viewport` | Prefetch when link enters viewport |
 
 ## Related
 
