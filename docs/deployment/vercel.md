@@ -29,35 +29,143 @@ vercel
 
 ## Configuration
 
-Create `vercel.json`:
+### Using the Vercel Adapter (Recommended)
+
+Generate configuration using `@ereo/deploy-vercel`:
+
+```ts
+// scripts/setup-vercel.ts
+import { generateVercelJson, generateBuildScript } from '@ereo/deploy-vercel'
+
+// Generate vercel.json
+await Bun.write('vercel.json', generateVercelJson({
+  edge: false,  // Use Node.js runtime
+  regions: ['iad1']  // Optional: specify regions
+}))
+
+// Generate build script
+await Bun.write('build.sh', generateBuildScript())
+```
+
+This generates a `vercel.json` like:
 
 ```json
 {
-  "buildCommand": "bun run build",
-  "outputDirectory": "dist",
-  "installCommand": "bun install",
-  "framework": null,
-  "functions": {
-    "dist/server/index.js": {
-      "runtime": "nodejs18.x"
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist/**"]
+      }
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/server.js"
+    }
+  ],
+  "regions": ["iad1"]
+}
+```
+
+### Manual Configuration
+
+If you prefer manual setup, create `vercel.json`:
+
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/server.js"
+    }
+  ]
 }
 ```
 
 ## Build Configuration
 
-Update `ereo.config.ts` for Vercel:
+Update `ereo.config.ts` for Vercel using the adapter:
+
+```ts
+import { defineConfig } from '@ereo/core'
+import { vercel } from '@ereo/deploy-vercel'
+
+export default defineConfig({
+  ...vercel({ edge: false }),  // Node.js runtime
+  // or
+  // ...vercel({ edge: true }),  // Edge runtime
+})
+```
+
+Or configure manually:
 
 ```ts
 import { defineConfig } from '@ereo/core'
 
 export default defineConfig({
   build: {
-    target: 'node',  // Vercel uses Node.js
+    target: 'node',  // 'node' for Vercel Node.js, 'edge' for Vercel Edge
     outDir: 'dist'
   }
 })
+```
+
+### Edge Runtime Configuration
+
+For Edge runtime, update both the config and vercel.json:
+
+```ts
+// ereo.config.ts
+import { defineConfig } from '@ereo/core'
+import { vercel } from '@ereo/deploy-vercel'
+
+export default defineConfig({
+  ...vercel({ edge: true, regions: ['iad1', 'sfo1'] }),
+})
+```
+
+The generated vercel.json for Edge:
+
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/server.js",
+      "use": "@vercel/edge",
+      "config": {
+        "includeFiles": ["dist/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/server.js"
+    }
+  ],
+  "regions": ["iad1", "sfo1"],
+  "functions": {
+    "dist/server.js": {
+      "runtime": "edge",
+      "regions": ["iad1", "sfo1"]
+    }
+  }
+}
 ```
 
 ## Environment Variables

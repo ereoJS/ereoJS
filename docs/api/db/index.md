@@ -18,6 +18,88 @@ The `@ereo/db` package provides:
 4. **Plugin Integration** - Seamless integration with EreoJS plugin system
 5. **Type Safety** - Full TypeScript support with type inference utilities
 
+## Import
+
+```ts
+import {
+  // Plugin & Context Helpers
+  createDatabasePlugin,
+  useDb,
+  useAdapter,
+  getDb,
+  withTransaction,
+
+  // Adapter Registry
+  registerAdapter,
+  getAdapter,
+  getDefaultAdapter,
+  clearAdapterRegistry,
+
+  // Query Deduplication
+  generateFingerprint,
+  dedupQuery,
+  clearDedupCache,
+  invalidateTables,
+  getRequestDedupStats,
+  debugGetCacheContents,
+
+  // Connection Pool
+  ConnectionPool,
+  DEFAULT_POOL_CONFIG,
+  createEdgePoolConfig,
+  createServerlessPoolConfig,
+
+  // Retry Utilities
+  withRetry,
+  isCommonRetryableError,
+  DEFAULT_RETRY_CONFIG,
+
+  // Error Classes
+  DatabaseError,
+  ConnectionError,
+  QueryError,
+  TransactionError,
+  TimeoutError,
+
+  // Types - Adapter
+  type DatabaseAdapter,
+  type RequestScopedClient,
+  type Transaction,
+  type AdapterFactory,
+  type DatabasePluginOptions,
+
+  // Types - Results
+  type QueryResult,
+  type MutationResult,
+  type DedupResult,
+  type DedupStats,
+
+  // Types - Configuration
+  type PoolConfig,
+  type AdapterConfig,
+  type TransactionOptions,
+  type IsolationLevel,
+  type RetryConfig,
+
+  // Types - Pool & Health
+  type PoolStats,
+  type HealthCheckResult,
+
+  // Types - Type Inference
+  type InferSelect,
+  type InferInsert,
+  type DatabaseTables,
+  type TableNames,
+  type TableType,
+
+  // Types - Query Builder
+  type TypedWhere,
+  type WhereOperator,
+  type TypedOrderBy,
+  type TypedSelect,
+} from '@ereo/db'
+```
+
 ## Quick Start
 
 ### 1. Create an Adapter
@@ -350,6 +432,31 @@ console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
 console.log(`${stats.deduplicated} cached, ${stats.unique} unique queries`);
 ```
 
+### DedupStats
+
+Statistics about query deduplication for a request:
+
+```ts
+interface DedupStats {
+  /** Total number of queries attempted */
+  total: number;
+  /** Number of queries served from cache */
+  deduplicated: number;
+  /** Number of unique queries executed */
+  unique: number;
+  /** Cache hit rate (0-1) */
+  hitRate: number;
+}
+```
+
+```ts
+const stats = db.getDedupStats();
+if (stats.hitRate > 0.5) {
+  console.log('Good deduplication rate!');
+}
+console.log(`${stats.deduplicated} of ${stats.total} queries were cached`);
+```
+
 #### debugGetCacheContents
 
 Get current cache contents for debugging (development only):
@@ -377,6 +484,60 @@ abstract class ConnectionPool<T> {
   async close(): Promise<void>;
   getStats(): PoolStats;
   async healthCheck(): Promise<HealthCheckResult>;
+}
+```
+
+### Pool Statistics
+
+#### PoolStats
+
+Statistics about pool health and usage:
+
+```ts
+interface PoolStats {
+  /** Number of connections currently in use */
+  active: number;
+  /** Number of idle connections available */
+  idle: number;
+  /** Total connections (active + idle) */
+  total: number;
+  /** Number of requests waiting for a connection */
+  waiting: number;
+  /** Total connections created over pool lifetime */
+  totalCreated: number;
+  /** Total connections closed over pool lifetime */
+  totalClosed: number;
+}
+```
+
+```ts
+const stats = pool.getStats();
+console.log(`Active: ${stats.active}, Idle: ${stats.idle}, Waiting: ${stats.waiting}`);
+```
+
+#### HealthCheckResult
+
+Result of a database health check:
+
+```ts
+interface HealthCheckResult {
+  /** Whether the database is healthy */
+  healthy: boolean;
+  /** Time taken for the health check in milliseconds */
+  latencyMs: number;
+  /** Error message if unhealthy */
+  error?: string;
+  /** Additional metadata (e.g., pool stats) */
+  metadata?: Record<string, unknown>;
+}
+```
+
+```ts
+const health = await adapter.healthCheck();
+if (!health.healthy) {
+  console.error(`Database unhealthy: ${health.error}`);
+} else {
+  console.log(`Database latency: ${health.latencyMs}ms`);
 }
 ```
 
@@ -467,6 +628,29 @@ interface RetryConfig {
 }
 ```
 
+### DEFAULT_RETRY_CONFIG
+
+Default retry configuration for database operations:
+
+```ts
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxAttempts: 3,
+  baseDelayMs: 100,
+  maxDelayMs: 5000,
+  exponential: true,
+};
+```
+
+```ts
+import { DEFAULT_RETRY_CONFIG, withRetry } from '@ereo/db';
+
+// Use defaults with custom isRetryable
+await withRetry(operation, {
+  ...DEFAULT_RETRY_CONFIG,
+  isRetryable: (err) => err.message.includes('connection'),
+});
+```
+
 ### isCommonRetryableError
 
 Check if an error is commonly retryable for databases:
@@ -474,6 +658,12 @@ Check if an error is commonly retryable for databases:
 ```ts
 function isCommonRetryableError(error: Error): boolean;
 ```
+
+Detects common retryable errors:
+- Connection refused/reset/closed/timeout
+- Deadlock errors
+- Serialization failures
+- Too many connections errors
 
 ```ts
 import { withRetry, isCommonRetryableError } from '@ereo/db';
@@ -565,6 +755,34 @@ interface DatabaseAdapter<TSchema = unknown> {
   healthCheck(): Promise<HealthCheckResult>;
   disconnect(): Promise<void>;
 }
+```
+
+### AdapterFactory
+
+Factory function type for creating database adapters:
+
+```ts
+type AdapterFactory<TConfig extends AdapterConfig, TSchema> = (
+  config: TConfig
+) => DatabaseAdapter<TSchema>;
+```
+
+```ts
+import { AdapterFactory, AdapterConfig, DatabaseAdapter } from '@ereo/db';
+
+// Define your adapter factory type
+interface MyAdapterConfig extends AdapterConfig {
+  customOption?: boolean;
+}
+
+const createMyAdapter: AdapterFactory<MyAdapterConfig, MyClient> = (config) => {
+  // Return a DatabaseAdapter implementation
+  return {
+    name: 'my-adapter',
+    edgeCompatible: true,
+    // ... implement methods
+  };
+};
 ```
 
 ## Error Classes
@@ -693,6 +911,127 @@ type TableNames = keyof DatabaseTables extends never ? string : keyof DatabaseTa
 type TableType<T extends TableNames> = T extends keyof DatabaseTables
   ? DatabaseTables[T]
   : unknown;
+```
+
+### Query Builder Types
+
+Type-safe query builder utilities for constructing database queries.
+
+#### TypedWhere
+
+Typed WHERE clause conditions with support for nested AND/OR/NOT:
+
+```ts
+type TypedWhere<T> = {
+  [K in keyof T]?: T[K] | WhereOperator<T[K]>;
+} & {
+  AND?: TypedWhere<T>[];
+  OR?: TypedWhere<T>[];
+  NOT?: TypedWhere<T>;
+};
+```
+
+```ts
+interface User {
+  id: number;
+  name: string;
+  age: number;
+  active: boolean;
+}
+
+// Simple conditions
+const where1: TypedWhere<User> = { name: 'Alice', active: true };
+
+// With operators
+const where2: TypedWhere<User> = { age: { gte: 18 } };
+
+// Complex nested conditions
+const where3: TypedWhere<User> = {
+  active: true,
+  OR: [
+    { name: { like: 'A%' } },
+    { age: { between: [18, 25] } },
+  ],
+};
+```
+
+#### WhereOperator
+
+WHERE clause operators for field comparisons:
+
+```ts
+interface WhereOperator<T> {
+  eq?: T;           // Equal
+  ne?: T;           // Not equal
+  gt?: T;           // Greater than
+  gte?: T;          // Greater than or equal
+  lt?: T;           // Less than
+  lte?: T;          // Less than or equal
+  in?: T[];         // In array
+  notIn?: T[];      // Not in array
+  like?: string;    // LIKE pattern (case-sensitive)
+  ilike?: string;   // ILIKE pattern (case-insensitive)
+  isNull?: boolean; // IS NULL check
+  isNotNull?: boolean; // IS NOT NULL check
+  between?: [T, T]; // BETWEEN range
+}
+```
+
+```ts
+// String operators
+const nameFilter: WhereOperator<string> = { like: '%smith%' };
+
+// Numeric operators
+const ageFilter: WhereOperator<number> = { between: [18, 65] };
+
+// Array operators
+const statusFilter: WhereOperator<string> = { in: ['active', 'pending'] };
+```
+
+#### TypedOrderBy
+
+Typed ORDER BY clause:
+
+```ts
+type TypedOrderBy<T> = {
+  [K in keyof T]?: 'asc' | 'desc';
+};
+```
+
+```ts
+interface User {
+  id: number;
+  name: string;
+  createdAt: Date;
+}
+
+const orderBy: TypedOrderBy<User> = {
+  createdAt: 'desc',
+  name: 'asc',
+};
+```
+
+#### TypedSelect
+
+Typed SELECT fields:
+
+```ts
+type TypedSelect<T> = (keyof T)[] | '*';
+```
+
+```ts
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  password: string;
+}
+
+// Select specific fields (excludes password)
+const selectFields: TypedSelect<User> = ['id', 'name', 'email'];
+
+// Select all fields
+const selectAll: TypedSelect<User> = '*';
 ```
 
 ### Extending DatabaseTables

@@ -5,7 +5,26 @@ A builder pattern API for defining routes with stable type inference that never 
 ## Import
 
 ```ts
-import { defineRoute } from '@ereo/data'
+import {
+  defineRoute,
+  // Types
+  type TypedLoaderArgs,
+  type TypedActionArgs,
+  type HeadArgs,
+  type TypedMetaArgs,
+  type HeadData,
+  type RouteMiddleware,
+  type ValidationSchema,
+  type RouteBuilder,
+  type RouteBuilderWithLoader,
+  type RouteBuilderWithLoaderAndAction,
+  type RouteDefinition,
+  // Type helpers
+  type InferLoaderData,
+  type InferActionData,
+  type InferRouteParams,
+  type InferRoutePath,
+} from '@ereo/data'
 ```
 
 ## Overview
@@ -549,6 +568,182 @@ type Params = InferRouteParams<typeof route>
 // Extract path type
 type Path = InferRoutePath<typeof route>
 // '/posts/[slug]'
+```
+
+## Types Reference
+
+### TypedLoaderArgs
+
+Extended loader arguments with typed params and validated parameters.
+
+```ts
+interface TypedLoaderArgs<P extends RouteParams = RouteParams> extends LoaderArgs<P> {
+  /** Route parameters (typed from path pattern) */
+  params: P
+  /** Incoming request */
+  request: Request
+  /** Application context */
+  context: AppContext
+  /** Validated search params (if schema provided) */
+  searchParams?: Record<string, unknown>
+  /** Validated hash params (if schema provided) */
+  hashParams?: Record<string, unknown>
+}
+```
+
+### TypedActionArgs
+
+Extended action arguments with typed body.
+
+```ts
+interface TypedActionArgs<TBody, P extends RouteParams = RouteParams> extends ActionArgs<P> {
+  /** Route parameters */
+  params: P
+  /** Incoming request */
+  request: Request
+  /** Application context */
+  context: AppContext
+  /** Parsed and validated body */
+  body: TBody
+  /** Raw form data (if applicable) */
+  formData?: FormData
+}
+```
+
+### HeadArgs
+
+Arguments passed to the head function.
+
+```ts
+interface HeadArgs<TLoaderData, P extends RouteParams = RouteParams> {
+  /** Loader data (fully typed) */
+  data: TLoaderData
+  /** Route params */
+  params: P
+  /** Request object */
+  request: Request
+}
+```
+
+### TypedMetaArgs
+
+Arguments passed to the meta function.
+
+```ts
+interface TypedMetaArgs<TLoaderData, P extends RouteParams = RouteParams> {
+  /** Loader data */
+  data: TLoaderData
+  /** Route params */
+  params: P
+  /** Location info */
+  location: {
+    pathname: string
+    search: string
+    hash: string
+  }
+}
+```
+
+### RouteMiddleware
+
+Middleware handler for route-level middleware.
+
+```ts
+type RouteMiddleware<P extends RouteParams = RouteParams> = (
+  request: Request,
+  context: AppContext,
+  params: P,
+  next: () => Promise<Response>
+) => Response | Promise<Response>
+```
+
+### ValidationSchema
+
+Schema interface compatible with Zod, Yup, and similar validation libraries.
+
+```ts
+interface ValidationSchema<T> {
+  /** Parse and validate data (throws on error) */
+  parse: (data: unknown) => T
+  /** Parse safely (returns result object) */
+  safeParse?: (data: unknown) =>
+    | { success: true; data: T }
+    | { success: false; error: unknown }
+}
+```
+
+### RouteDefinition
+
+The final output of `.build()`.
+
+```ts
+interface RouteDefinition<
+  Path extends string,
+  Params extends RouteParams,
+  LoaderData,
+  ActionData,
+  ActionBody
+> {
+  /** The route path pattern */
+  path: Path
+  /** Loader function (if defined) */
+  loader?: (args: LoaderArgs<Params>) => Promise<LoaderData>
+  /** Action function (if defined) */
+  action?: (args: ActionArgs<Params>) => Promise<ActionData>
+  /** Head data generator */
+  head?: (args: HeadArgs<LoaderData, Params>) => HeadData
+  /** Meta tags generator */
+  meta?: (args: TypedMetaArgs<LoaderData, Params>) => MetaDescriptor[]
+  /** Route-level middleware */
+  middleware?: RouteMiddleware<Params>[]
+  /** Route configuration */
+  config?: RouteConfig
+  /** Cache options */
+  cache?: CacheOptions
+  /** Type brands for inference */
+  readonly _types: {
+    path: Path
+    params: Params
+    loaderData: LoaderData
+    actionData: ActionData
+    actionBody: ActionBody
+  }
+}
+```
+
+### Builder Types
+
+```ts
+// Initial builder (before loader)
+interface RouteBuilder<Path, Params> {
+  loader<TData>(fn): RouteBuilderWithLoader<Path, Params, TData>
+  searchParams<T>(schema): RouteBuilder<Path, Params>
+  hashParams<T>(schema): RouteBuilder<Path, Params>
+  middleware(...handlers): RouteBuilder<Path, Params>
+  configure(config): RouteBuilder<Path, Params>
+  build(): RouteDefinition<Path, Params, never, never, never>
+}
+
+// After loader is defined
+interface RouteBuilderWithLoader<Path, Params, LoaderData> {
+  action<TBody, TResult>(fn, options?): RouteBuilderWithLoaderAndAction<...>
+  head(fn): RouteBuilderWithLoader<Path, Params, LoaderData>
+  meta(fn): RouteBuilderWithLoader<Path, Params, LoaderData>
+  cache(options): RouteBuilderWithLoader<Path, Params, LoaderData>
+  middleware(...handlers): RouteBuilderWithLoader<Path, Params, LoaderData>
+  configure(config): RouteBuilderWithLoader<Path, Params, LoaderData>
+  build(): RouteDefinition<Path, Params, LoaderData, never, never>
+}
+
+// After both loader and action are defined
+interface RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody> {
+  head(fn): RouteBuilderWithLoaderAndAction<...>
+  meta(fn): RouteBuilderWithLoaderAndAction<...>
+  cache(options): RouteBuilderWithLoaderAndAction<...>
+  middleware(...handlers): RouteBuilderWithLoaderAndAction<...>
+  configure(config): RouteBuilderWithLoaderAndAction<...>
+  build(): RouteDefinition<Path, Params, LoaderData, ActionData, ActionBody>
+}
 ```
 
 ## TanStack Start Comparison

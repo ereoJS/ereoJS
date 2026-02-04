@@ -18,12 +18,25 @@ import {
 
 ## revalidateTag
 
-Invalidates all cached data associated with a tag.
+Invalidates all cached data associated with one or more tags. Accepts multiple tags via spread syntax.
 
 ### Signature
 
 ```ts
-function revalidateTag(tag: string): Promise<void>
+function revalidateTag(...tags: string[]): Promise<RevalidateResult>
+```
+
+### RevalidateResult
+
+```ts
+interface RevalidateResult {
+  success: boolean
+  revalidated: {
+    tags: string[]
+    paths: string[]
+  }
+  timestamp: number
+}
 ```
 
 ### Example
@@ -34,35 +47,25 @@ export const action = createAction(async ({ request }) => {
   const formData = await request.formData()
   await db.posts.create(Object.fromEntries(formData))
 
-  // Invalidate all cached data tagged with 'posts'
+  // Invalidate single tag
   await revalidateTag('posts')
 
   return redirect('/posts')
 })
 ```
 
-## revalidateTags
-
-Invalidates multiple tags at once.
-
-### Signature
-
-```ts
-function revalidateTags(tags: string[]): Promise<void>
-```
-
-### Example
+### Invalidating Multiple Tags
 
 ```ts
 export const action = createAction(async ({ request, params }) => {
   const post = await db.posts.update(params.id, data)
 
-  // Invalidate multiple related caches
-  await revalidateTags([
+  // Invalidate multiple tags using spread syntax
+  await revalidateTag(
     'posts',
     `post-${params.id}`,
     `author-${post.authorId}`
-  ])
+  )
 
   return redirect(`/posts/${params.id}`)
 })
@@ -145,16 +148,24 @@ await revalidate({
 
 ## unstable_cache
 
-Wraps a function with caching and revalidation support.
+Wraps a function with caching and revalidation support. Similar to Next.js `unstable_cache`.
 
 ### Signature
 
 ```ts
-function unstable_cache<T>(
-  fn: () => T | Promise<T>,
-  options?: RevalidateOptions & { ttl?: number }
-): () => Promise<T>
+function unstable_cache<T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  keyParts: string[],
+  options?: { tags?: string[]; revalidate?: number }
+): T
 ```
+
+### Parameters
+
+- `fn`: The async function to cache
+- `keyParts`: Array of strings used to generate the cache key
+- `options.tags`: Tags for cache invalidation
+- `options.revalidate`: TTL in seconds (default: 3600)
 
 ### Example
 
@@ -163,9 +174,10 @@ const getPosts = unstable_cache(
   async () => {
     return await db.posts.findMany()
   },
+  ['posts', 'all'],  // Key parts
   {
     tags: ['posts'],
-    ttl: 3600 // 1 hour
+    revalidate: 3600 // 1 hour
   }
 )
 
@@ -176,57 +188,155 @@ export const loader = createLoader(async () => {
 })
 ```
 
-## tags
-
-Helper to define cache tags.
-
-### Signature
+### With Arguments
 
 ```ts
-function tags(...tagNames: string[]): { tags: string[] }
+const getPostById = unstable_cache(
+  async (id: string) => {
+    return await db.posts.find(id)
+  },
+  ['posts', 'byId'],
+  { tags: ['posts'], revalidate: 1800 }
+)
+
+// Usage
+const post = await getPostById('123') // Cache key includes args
+```
+
+## tags
+
+Helper object with methods to create consistent cache tag names.
+
+### Interface
+
+```ts
+const tags = {
+  // Create a resource tag (e.g., 'post:123')
+  resource: (type: string, id: string | number) => string
+
+  // Create a collection tag (e.g., 'posts')
+  collection: (type: string) => string
+
+  // Create a user-scoped tag (e.g., 'user:123:posts')
+  userScoped: (userId: string | number, type: string) => string
+}
 ```
 
 ### Example
 
 ```ts
-import { tags } from '@ereo/data'
+import { tags, cached, revalidateTag } from '@ereo/data'
 
-export const config = {
-  cache: {
+// In a loader - use tags for consistent naming
+const post = await cached(
+  `post:${params.id}`,
+  () => db.posts.find(params.id),
+  {
     maxAge: 3600,
-    ...tags('posts', 'homepage')
+    tags: [
+      tags.collection('posts'),           // 'posts'
+      tags.resource('post', params.id),   // 'post:123'
+      tags.userScoped(userId, 'posts')    // 'user:456:posts'
+    ]
   }
-}
+)
+
+// In an action - invalidate using the same tag patterns
+export const action = createAction(async ({ params }) => {
+  await db.posts.delete(params.id)
+
+  await revalidateTag(
+    tags.collection('posts'),
+    tags.resource('post', params.id)
+  )
+
+  return redirect('/posts')
+})
 ```
 
 ## onDemandRevalidate
 
-Handles on-demand revalidation from external sources.
+ISR-style on-demand revalidation. Automatically detects whether each argument is a tag or path (paths start with `/`).
 
 ### Signature
 
 ```ts
-function onDemandRevalidate(request: Request): Promise<RevalidateResult>
+function onDemandRevalidate(...tagsOrPaths: string[]): Promise<RevalidateResult>
 ```
 
 ### Example
 
-Create an API route for webhooks:
+```ts
+import { onDemandRevalidate } from '@ereo/data'
+
+// In an action after mutation
+export const action = createAction(async ({ params }) => {
+  await db.posts.update(params.id, data)
+
+  // Revalidate tags and paths together
+  await onDemandRevalidate(
+    'posts',              // Tag
+    `post-${params.id}`,  // Tag
+    '/posts',             // Path (starts with /)
+    `/posts/${params.id}` // Path
+  )
+
+  return redirect(`/posts/${params.id}`)
+})
+```
+
+### In Webhook Handlers
+
+For external webhooks, use `createRevalidationHandler` instead:
 
 ```ts
 // routes/api/revalidate.ts
-import { onDemandRevalidate } from '@ereo/data'
+import { createRevalidationHandler } from '@ereo/data'
+
+const handler = createRevalidationHandler(process.env.REVALIDATION_SECRET)
 
 export async function POST(request: Request) {
-  // Verify the request (e.g., webhook signature)
-  const secret = request.headers.get('X-Revalidate-Secret')
-  if (secret !== process.env.REVALIDATION_SECRET) {
-    return Response.json({ error: 'Invalid secret' }, { status: 401 })
-  }
+  return handler(request)
+}
+```
 
-  const result = await onDemandRevalidate(request)
+## createRevalidationHandler
 
-  return Response.json(result)
+Creates a revalidation handler for API routes with optional secret-based authentication.
+
+### Signature
+
+```ts
+function createRevalidationHandler(secret?: string): (request: Request) => Promise<Response>
+```
+
+### Parameters
+
+- `secret` (optional): If provided, the handler will verify the request has a matching `Authorization: Bearer <secret>` header
+
+### Request Body
+
+The handler expects a JSON body matching `RevalidateOptions`:
+
+```ts
+interface RevalidateOptions {
+  tags?: string[]    // Tags to revalidate
+  paths?: string[]   // Paths to revalidate
+  all?: boolean      // Revalidate everything
+}
+```
+
+### Example
+
+```ts
+import { createRevalidationHandler } from '@ereo/data'
+
+// Create handler with secret authentication
+const handler = createRevalidationHandler(process.env.REVALIDATION_SECRET)
+
+// In an API route
+export async function POST(request: Request) {
+  return handler(request)
 }
 ```
 
@@ -234,35 +344,9 @@ Call from external service:
 
 ```bash
 curl -X POST https://example.com/api/revalidate \
-  -H "X-Revalidate-Secret: your-secret" \
+  -H "Authorization: Bearer your-secret" \
   -H "Content-Type: application/json" \
-  -d '{"tag": "posts"}'
-```
-
-## createRevalidationHandler
-
-Creates a revalidation handler with custom options.
-
-### Signature
-
-```ts
-function createRevalidationHandler(
-  options: RevalidateOptions
-): (request: Request) => Promise<RevalidateResult>
-```
-
-### Example
-
-```ts
-const revalidatePosts = createRevalidationHandler({
-  tags: ['posts']
-})
-
-// In an API route
-export async function POST(request: Request) {
-  const result = await revalidatePosts(request)
-  return Response.json(result)
-}
+  -d '{"tags": ["posts"]}'
 ```
 
 ## Revalidation Patterns
@@ -287,7 +371,7 @@ export const action = createAction(async ({ request, params }) => {
   const post = await db.posts.update(params.id, data)
 
   // Invalidate both the specific post and list pages
-  await revalidateTags(['posts', `post-${params.id}`])
+  await revalidateTag('posts', `post-${params.id}`)
 
   return redirect(`/posts/${params.id}`)
 })
@@ -300,11 +384,11 @@ export const action = createAction(async ({ params }) => {
   const post = await db.posts.delete(params.id)
 
   // Invalidate the post, list, and any related caches
-  await revalidateTags([
+  await revalidateTag(
     'posts',
     `post-${params.id}`,
     `author-${post.authorId}`
-  ])
+  )
 
   return redirect('/posts')
 })
@@ -363,10 +447,12 @@ The result of a revalidation operation.
 
 ```ts
 interface RevalidateResult {
-  revalidated: boolean
-  tags?: string[]
-  paths?: string[]
-  error?: string
+  success: boolean
+  revalidated: {
+    tags: string[]
+    paths: string[]
+  }
+  timestamp: number
 }
 ```
 

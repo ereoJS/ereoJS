@@ -12,9 +12,19 @@ import {
   jsonAction,
   parseRequestBody,
   formDataToObject,
+  parseFormData,
+  coerceValue,
+  validateRequired,
+  combineValidators,
   redirect,
   json,
-  error
+  error,
+  type ActionOptions,
+  type TypedActionOptions,
+  type ActionResult,
+  type ValidationResult,
+  type TypedActionArgs,
+  type ActionBody,
 } from '@ereo/data'
 ```
 
@@ -254,16 +264,172 @@ export const action = createAction(async ({ request }) => {
 
 ### formDataToObject
 
-Converts FormData to a plain object.
+Converts FormData to a typed object with automatic type coercion and nested object support.
 
 ```ts
-function formDataToObject(formData: FormData): Record<string, any>
+function formDataToObject<T = Record<string, unknown>>(
+  formData: FormData,
+  options?: { coerce?: boolean }
+): T
+```
+
+**Features:**
+- `field[]` or multiple same-name fields → array
+- `field.nested` → nested object
+- `field[0]`, `field[1]` → indexed array
+- Automatic type coercion (when `coerce: true`, default)
+
+```ts
+const formData = new FormData()
+formData.append('user.name', 'Alice')
+formData.append('user.email', 'alice@example.com')
+formData.append('tags[]', 'typescript')
+formData.append('tags[]', 'react')
+formData.append('items[0].name', 'Item 1')
+formData.append('items[0].price', '100')
+formData.append('active', 'true')
+
+const data = formDataToObject(formData)
+// {
+//   user: { name: 'Alice', email: 'alice@example.com' },
+//   tags: ['typescript', 'react'],
+//   items: [{ name: 'Item 1', price: 100 }],
+//   active: true  // coerced from string
+// }
+
+// Disable coercion to keep string values
+const rawData = formDataToObject(formData, { coerce: false })
+// { ..., active: 'true', items: [{ price: '100' }] }
+```
+
+### parseFormData
+
+Simple FormData to typed object conversion without nested object support.
+
+```ts
+function parseFormData<T extends Record<string, unknown>>(
+  formData: FormData
+): Partial<T>
 ```
 
 ```ts
+interface ContactForm {
+  name: string
+  email: string
+  tags: string[]
+}
+
 const formData = await request.formData()
-const data = formDataToObject(formData)
-// { title: 'Hello', tags: ['a', 'b'] }
+const data = parseFormData<ContactForm>(formData)
+// { name: 'John', email: 'john@example.com', tags: ['support'] }
+```
+
+### coerceValue
+
+Coerces a string value to the appropriate JavaScript type.
+
+```ts
+function coerceValue(value: string): unknown
+```
+
+**Supported conversions:**
+- `'true'` / `'false'` → boolean
+- `'null'` → null
+- `'undefined'` → undefined
+- Numeric strings → number
+- ISO date strings → Date
+- JSON objects/arrays → parsed object
+
+```ts
+coerceValue('true')           // true (boolean)
+coerceValue('false')          // false (boolean)
+coerceValue('null')           // null
+coerceValue('undefined')      // undefined
+coerceValue('42')             // 42 (number)
+coerceValue('3.14')           // 3.14 (number)
+coerceValue('2024-01-15')     // Date object
+coerceValue('{"a":1}')        // { a: 1 } (parsed JSON)
+coerceValue('[1,2,3]')        // [1, 2, 3] (parsed JSON array)
+coerceValue('hello')          // 'hello' (string unchanged)
+```
+
+### validateRequired
+
+Validates that required fields are present in FormData.
+
+```ts
+function validateRequired(
+  formData: FormData,
+  fields: string[]
+): ValidationResult
+
+interface ValidationResult {
+  success: boolean
+  errors?: Record<string, string[]>
+}
+```
+
+```ts
+const formData = new FormData()
+formData.append('email', 'user@example.com')
+
+const result = validateRequired(formData, ['email', 'password'])
+// {
+//   success: false,
+//   errors: { password: ['password is required'] }
+// }
+
+// Use in createAction
+export const action = createAction({
+  validate: (formData) => validateRequired(formData, ['title', 'content']),
+  handler: async ({ formData }) => {
+    // ...
+  },
+})
+```
+
+### combineValidators
+
+Combines multiple validation functions into one. Collects all errors from all validators.
+
+```ts
+function combineValidators(
+  ...validators: Array<(formData: FormData) => ValidationResult | Promise<ValidationResult>>
+): (formData: FormData) => Promise<ValidationResult>
+```
+
+```ts
+const validateEmail = (formData: FormData): ValidationResult => {
+  const email = formData.get('email') as string
+  if (!email?.includes('@')) {
+    return { success: false, errors: { email: ['Invalid email format'] } }
+  }
+  return { success: true }
+}
+
+const validatePassword = (formData: FormData): ValidationResult => {
+  const password = formData.get('password') as string
+  if (!password || password.length < 8) {
+    return { success: false, errors: { password: ['Password must be at least 8 characters'] } }
+  }
+  return { success: true }
+}
+
+// Combine validators
+const validateSignup = combineValidators(
+  (fd) => validateRequired(fd, ['email', 'password', 'name']),
+  validateEmail,
+  validatePassword
+)
+
+export const action = createAction({
+  validate: validateSignup,
+  handler: async ({ formData }) => {
+    // All validations passed
+    const email = formData.get('email')
+    // ...
+  },
+})
 ```
 
 ## Handling Multiple Actions

@@ -21,93 +21,205 @@ import {
 
 ## MemoryCache
 
-In-memory cache implementation.
+In-memory cache implementation with tag-based invalidation support.
 
 ### Constructor
 
 ```ts
-new MemoryCache(options?: { maxSize?: number; ttl?: number })
+new MemoryCache()
 ```
 
-### Methods
+The `MemoryCache` class takes no constructor parameters.
+
+### CacheStorage Interface Methods
+
+All methods are async and return Promises:
+
+```ts
+class MemoryCache implements CacheStorage {
+  // Get full cache entry with metadata
+  get<T>(key: string): Promise<CacheEntry<T> | null>
+
+  // Set a cache entry with full metadata
+  set<T>(key: string, entry: CacheEntry<T>): Promise<void>
+
+  // Delete a cache entry
+  delete(key: string): Promise<boolean>
+
+  // Delete all entries with a specific tag
+  deleteByTag(tag: string): Promise<void>
+
+  // Clear all entries
+  clear(): Promise<void>
+
+  // Get all keys
+  keys(): Promise<string[]>
+
+  // Get cache statistics
+  getStats(): { size: number; tags: number }
+}
+```
+
+### CacheAdapter-Compatible Methods
+
+For easier integration with `@ereo/core`:
 
 ```ts
 class MemoryCache {
-  get<T>(key: string): T | undefined
-  set<T>(key: string, value: T, ttl?: number): void
-  delete(key: string): boolean
-  has(key: string): boolean
-  clear(): void
-  keys(): string[]
-  size(): number
+  // Get just the value (not full entry)
+  getValue<T>(key: string): Promise<T | undefined>
+
+  // Set value with options (ttl in seconds, tags)
+  setValue<T>(key: string, value: T, options?: { ttl?: number; tags?: string[] }): Promise<void>
+
+  // Check if key exists
+  has(key: string): Promise<boolean>
+
+  // Invalidate by tag
+  invalidateTag(tag: string): Promise<void>
+  invalidateTags(tags: string[]): Promise<void>
+
+  // Get keys by tag
+  getByTag(tag: string): Promise<string[]>
+
+  // Get CacheAdapter wrapper
+  asCacheAdapter(): CacheAdapter & TaggedCache
+}
+```
+
+### CacheEntry Interface
+
+```ts
+interface CacheEntry<T = unknown> {
+  value: T
+  timestamp: number
+  maxAge: number
+  staleWhileRevalidate?: number
+  tags: string[]
 }
 ```
 
 ### Example
 
 ```ts
-const cache = new MemoryCache({ maxSize: 1000, ttl: 3600 })
+const cache = new MemoryCache()
 
-// Set a value
-cache.set('user:123', { name: 'Alice' })
+// Set a value with full entry metadata
+await cache.set('user:123', {
+  value: { name: 'Alice' },
+  timestamp: Date.now(),
+  maxAge: 3600,
+  tags: ['users', 'user-123']
+})
 
-// Get a value
-const user = cache.get('user:123')
+// Get the full entry (includes metadata)
+const entry = await cache.get('user:123')
+if (entry) {
+  console.log(entry.value) // { name: 'Alice' }
+}
 
-// Set with custom TTL
-cache.set('session:abc', { userId: 123 }, 1800) // 30 minutes
+// Or use simplified getValue for just the value
+const user = await cache.getValue('user:123')
+
+// Set with simplified interface
+await cache.setValue('session:abc', { userId: 123 }, { ttl: 1800, tags: ['sessions'] })
 
 // Check existence
-if (cache.has('user:123')) {
+if (await cache.has('user:123')) {
   console.log('User is cached')
 }
 
-// Delete
-cache.delete('user:123')
+// Delete single entry
+await cache.delete('user:123')
+
+// Delete all entries with a tag
+await cache.deleteByTag('users')
 
 // Clear all
-cache.clear()
+await cache.clear()
 
 // Get all keys
-const keys = cache.keys()
+const keys = await cache.keys()
 
-// Get size
-console.log(`Cache has ${cache.size()} entries`)
+// Get stats
+const stats = cache.getStats()
+console.log(`Cache has ${stats.size} entries and ${stats.tags} tags`)
+
+// Get CacheAdapter for use with @ereo/core
+const adapter = cache.asCacheAdapter()
 ```
 
 ## getCache / setCache
 
-Global cache accessors.
+Global cache instance management functions.
 
 ### Signatures
 
 ```ts
-function getCache<T>(key: string): T | undefined
-function setCache<T>(key: string, value: T, ttl?: number): void
+// Get (or create) the global cache instance
+function getCache(): CacheStorage
+
+// Set a custom cache storage implementation
+function setCache(storage: CacheStorage): void
+```
+
+### CacheStorage Interface
+
+```ts
+interface CacheStorage {
+  get<T>(key: string): Promise<CacheEntry<T> | null>
+  set<T>(key: string, entry: CacheEntry<T>): Promise<void>
+  delete(key: string): Promise<boolean | void>
+  deleteByTag(tag: string): Promise<void>
+  clear(): Promise<void>
+  keys(): Promise<string[]>
+}
 ```
 
 ### Example
 
 ```ts
-// Store in global cache
-setCache('config', { theme: 'dark' })
+// Get the global cache instance
+const cache = getCache()
 
-// Retrieve from global cache
-const config = getCache('config')
+// Use the cache
+await cache.set('user:123', {
+  value: { name: 'Alice' },
+  timestamp: Date.now(),
+  maxAge: 3600,
+  tags: ['users']
+})
+
+const entry = await cache.get('user:123')
+
+// Use a custom cache storage (e.g., Redis adapter)
+import { RedisCache } from './my-redis-cache'
+setCache(new RedisCache({ url: process.env.REDIS_URL }))
 ```
 
 ## cached
 
-Wraps a function with caching.
+Wraps a function with caching and stale-while-revalidate support.
 
 ### Signature
 
 ```ts
 function cached<T>(
   key: string,
-  fn: () => T | Promise<T>,
-  options?: { ttl?: number; tags?: string[] }
+  fn: () => Promise<T>,
+  options: CacheOptions
 ): Promise<T>
+```
+
+### CacheOptions
+
+```ts
+interface CacheOptions {
+  maxAge?: number              // TTL in seconds (default: 60)
+  staleWhileRevalidate?: number // Additional seconds to serve stale while refreshing
+  tags?: string[]              // Tags for invalidation
+  private?: boolean            // Mark as private (for Cache-Control header)
+}
 ```
 
 ### Example
@@ -118,7 +230,7 @@ export const loader = createLoader(async ({ params }) => {
   const post = await cached(
     `post:${params.id}`,
     () => db.posts.find(params.id),
-    { ttl: 3600, tags: ['posts', `post-${params.id}`] }
+    { maxAge: 3600, tags: ['posts', `post-${params.id}`] }
   )
 
   return { post }
@@ -133,16 +245,18 @@ const post = await cached(
   async () => {
     const post = await db.posts.find(params.id)
 
-    // Don't cache drafts
+    // Don't cache drafts - just return without caching
     if (post.status === 'draft') {
-      throw new CacheSkip()
+      return post // Will still be cached; handle draft logic elsewhere
     }
 
     return post
   },
-  { ttl: 3600 }
+  { maxAge: 3600, tags: ['posts'] }
 )
 ```
+
+> **Note:** The `cached` function always caches the result. For conditional caching, consider using `getCache()` and `setCache()` directly to control when values are stored.
 
 ## cacheKey / generateCacheKey
 
@@ -281,7 +395,7 @@ export const loader = createLoader(async ({ params }) => {
   const post = await cached(
     cacheKey('post', params.id),
     () => db.posts.find(params.id),
-    { ttl: 3600 }
+    { maxAge: 3600, tags: ['posts'] }
   )
 
   return { post }
@@ -299,7 +413,7 @@ export const loader = createLoader(async ({ params, context }) => {
     cacheKey('post', params.id, user ? 'auth' : 'anon'),
     () => db.posts.find(params.id),
     {
-      ttl: user ? 60 : 3600,
+      maxAge: user ? 60 : 3600,
       tags: ['posts', `post-${params.id}`]
     }
   )
@@ -312,13 +426,21 @@ export const loader = createLoader(async ({ params, context }) => {
 
 ```ts
 export const loader = createLoader(async ({ params }) => {
-  let post = await getCache(`post:${params.id}`)
+  const cache = getCache()
+  const entry = await cache.get(`post:${params.id}`)
+
+  let post = entry?.value
 
   if (!post) {
     post = await db.posts.find(params.id)
 
     if (post) {
-      setCache(`post:${params.id}`, post, 3600)
+      await cache.set(`post:${params.id}`, {
+        value: post,
+        timestamp: Date.now(),
+        maxAge: 3600,
+        tags: ['posts', `post-${params.id}`]
+      })
     }
   }
 
@@ -334,6 +456,23 @@ export const loader = createLoader(async ({ params }) => {
 
 ### Stale-While-Revalidate
 
+The `cached` function has built-in SWR support:
+
+```ts
+// Use staleWhileRevalidate option for automatic background refresh
+const post = await cached(
+  `post:${params.id}`,
+  () => db.posts.find(params.id),
+  {
+    maxAge: 3600,              // Fresh for 1 hour
+    staleWhileRevalidate: 86400, // Serve stale for up to 24 more hours while refreshing
+    tags: ['posts']
+  }
+)
+```
+
+Or implement custom SWR logic:
+
 ```ts
 async function getWithSWR<T>(
   key: string,
@@ -341,30 +480,43 @@ async function getWithSWR<T>(
   maxAge: number,
   swr: number
 ): Promise<T> {
-  const cached = await getCache<{ value: T; timestamp: number }>(key)
+  const cache = getCache()
+  const entry = await cache.get<T>(key)
   const now = Date.now()
 
-  if (cached) {
-    const age = (now - cached.timestamp) / 1000
+  if (entry) {
+    const age = (now - entry.timestamp) / 1000
 
-    // Fresh: return cached
+    // Fresh: return cached value
     if (age < maxAge) {
-      return cached.value
+      return entry.value
     }
 
-    // Stale but within SWR: return cached and refresh in background
+    // Stale but within SWR window: return cached and refresh in background
     if (age < maxAge + swr) {
-      // Background refresh
-      fetcher().then(value => {
-        setCache(key, { value, timestamp: Date.now() }, maxAge + swr)
+      // Fire-and-forget background refresh
+      fetcher().then(async value => {
+        await cache.set(key, {
+          value,
+          timestamp: Date.now(),
+          maxAge,
+          staleWhileRevalidate: swr,
+          tags: []
+        })
       })
-      return cached.value
+      return entry.value
     }
   }
 
   // Expired or missing: fetch fresh
   const value = await fetcher()
-  setCache(key, { value, timestamp: now }, maxAge + swr)
+  await cache.set(key, {
+    value,
+    timestamp: now,
+    maxAge,
+    staleWhileRevalidate: swr,
+    tags: []
+  })
   return value
 }
 ```
@@ -373,10 +525,16 @@ async function getWithSWR<T>(
 
 ```ts
 async function warmCache() {
+  const cache = getCache()
   const popularPosts = await db.posts.findPopular(10)
 
   for (const post of popularPosts) {
-    setCache(`post:${post.id}`, post, 3600)
+    await cache.set(`post:${post.id}`, {
+      value: post,
+      timestamp: Date.now(),
+      maxAge: 3600,
+      tags: ['posts', `post-${post.id}`]
+    })
   }
 }
 ```
@@ -384,19 +542,22 @@ async function warmCache() {
 ### Cache Busting
 
 ```ts
-function bustCache(pattern: string) {
-  const cache = new MemoryCache()
-  const keys = cache.keys()
+async function bustCache(pattern: RegExp) {
+  const cache = getCache()
+  const keys = await cache.keys()
 
   for (const key of keys) {
-    if (key.match(pattern)) {
-      cache.delete(key)
+    if (pattern.test(key)) {
+      await cache.delete(key)
     }
   }
 }
 
 // Bust all post caches
-bustCache(/^post:/)
+await bustCache(/^post:/)
+
+// Or use tag-based invalidation (preferred)
+await cache.deleteByTag('posts')
 ```
 
 ## Related

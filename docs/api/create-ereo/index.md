@@ -1,6 +1,13 @@
 # create-ereo
 
-Scaffold a new EreoJS project with a single command. The `create-ereo` package provides an interactive project generator with multiple templates and configuration options.
+Scaffold a new EreoJS project with a single command. The `create-ereo` package provides a project generator with multiple templates and configuration options.
+
+## Requirements
+
+- **Bun**: Version 1.0 or later is required
+- **Operating Systems**: macOS, Linux, Windows (WSL recommended)
+
+> **Note:** `create-ereo` uses Bun-specific APIs (`Bun.write`, `Bun.spawn`) and cannot run directly on Node.js.
 
 ## Usage
 
@@ -46,8 +53,6 @@ Full-featured template with Tailwind CSS styling, demonstrating all EreoJS featu
 - Form handling with actions
 - Islands architecture with interactive components
 - Error boundaries
-- API routes
-- Middleware examples
 
 ```bash
 bunx create-ereo my-app --template tailwind
@@ -73,6 +78,28 @@ Bare-bones template for starting from scratch:
 ```bash
 bunx create-ereo my-app --template minimal
 ```
+
+## Template Comparison
+
+| Feature | minimal | default / tailwind |
+|---------|---------|-------------------|
+| Root Layout | ✅ | ✅ |
+| Index Page | ✅ | ✅ |
+| TypeScript Config | ✅ | ✅ |
+| Blog (dynamic routes) | ❌ | ✅ |
+| Contact Form (action) | ❌ | ✅ |
+| About Page | ❌ | ✅ |
+| Error Boundary (`_error.tsx`) | ❌ | ✅ |
+| 404 Page (`_404.tsx`) | ❌ | ✅ |
+| Navigation Component | ❌ | ✅ |
+| Footer Component | ❌ | ✅ |
+| Counter Island | ❌ | ✅ |
+| Tailwind CSS | ❌ | ✅ |
+| Dark Mode | ❌ | ✅ |
+| Path Aliases (`~/`) | ❌ | ✅ |
+| `.env.example` | ❌ | ✅ |
+| Mock Data Helpers | ❌ | ✅ |
+| Type Definitions | ❌ | ✅ |
 
 ## Examples
 
@@ -199,6 +226,33 @@ export default defineConfig({
 }
 ```
 
+### Path Aliases (Tailwind Template)
+
+The tailwind template configures the `~/` path alias for cleaner imports:
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "paths": {
+      "~/*": ["./app/*"]
+    }
+  }
+}
+```
+
+Usage example:
+
+```tsx
+// Before (relative imports)
+import { Counter } from '../../../components/Counter'
+import { getAllPosts } from '../lib/data'
+
+// After (path aliases)
+import { Counter } from '~/components/Counter'
+import { getAllPosts } from '~/lib/data'
+```
+
 ## Dependencies
 
 ### Runtime Dependencies
@@ -266,37 +320,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - Create components in `app/components/`
 - Configure the app in `ereo.config.ts`
 
-## Interactive Mode
-
-When running without arguments, `create-ereo` enters interactive mode:
-
-```bash
-bunx create-ereo
-```
-
-The interactive prompts ask for:
-
-1. **Project name** - Directory name for the new project
-2. **Template** - Choose from available templates
-3. **TypeScript** - Enable/disable TypeScript
-4. **Git** - Initialize git repository
-5. **Install** - Run package installation
-
-## Programmatic Usage
-
-You can use `create-ereo` programmatically in Node.js/Bun scripts:
-
-```ts
-import { create } from 'create-ereo';
-
-await create('my-app', {
-  template: 'tailwind',
-  typescript: true,
-  git: true,
-  install: true,
-});
-```
-
 ## Troubleshooting
 
 ### Permission Denied
@@ -334,6 +357,13 @@ bunx create-ereo my-app --template minimal
 bunx create-ereo my-app --template default
 bunx create-ereo my-app --template tailwind
 ```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success or `--help` displayed |
+| `1` | Missing project name argument |
 
 ## Related
 
