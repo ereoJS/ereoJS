@@ -200,30 +200,40 @@ export default function AppLayout({ children }) {
 
 ## API Routes
 
-Files that export HTTP method handlers become API routes:
+API routes use `loader` for GET requests and `action` for mutations:
 
 ```ts
 // routes/api/posts.ts
-export async function GET(request: Request) {
+import type { LoaderArgs, ActionArgs } from '@ereo/core'
+
+// GET handler
+export async function loader({ request }: LoaderArgs) {
   const posts = await db.posts.findMany()
-  return Response.json(posts)
+  return posts // Plain data is serialized to JSON
 }
 
-export async function POST(request: Request) {
-  const body = await request.json()
-  const post = await db.posts.create(body)
-  return Response.json(post, { status: 201 })
-}
+// POST/PUT/DELETE handler
+export async function action({ request }: ActionArgs) {
+  const method = request.method
 
-export async function DELETE(request: Request) {
-  const url = new URL(request.url)
-  const id = url.searchParams.get('id')
-  await db.posts.delete(id)
-  return new Response(null, { status: 204 })
+  if (method === 'POST') {
+    const body = await request.json()
+    const post = await db.posts.create(body)
+    return post
+  }
+
+  if (method === 'DELETE') {
+    const url = new URL(request.url)
+    const id = url.searchParams.get('id')
+    await db.posts.delete(id)
+    return { success: true }
+  }
+
+  return new Response('Method not allowed', { status: 405 })
 }
 ```
 
-Supported methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`
+**Note:** Request API endpoints with `Accept: application/json` header to receive JSON directly
 
 ## Route Priority
 
