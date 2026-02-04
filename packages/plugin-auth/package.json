@@ -1,11 +1,40 @@
 {
   "name": "@ereo/auth",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/plugin-auth"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "description": "Authentication plugin for EreoJS framework",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./providers": "./src/providers/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts ./src/providers/index.ts --outdir ./dist --target bun --external @ereo/core --external @ereo/router && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ereo/core": "workspace:*",

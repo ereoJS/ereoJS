@@ -1,17 +1,44 @@
 {
   "name": "@ereo/dev-inspector",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/dev-inspector"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "description": "Visual route inspector for EreoJS framework development",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --external @ereo/core --external @ereo/router --external @ereo/data && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ereo/core": "workspace:*",
-    "@ereo/router": "workspace:*"
+    "@ereo/router": "workspace:*",
+    "@ereo/data": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "^5.0.0"
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.4.0"
   }
 }

@@ -1,18 +1,46 @@
 {
   "name": "@ereo/rsc",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/rsc"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "description": "React Server Components support for EreoJS framework",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --external @ereo/core --external react && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ereo/core": "workspace:*",
+    "@ereo/core": "workspace:*"
+  },
+  "peerDependencies": {
     "react": "^18.0.0"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/react": "^18.0.0",
-    "typescript": "^5.0.0"
+    "@types/bun": "^1.1.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.4.0"
   }
 }

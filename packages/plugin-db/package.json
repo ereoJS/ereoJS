@@ -1,6 +1,18 @@
 {
   "name": "@ereo/plugin-db",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "private": true,
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/plugin-db"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "description": "Database integration plugin for EreoJS framework (DEPRECATED - use @ereo/db and @ereo/db-drizzle)",
   "type": "module",
   "exports": {

@@ -3,15 +3,14 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "composite": true,
     "noEmit": false,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "paths": {
+      "@ereo/core": ["../core/dist/index.d.ts"],
+      "@ereo/server": ["../server/dist/index.d.ts"]
+    }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"],
-  "references": [
-    { "path": "../core" },
-    { "path": "../server" }
-  ]
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

@@ -1,6 +1,17 @@
 {
   "name": "@ereo/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

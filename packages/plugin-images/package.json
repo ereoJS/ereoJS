@@ -1,6 +1,17 @@
 {
   "name": "@ereo/plugin-images",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/plugin-images"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,18 +23,14 @@
     "./components": {
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js"
-    },
-    "./image-types": {
-      "types": "./dist/image-types.d.ts"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts ./src/components/index.ts --outdir ./dist --target bun && bun run build:types && bun run copy:types",
+    "build": "bun build ./src/index.ts ./src/components/index.ts --outdir ./dist --target bun --external @ereo/core --external sharp && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
-    "copy:types": "cp src/image-types.d.ts dist/",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "test": "bun test",
     "typecheck": "tsc --noEmit"

@@ -266,19 +266,20 @@ class SurrealDBAdapter implements DatabaseAdapter<SurrealClient> {
     await this.connect();
 
     let isActive = true;
+    const client = this.client!;
 
     // Begin the transaction
-    await this.client!.query('BEGIN TRANSACTION');
+    await client.query('BEGIN TRANSACTION');
 
     return {
-      client: this.client!,
+      client,
 
       async commit(): Promise<void> {
         if (!isActive) {
           throw new TransactionError('Transaction is not active');
         }
         isActive = false;
-        await this.client.query('COMMIT TRANSACTION');
+        await client.query('COMMIT TRANSACTION');
       },
 
       async rollback(): Promise<void> {
@@ -286,7 +287,7 @@ class SurrealDBAdapter implements DatabaseAdapter<SurrealClient> {
           throw new TransactionError('Transaction is not active');
         }
         isActive = false;
-        await this.client.query('CANCEL TRANSACTION');
+        await client.query('CANCEL TRANSACTION');
       },
 
       get isActive(): boolean {

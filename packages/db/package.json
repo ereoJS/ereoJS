@@ -1,6 +1,17 @@
 {
   "name": "@ereo/db",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/db"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "description": "Database adapter abstractions for EreoJS framework",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +26,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun run build:types",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --external @ereo/core && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "test": "bun test",

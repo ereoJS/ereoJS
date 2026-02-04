@@ -1,6 +1,17 @@
 {
   "name": "@ereo/db-drizzle",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/db-drizzle"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
   "description": "Drizzle ORM adapter for EreoJS database abstraction",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +26,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun && bun run build:types",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --external @ereo/db --external drizzle-orm --external postgres --external @neondatabase/serverless --external @planetscale/database --external @libsql/client --external better-sqlite3 && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "test": "bun test",
