@@ -9,6 +9,10 @@ import {
   isServerComponent,
   isClientComponent,
   createRSCRenderConfig,
+  markAsServerComponent,
+  markAsClientComponent,
+  SERVER_COMPONENT,
+  CLIENT_COMPONENT,
 } from './rsc';
 
 describe('serializeRSC', () => {
@@ -65,27 +69,25 @@ describe('parseRSCStream', () => {
 });
 
 describe('isServerComponent', () => {
-  it('should return true for "use server" directive', () => {
-    function serverComponent() {
-      'use server';
+  it('should return true for marked server component', () => {
+    const serverComponent = markAsServerComponent(function () {
       return null;
-    }
+    });
     expect(isServerComponent(serverComponent)).toBe(true);
   });
 
-  it('should return true for "use rsc" directive', () => {
+  it('should return true for component with SERVER_COMPONENT symbol', () => {
     function rscComponent() {
-      'use rsc';
       return null;
     }
+    (rscComponent as any)[SERVER_COMPONENT] = true;
     expect(isServerComponent(rscComponent)).toBe(true);
   });
 
   it('should return false for client component', () => {
-    function clientComponent() {
-      'use client';
+    const clientComponent = markAsClientComponent(function () {
       return null;
-    }
+    });
     expect(isServerComponent(clientComponent)).toBe(false);
   });
 
@@ -105,19 +107,25 @@ describe('isServerComponent', () => {
 });
 
 describe('isClientComponent', () => {
-  it('should return true for "use client" directive', () => {
+  it('should return true for marked client component', () => {
+    const clientComponent = markAsClientComponent(function () {
+      return null;
+    });
+    expect(isClientComponent(clientComponent)).toBe(true);
+  });
+
+  it('should return true for component with CLIENT_COMPONENT symbol', () => {
     function clientComponent() {
-      'use client';
       return null;
     }
+    (clientComponent as any)[CLIENT_COMPONENT] = true;
     expect(isClientComponent(clientComponent)).toBe(true);
   });
 
   it('should return false for server component', () => {
-    function serverComponent() {
-      'use server';
+    const serverComponent = markAsServerComponent(function () {
       return null;
-    }
+    });
     expect(isClientComponent(serverComponent)).toBe(false);
   });
 
@@ -174,10 +182,9 @@ describe('serializeRSC error handling', () => {
 
 describe('serializeRSC with function components', () => {
   it('should serialize client component as client-ref', async () => {
-    function ClientComponent() {
-      'use client';
+    const ClientComponent = markAsClientComponent(function ClientComponent() {
       return null;
-    }
+    });
 
     const element = {
       type: ClientComponent,
@@ -195,10 +202,9 @@ describe('serializeRSC with function components', () => {
   });
 
   it('should serialize server component', async () => {
-    function ServerComponent() {
-      'use server';
+    const ServerComponent = markAsServerComponent(function ServerComponent() {
       return null;
-    }
+    });
 
     const element = {
       type: ServerComponent,
@@ -216,10 +222,9 @@ describe('serializeRSC with function components', () => {
   });
 
   it('should serialize anonymous client component', async () => {
-    const ClientComponent = function () {
-      'use client';
+    const ClientComponent = markAsClientComponent(function () {
       return null;
-    };
+    });
     // Remove name to test anonymous handling
     Object.defineProperty(ClientComponent, 'name', { value: '' });
 
@@ -238,10 +243,9 @@ describe('serializeRSC with function components', () => {
   });
 
   it('should serialize anonymous server component', async () => {
-    const ServerComponent = function () {
-      'use server';
+    const ServerComponent = markAsServerComponent(function () {
       return null;
-    };
+    });
     Object.defineProperty(ServerComponent, 'name', { value: '' });
 
     const element = {
@@ -435,10 +439,9 @@ describe('serializeRSC with complex props', () => {
 
 describe('extractClientReferences', () => {
   it('should extract client component refs from tree', async () => {
-    function ClientButton() {
-      'use client';
+    const ClientButton = markAsClientComponent(function ClientButton() {
       return null;
-    }
+    });
 
     // Use React.createElement to create actual React elements that pass isValidElement
     const React = await import('react');
@@ -451,10 +454,9 @@ describe('extractClientReferences', () => {
   });
 
   it('should extract anonymous client component refs', async () => {
-    const ClientComponent = function () {
-      'use client';
+    const ClientComponent = markAsClientComponent(function () {
       return null;
-    };
+    });
     Object.defineProperty(ClientComponent, 'name', { value: '' });
 
     const React = await import('react');
@@ -467,10 +469,9 @@ describe('extractClientReferences', () => {
   });
 
   it('should deduplicate client refs', async () => {
-    function ClientButton() {
-      'use client';
+    const ClientButton = markAsClientComponent(function ClientButton() {
       return null;
-    }
+    });
 
     const React = await import('react');
     const element = React.createElement(
@@ -489,10 +490,9 @@ describe('extractClientReferences', () => {
   });
 
   it('should handle nested children in extractClientReferences', async () => {
-    function ClientButton() {
-      'use client';
+    const ClientButton = markAsClientComponent(function ClientButton() {
       return null;
-    }
+    });
 
     const React = await import('react');
     const element = React.createElement(

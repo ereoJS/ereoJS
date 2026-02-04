@@ -10,7 +10,12 @@ import {
   parseRSCStream,
   isServerComponent,
   isClientComponent,
-  createRSCRenderConfig
+  createRSCRenderConfig,
+  // Marker functions for runtime detection
+  markAsServerComponent,
+  markAsClientComponent,
+  SERVER_COMPONENT,
+  CLIENT_COMPONENT
 } from '@ereo/rsc'
 ```
 
@@ -203,17 +208,17 @@ function isServerComponent(component: unknown): boolean
 
 #### Returns
 
-`true` if the component has a `'use server'` or `'use rsc'` directive.
+`true` if the component is marked as a server component (via `markAsServerComponent` or the `SERVER_COMPONENT` symbol).
 
 #### Example
 
 ```ts
-import { isServerComponent } from '@ereo/rsc'
+import { isServerComponent, markAsServerComponent } from '@ereo/rsc'
 
-function ServerComp() {
-  'use server'
+// Mark a component as server component for runtime detection
+const ServerComp = markAsServerComponent(function ServerComp() {
   return <div>Server</div>
-}
+})
 
 function RegularComp() {
   return <div>Regular</div>
@@ -241,26 +246,102 @@ function isClientComponent(component: unknown): boolean
 
 #### Returns
 
-`true` if the component has a `'use client'` directive.
+`true` if the component is marked as a client component (via `markAsClientComponent` or the `CLIENT_COMPONENT` symbol).
 
 #### Example
 
 ```ts
-import { isClientComponent } from '@ereo/rsc'
+import { isClientComponent, markAsClientComponent } from '@ereo/rsc'
 
-function ClientComp() {
-  'use client'
+// Mark a component as client component for runtime detection
+const ClientComp = markAsClientComponent(function ClientComp() {
   return <div>Client</div>
-}
+})
 
 function ServerComp() {
-  'use server'
   return <div>Server</div>
 }
 
 isClientComponent(ClientComp) // true
 isClientComponent(ServerComp) // false
 ```
+
+### markAsServerComponent
+
+Marks a component as a server component for runtime detection.
+
+#### Signature
+
+```ts
+function markAsServerComponent<T extends Function>(component: T): T
+```
+
+#### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| `component` | `Function` | The component to mark |
+
+#### Returns
+
+The same component with the `SERVER_COMPONENT` symbol set.
+
+#### Example
+
+```ts
+import { markAsServerComponent } from '@ereo/rsc'
+
+const UserProfile = markAsServerComponent(async function UserProfile({ userId }) {
+  const user = await db.users.findById(userId)
+  return <div>{user.name}</div>
+})
+```
+
+### markAsClientComponent
+
+Marks a component as a client component for runtime detection.
+
+#### Signature
+
+```ts
+function markAsClientComponent<T extends Function>(component: T): T
+```
+
+#### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| `component` | `Function` | The component to mark |
+
+#### Returns
+
+The same component with the `CLIENT_COMPONENT` symbol set.
+
+#### Example
+
+```ts
+import { markAsClientComponent } from '@ereo/rsc'
+
+const LikeButton = markAsClientComponent(function LikeButton({ initialLikes }) {
+  const [likes, setLikes] = useState(initialLikes)
+  return <button onClick={() => setLikes(l => l + 1)}>Likes: {likes}</button>
+})
+```
+
+### Component Markers
+
+Symbols used to mark components for runtime detection:
+
+```ts
+import { SERVER_COMPONENT, CLIENT_COMPONENT } from '@ereo/rsc'
+
+// These symbols are used internally by markAsServerComponent/markAsClientComponent
+// You can also use them directly:
+function MyComponent() { return <div>Hello</div> }
+(MyComponent as any)[CLIENT_COMPONENT] = true
+```
+
+> **Note:** The directive-based detection (`'use client'`, `'use server'`) works at build time when the bundler processes the source files. For runtime detection, use the marker functions as directives may be optimized away during compilation.
 
 ### createRSCRenderConfig
 

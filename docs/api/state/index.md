@@ -12,7 +12,11 @@ import {
   atom,
   computed,
   batch,
-  createStore
+  createStore,
+  // React hooks
+  useSignal,
+  useStoreKey,
+  useStore
 } from '@ereo/state'
 ```
 

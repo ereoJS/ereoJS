@@ -6,6 +6,12 @@
 
 import type { RenderConfig } from '@ereo/core';
 
+/** Symbol to mark server components */
+export const SERVER_COMPONENT = Symbol.for('ereo.server-component');
+
+/** Symbol to mark client components */
+export const CLIENT_COMPONENT = Symbol.for('ereo.client-component');
+
 /** RSC render configuration */
 export interface RSCConfig {
   /** Enable React Server Components */
@@ -24,6 +30,30 @@ export interface RSCChunk {
   data: unknown;
   /** Whether this is the final chunk */
   done: boolean;
+}
+
+/** Component type with RSC markers */
+export interface MarkedComponent extends Function {
+  [SERVER_COMPONENT]?: boolean;
+  [CLIENT_COMPONENT]?: boolean;
+}
+
+/**
+ * Mark a component as a server component.
+ * Use this to explicitly mark components when directives are not preserved.
+ */
+export function markAsServerComponent<T extends Function>(component: T): T {
+  (component as MarkedComponent)[SERVER_COMPONENT] = true;
+  return component;
+}
+
+/**
+ * Mark a component as a client component.
+ * Use this to explicitly mark components when directives are not preserved.
+ */
+export function markAsClientComponent<T extends Function>(component: T): T {
+  (component as MarkedComponent)[CLIENT_COMPONENT] = true;
+  return component;
 }
 
 /**
@@ -81,12 +111,20 @@ export async function parseRSCStream(
 
 /**
  * Check if a component is a server component.
- * Server components are marked with 'use server' or use .server/.rsc extensions.
+ *
+ * Detection methods (in order of priority):
+ * 1. Symbol marker (set via markAsServerComponent)
+ * 2. 'use server' or 'use rsc' directive in source (for build-time analysis)
  */
 export function isServerComponent(component: unknown): boolean {
   if (typeof component !== 'function') return false;
 
-  // Check for 'use server' directive
+  // Check for symbol marker (most reliable, survives compilation)
+  if ((component as MarkedComponent)[SERVER_COMPONENT] === true) {
+    return true;
+  }
+
+  // Fall back to string detection for source-level analysis
   const code = component.toString();
   return (
     code.includes('"use server"') ||
@@ -98,11 +136,20 @@ export function isServerComponent(component: unknown): boolean {
 
 /**
  * Check if a component is a client component.
- * Client components have 'use client' directive.
+ *
+ * Detection methods (in order of priority):
+ * 1. Symbol marker (set via markAsClientComponent)
+ * 2. 'use client' directive in source (for build-time analysis)
  */
 export function isClientComponent(component: unknown): boolean {
   if (typeof component !== 'function') return false;
 
+  // Check for symbol marker (most reliable, survives compilation)
+  if ((component as MarkedComponent)[CLIENT_COMPONENT] === true) {
+    return true;
+  }
+
+  // Fall back to string detection for source-level analysis
   const code = component.toString();
   return code.includes('"use client"') || code.includes("'use client'");
 }
