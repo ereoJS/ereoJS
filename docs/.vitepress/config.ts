@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Ereo',
   description: 'A React fullstack framework built on Bun',
+  ignoreDeadLinks: true,
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
@@ -113,6 +114,7 @@ export default defineConfig({
           text: '@ereo/core',
           collapsed: false,
           items: [
+            { text: 'Overview', link: '/api/core/' },
             { text: 'createApp', link: '/api/core/create-app' },
             { text: 'RequestContext', link: '/api/core/context' },
             { text: 'Plugins', link: '/api/core/plugins' },
@@ -128,15 +130,26 @@ export default defineConfig({
           items: [
             { text: 'FileRouter', link: '/api/router/file-router' },
             { text: 'Route Config', link: '/api/router/route-config' },
+            { text: 'Route Tree', link: '/api/router/route-tree' },
             { text: 'Route Matching', link: '/api/router/matching' },
             { text: 'Middleware', link: '/api/router/middleware' },
-            { text: 'Validation', link: '/api/router/validation' }
+            { text: 'Typed Middleware', link: '/api/router/typed-middleware' },
+            { text: 'Validation', link: '/api/router/validation' },
+            { text: 'Validators', link: '/api/router/validators' }
+          ]
+        },
+        {
+          text: '@ereo/router-conventions',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/router-conventions/' }
           ]
         },
         {
           text: '@ereo/client',
           collapsed: false,
           items: [
+            { text: 'Overview', link: '/api/client/' },
             { text: 'Hooks', link: '/api/client/hooks' },
             { text: 'Link', link: '/api/client/link' },
             { text: 'TypedLink', link: '/api/client/typed-link' },
@@ -149,13 +162,22 @@ export default defineConfig({
           ]
         },
         {
+          text: '@ereo/client-sdk',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/client-sdk/' }
+          ]
+        },
+        {
           text: '@ereo/data',
           collapsed: false,
           items: [
+            { text: 'Overview', link: '/api/data/' },
             { text: 'defineRoute', link: '/api/data/define-route' },
             { text: 'Schema Adapters', link: '/api/data/schema-adapters' },
             { text: 'Loaders', link: '/api/data/loaders' },
             { text: 'Actions', link: '/api/data/actions' },
+            { text: 'Pipeline', link: '/api/data/pipeline' },
             { text: 'Cache', link: '/api/data/cache' },
             { text: 'Revalidation', link: '/api/data/revalidation' }
           ]
@@ -173,6 +195,7 @@ export default defineConfig({
           text: '@ereo/state',
           collapsed: false,
           items: [
+            { text: 'Overview', link: '/api/state/' },
             { text: 'Signals', link: '/api/state/signals' },
             { text: 'Stores', link: '/api/state/stores' }
           ]
@@ -194,12 +217,75 @@ export default defineConfig({
           ]
         },
         {
+          text: '@ereo/rsc',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/rsc/' }
+          ]
+        },
+        {
+          text: '@ereo/bundler',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/bundler/' }
+          ]
+        },
+        {
+          text: '@ereo/runtime-bun',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/runtime-bun/' }
+          ]
+        },
+        {
+          text: '@ereo/testing',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/testing/' }
+          ]
+        },
+        {
           text: '@ereo/cli',
           collapsed: false,
           items: [
+            { text: 'Overview', link: '/api/cli/' },
             { text: 'dev', link: '/api/cli/dev' },
             { text: 'build', link: '/api/cli/build' },
-            { text: 'start', link: '/api/cli/start' }
+            { text: 'start', link: '/api/cli/start' },
+            { text: 'create', link: '/api/cli/create' },
+            { text: 'deploy', link: '/api/cli/deploy' },
+            { text: 'db', link: '/api/cli/db' }
+          ]
+        },
+        {
+          text: 'create-ereo',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/create-ereo/' }
+          ]
+        },
+        {
+          text: '@ereo/db',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/api/db/' },
+            { text: 'Drizzle Adapter', link: '/api/db/drizzle' },
+            { text: 'SurrealDB Adapter', link: '/api/db/surrealdb' }
+          ]
+        },
+        {
+          text: 'Deployment',
+          collapsed: true,
+          items: [
+            { text: 'Vercel', link: '/api/deploy/vercel' },
+            { text: 'Cloudflare', link: '/api/deploy/cloudflare' }
+          ]
+        },
+        {
+          text: '@ereo/dev-inspector',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/api/dev-inspector/' }
           ]
         },
         {
@@ -207,8 +293,9 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: 'Tailwind', link: '/api/plugins/tailwind' },
+            { text: 'Images', link: '/api/plugins/images' },
             { text: 'Auth', link: '/api/plugins/auth' },
-            { text: 'Database', link: '/api/plugins/db' }
+            { text: 'Database (deprecated)', link: '/api/plugins/db' }
           ]
         }
       ]
