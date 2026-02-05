@@ -115,6 +115,13 @@ export function createWizard<T extends Record<string, any>>(
     const stepConfig = steps[step];
     if (!stepConfig) return true;
 
+    // Touch all step fields so errors become visible
+    if (stepConfig.fields) {
+      for (const field of stepConfig.fields) {
+        form.setTouched(field, true);
+      }
+    }
+
     // Run step-level validate function
     if (stepConfig.validate) {
       const valid = await stepConfig.validate();

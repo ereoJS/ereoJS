@@ -94,7 +94,28 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
   getSignal(path: string): Signal<unknown> {
     let sig = this._signals.get(path);
     if (!sig) {
-      const value = getPath(this._baseline, path);
+      let value = getPath(this._baseline, path);
+      // If baseline doesn't have this path, derive from closest parent signal
+      if (value === undefined) {
+        const parts = path.split('.');
+        for (let i = parts.length - 1; i >= 1; i--) {
+          const parentPath = parts.slice(0, i).join('.');
+          const parentSig = this._signals.get(parentPath);
+          if (parentSig) {
+            const parentVal = parentSig.get();
+            if (parentVal != null && typeof parentVal === 'object') {
+              const rest = parts.slice(i);
+              let current: any = parentVal;
+              for (const part of rest) {
+                if (current == null || typeof current !== 'object') { current = undefined; break; }
+                current = (current as any)[part];
+              }
+              if (current !== undefined) value = current;
+            }
+            break;
+          }
+        }
+      }
       sig = signal(value);
       this._signals.set(path, sig);
     }
@@ -127,6 +148,11 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
       if (oldValue === value) return;
 
       sig.set(value);
+
+      // Propagate array/object values down to existing child signals
+      if (value !== null && typeof value === 'object') {
+        this._syncChildSignals(path, value);
+      }
 
       // Update parent object signals and notify their watchers
       this._updateParentSignals(path, value);
@@ -164,6 +190,46 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     return this._getCurrentValues();
   }
 
+  private _syncChildSignals(path: string, value: any): void {
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        const childPath = `${path}.${i}`;
+        const childSig = this._signals.get(childPath);
+        if (childSig) {
+          childSig.set(value[i]);
+        }
+        // Recurse into nested objects/arrays
+        if (value[i] !== null && typeof value[i] === 'object') {
+          this._syncChildSignals(childPath, value[i]);
+        }
+      }
+      // Clean up signals for indices beyond the new array length
+      const prefix = path + '.';
+      for (const key of [...this._signals.keys()]) {
+        if (key.startsWith(prefix)) {
+          const rest = key.slice(prefix.length);
+          const dotIdx = rest.indexOf('.');
+          const segment = dotIdx === -1 ? rest : rest.slice(0, dotIdx);
+          const idx = parseInt(segment, 10);
+          if (!isNaN(idx) && idx >= value.length) {
+            this._signals.delete(key);
+          }
+        }
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      for (const key of Object.keys(value)) {
+        const childPath = `${path}.${key}`;
+        const childSig = this._signals.get(childPath);
+        if (childSig) {
+          childSig.set(value[key]);
+        }
+        if (value[key] !== null && typeof value[key] === 'object') {
+          this._syncChildSignals(childPath, value[key]);
+        }
+      }
+    }
+  }
+
   private _updateParentSignals(path: string, _childValue: unknown): void {
     const parts = path.split('.');
     for (let i = parts.length - 1; i > 0; i--) {
@@ -181,6 +247,8 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
   private _reconstructValue(path: string): unknown {
     // Use signals for child values, falling back to baseline for shape
     const baselineVal = getPath(this._baseline, path);
+    // Also get the current signal value for this path as a secondary fallback
+    const currentSigVal = this._signals.get(path)?.get();
 
     // For non-objects, just return the signal value
     if (baselineVal === null || typeof baselineVal !== 'object') {
@@ -190,9 +258,14 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     // Collect all known child paths from signals
     const prefix = path + '.';
 
-    if (Array.isArray(baselineVal)) {
+    // Determine the shape source: use current signal value if it's an array/object,
+    // otherwise fall back to baseline
+    const shapeSource = (currentSigVal !== null && typeof currentSigVal === 'object') ? currentSigVal : baselineVal;
+
+    if (Array.isArray(shapeSource) || Array.isArray(baselineVal)) {
+      const sourceArray = Array.isArray(shapeSource) ? shapeSource : baselineVal;
       // Determine array length from signals (may have grown beyond baseline)
-      let maxLen = baselineVal.length;
+      let maxLen = (sourceArray as any[]).length;
       for (const key of this._signals.keys()) {
         if (key.startsWith(prefix)) {
           const rest = key.slice(prefix.length);
@@ -208,7 +281,13 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
       for (let i = 0; i < maxLen; i++) {
         const childPath = `${path}.${i}`;
         const childSig = this._signals.get(childPath);
-        result[i] = childSig ? childSig.get() : (baselineVal[i] ?? undefined);
+        if (childSig) {
+          result[i] = childSig.get();
+        } else {
+          // Try current signal value first, then baseline
+          const fromCurrent = Array.isArray(currentSigVal) ? currentSigVal[i] : undefined;
+          result[i] = fromCurrent ?? (baselineVal as any[])?.[i] ?? undefined;
+        }
       }
       return result;
     }
@@ -400,6 +479,11 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     batch(() => {
       this.isSubmitting.set(true);
       this.submitState.set('submitting');
+      // Touch all registered fields on submit attempt so errors become visible
+      for (const path of this._fieldOptions.keys()) {
+        this._touchedSet.add(path);
+      }
+      this._notifySubscribers();
     });
 
     try {
