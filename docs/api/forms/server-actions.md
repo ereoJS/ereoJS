@@ -21,9 +21,9 @@ Creates a server-side request handler that parses the request body, validates wi
 
 ```ts
 function createFormAction<T, TResult = unknown>(opts: {
-  schema?: ValidationSchema<unknown, T>
-  handler: (values: T) => Promise<TResult>
-  onError?: (error: unknown) => ActionResult<TResult>
+  schema?: ValidationSchema<unknown, T>;
+  handler: (values: T) => Promise<TResult>;
+  onError?: (error: unknown) => ActionResult<TResult>;
 }): (request: Request) => Promise<ActionResult<TResult>>
 ```
 
@@ -32,7 +32,7 @@ function createFormAction<T, TResult = unknown>(opts: {
 | Name | Type | Description |
 |------|------|-------------|
 | `schema` | `ValidationSchema` | Optional schema for server-side validation |
-| `handler` | `(values: T) => Promise<TResult>` | Business logic — called with validated values |
+| `handler` | `(values: T) => Promise<TResult>` | Business logic -- called with validated values (required) |
 | `onError` | `(error: unknown) => ActionResult<TResult>` | Custom error handler |
 
 ### Returns
@@ -85,8 +85,8 @@ function ActionForm<T extends Record<string, any>>(
 
 | Name | Type | Description |
 |------|------|-------------|
-| `form` | `FormStoreInterface<T>` | The form store |
-| `action` | `string \| ((values: T) => Promise<ActionResult>)` | URL endpoint or async function |
+| `form` | `FormStoreInterface<T>` | The form store (required) |
+| `action` | `string \| ((values: T) => Promise<ActionResult>)` | URL endpoint or async function (required) |
 | `method` | `'post' \| 'put' \| 'patch' \| 'delete'` | HTTP method (default `'post'`) |
 | `onSuccess` | `(result: any) => void` | Called with response data on success |
 | `onError` | `(errors: Record<string, string[]>) => void` | Called with error map on failure |
@@ -165,14 +165,14 @@ Hook for programmatic form submissions without `ActionForm`.
 
 ```ts
 function useFormAction<T, TResult = unknown>(opts: {
-  action: string | ((values: T) => Promise<ActionResult<TResult>>)
-  method?: string
-  encType?: 'application/json' | 'multipart/form-data'
+  action: string | ((values: T) => Promise<ActionResult<TResult>>);
+  method?: string;
+  encType?: 'application/json' | 'multipart/form-data';
 }): {
-  submit: (values: T) => Promise<ActionResult<TResult>>
-  cancel: () => void
-  isSubmitting: boolean
-  result: ActionResult<TResult> | null
+  submit: (values: T) => Promise<ActionResult<TResult>>;
+  cancel: () => void;
+  isSubmitting: boolean;
+  result: ActionResult<TResult> | null;
 }
 ```
 
@@ -237,9 +237,21 @@ Handles these shapes:
 | `null` / `undefined` | `{ success: false, errors: { '': ['Empty response'] } }` |
 | Other | `{ success: true, data: response }` |
 
+## ActionResult
+
+```ts
+interface ActionResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  errors?: Record<string, string[]>;
+}
+```
+
+When `errors` is present, keys are dot-notation field paths. An empty string key (`''`) represents form-level errors not tied to a specific field.
+
 ## Related
 
-- [Schema Adapters](/api/forms/schema-adapters) — validation schemas for server-side
-- [useForm](/api/forms/use-form) — client-side form creation
-- [Accessibility](/api/forms/accessibility) — auto-announced by ActionForm
-- [Types — ActionResult](/api/forms/types)
+- [Schema Adapters](/api/forms/schema-adapters) -- validation schemas for server-side
+- [useForm](/api/forms/use-form) -- client-side form creation
+- [Accessibility](/api/forms/accessibility) -- auto-announced by ActionForm
+- [Types -- ActionResult](/api/forms/types)

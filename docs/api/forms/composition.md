@@ -1,6 +1,6 @@
 # Composition
 
-Utilities for merging form configurations and composing validation schemas.
+Utilities for merging form configurations and composing validation schemas from multiple sources.
 
 ## Import
 
@@ -23,10 +23,10 @@ function mergeFormConfigs<
 
 ### Merge Rules
 
-| Field | Strategy |
-|-------|----------|
-| `defaultValues` | Deep-merged (B overrides A for conflicts) |
-| `validators` | Concatenated — same-path validators from both configs are combined into arrays |
+| Property | Strategy |
+|----------|----------|
+| `defaultValues` | Deep-merged (B overrides A for conflicting keys) |
+| `validators` | Concatenated -- same-path validators from both configs are combined into arrays |
 | `onSubmit` | B wins (B ?? A) |
 | `schema` | B wins (B ?? A) |
 | `validateOn` | B wins (B ?? A) |
@@ -92,6 +92,15 @@ function composeSchemas<A, B>(
 ): ValidationSchema<unknown, Record<string, unknown>>
 ```
 
+### Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| `prefix1` | `string` | Key for the first schema's data (e.g. `'account'`) |
+| `schema1` | `ValidationSchema` | First schema |
+| `prefix2` | `string` | Key for the second schema's data (e.g. `'profile'`) |
+| `schema2` | `ValidationSchema` | Second schema |
+
 ### Example
 
 ```ts
@@ -126,6 +135,6 @@ const combinedSchema = composeSchemas(
 
 ## Related
 
-- [useForm](/api/forms/use-form) — accepts the merged config
-- [Schema Adapters](/api/forms/schema-adapters) — schemas to compose
-- [Validation](/api/forms/validation) — validators that get merged
+- [useForm](/api/forms/use-form) -- accepts the merged config
+- [Schema Adapters](/api/forms/schema-adapters) -- schemas to compose
+- [Validation](/api/forms/validation) -- validators that get merged

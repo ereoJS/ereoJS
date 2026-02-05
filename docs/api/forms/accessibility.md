@@ -35,7 +35,7 @@ import {
 function generateA11yId(prefix?: string): string
 ```
 
-Generates a unique ID for ARIA attributes. Default prefix is `'ereo'`.
+Generates a unique ID for ARIA attributes. Default prefix is `'ereo'`. Uses an auto-incrementing counter.
 
 ### getFieldA11y
 
@@ -51,15 +51,18 @@ Returns `aria-invalid` and `aria-describedby` when the field has errors and is t
 ```ts
 getFieldA11y('email', { errors: ['Required'], touched: true })
 // { 'aria-invalid': true, 'aria-describedby': 'email-error' }
+
+getFieldA11y('email', { errors: [], touched: true })
+// {}
 ```
 
 ### getErrorA11y
 
 ```ts
 function getErrorA11y(name: string): {
-  id: string
-  role: string
-  'aria-live': string
+  id: string;
+  role: string;
+  'aria-live': string;
 }
 ```
 
@@ -74,12 +77,12 @@ getErrorA11y('email')
 
 ```ts
 function getLabelA11y(name: string, opts?: { id?: string }): {
-  htmlFor: string
-  id: string
+  htmlFor: string;
+  id: string;
 }
 ```
 
-Returns `htmlFor` and `id` for a label element.
+Returns `htmlFor` and `id` for a label element. Default `id` is `{name}-label`.
 
 ```ts
 getLabelA11y('email')
@@ -92,18 +95,18 @@ getLabelA11y('email')
 function getDescriptionA11y(name: string): { id: string }
 ```
 
-Returns an `id` for a field description element.
+Returns an `id` for a field description element: `{ id: '{name}-description' }`.
 
 ### getFieldsetA11y
 
 ```ts
-function getFieldsetA11y(name: string): {
-  role: string
-  'aria-labelledby': string
+function getFieldsetA11y(name: string, legend?: string): {
+  role: string;
+  'aria-labelledby': string;
 }
 ```
 
-Returns attributes for a fieldset/group wrapper.
+Returns `role="group"` and `aria-labelledby` pointing to `{name}-legend` for grouping related fields.
 
 ### getFieldWrapperA11y
 
@@ -131,12 +134,12 @@ Returns `id`, `role="form"`, and `aria-busy` when submitting.
 
 ```ts
 function getErrorSummaryA11y(formId: string): {
-  role: string
-  'aria-labelledby': string
+  role: string;
+  'aria-labelledby': string;
 }
 ```
 
-Returns attributes for an error summary section.
+Returns `role="alert"` and `aria-labelledby` pointing to `{formId}-error-summary` for an error summary section.
 
 ## Focus Management
 
@@ -146,7 +149,7 @@ Returns attributes for an error summary section.
 function focusFirstError(form: FormStoreInterface<any>): void
 ```
 
-Focuses the first field with errors. Uses the form's field refs for scoped focusing, with a fallback to `[aria-invalid="true"]` query. Respects `prefers-reduced-motion` for scroll behavior.
+Focuses the first field with errors. Uses the form's field refs for scoped focusing, with a fallback to `[aria-invalid="true"]` query. Respects `prefers-reduced-motion` for scroll behavior. SSR-safe (no-op when `document` is undefined).
 
 ### focusField
 
@@ -154,7 +157,7 @@ Focuses the first field with errors. Uses the form's field refs for scoped focus
 function focusField(name: string): void
 ```
 
-Focuses a field by its `name` attribute and scrolls it into view.
+Focuses a field by its `name` attribute and scrolls it into view. SSR-safe.
 
 ### trapFocus
 
@@ -162,7 +165,7 @@ Focuses a field by its `name` attribute and scrolls it into view.
 function trapFocus(container: HTMLElement): () => void
 ```
 
-Traps Tab/Shift+Tab focus within a container element (useful for modal wizards). Returns an unsubscribe function.
+Traps Tab/Shift+Tab focus within a container element (useful for modal wizards or dialogs). Returns a cleanup function that removes the event listener. SSR-safe (returns no-op).
 
 ```tsx
 useEffect(() => {
@@ -174,6 +177,8 @@ useEffect(() => {
 
 ## Live Announcements
 
+These functions use a shared, visually-hidden live region to announce messages to screen readers. The live region is auto-created on first use and appended to `document.body`.
+
 ### announce
 
 ```ts
@@ -183,7 +188,7 @@ function announce(
 ): void
 ```
 
-Announces a message to screen readers via a visually hidden live region. The live region is created on first use and reused.
+Announces a message to screen readers. Default priority is `'polite'`.
 
 ### announceErrors
 
@@ -194,7 +199,7 @@ function announceErrors(
 ): void
 ```
 
-Announces form errors to screen readers. Default prefix: `"Form has errors:"`.
+Announces form errors to screen readers. Default prefix: `"Form has errors:"`. Uses `'assertive'` priority. Only fires when there are actual errors.
 
 ### announceSubmitStatus
 
@@ -202,20 +207,20 @@ Announces form errors to screen readers. Default prefix: `"Form has errors:"`.
 function announceSubmitStatus(
   status: FormSubmitState,
   opts?: {
-    successMessage?: string
-    errorMessage?: string
-    submittingMessage?: string
+    successMessage?: string;
+    errorMessage?: string;
+    submittingMessage?: string;
   }
 ): void
 ```
 
 Announces submit status with customizable messages:
 
-| Status | Default message |
-|--------|----------------|
-| `submitting` | `"Submitting form..."` |
-| `success` | `"Form submitted successfully."` |
-| `error` | `"Form submission failed. Please check for errors."` |
+| Status | Default message | Priority |
+|--------|----------------|----------|
+| `submitting` | `"Submitting form..."` | `polite` |
+| `success` | `"Form submitted successfully."` | `polite` |
+| `error` | `"Form submission failed. Please check for errors."` | `assertive` |
 
 ### cleanupLiveRegion
 
@@ -223,7 +228,7 @@ Announces submit status with customizable messages:
 function cleanupLiveRegion(): void
 ```
 
-Removes the live region from the DOM. Call during cleanup if needed.
+Removes the live region from the DOM. Call during cleanup or in test teardown. SSR-safe.
 
 ## Utilities
 
@@ -233,7 +238,7 @@ Removes the live region from the DOM. Call during cleanup if needed.
 function prefersReducedMotion(): boolean
 ```
 
-Returns `true` if the user prefers reduced motion. SSR-safe (returns `false` on server).
+Returns `true` if the user prefers reduced motion. Used internally to switch scroll behavior from `'smooth'` to `'auto'`. SSR-safe (returns `false` on server).
 
 ### isScreenReaderActive
 
@@ -241,7 +246,7 @@ Returns `true` if the user prefers reduced motion. SSR-safe (returns `false` on 
 function isScreenReaderActive(): boolean
 ```
 
-Heuristic detection — checks for NVDA/JAWS in user agent and `[role="application"]`. Not reliable for all screen readers (VoiceOver, TalkBack, Orca are undetectable from JS). Prefer designing for accessibility by default.
+Heuristic detection -- checks for NVDA/JAWS in user agent and `[role="application"]`. Not reliable for all screen readers (VoiceOver, TalkBack, Orca are undetectable from JS). Prefer designing for accessibility by default. SSR-safe (returns `false`).
 
 ## What Components Provide Automatically
 
@@ -260,6 +265,6 @@ The `ActionForm` component automatically:
 
 ## Related
 
-- [Components](/api/forms/components) — pre-built accessible components
-- [Server Actions — ActionForm](/api/forms/server-actions) — auto-announces
-- [Wizard](/api/forms/wizard) — ARIA roles on wizard components
+- [Components](/api/forms/components) -- pre-built accessible components
+- [Server Actions -- ActionForm](/api/forms/server-actions) -- auto-announces
+- [Wizard](/api/forms/wizard) -- ARIA roles on wizard components

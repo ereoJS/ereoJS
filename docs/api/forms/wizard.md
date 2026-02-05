@@ -1,6 +1,6 @@
 # Wizard
 
-Multi-step forms with per-step validation, navigation, and optional persistence.
+Multi-step forms with per-step validation, navigation, progress tracking, and optional persistence.
 
 ## Import
 
@@ -32,8 +32,8 @@ function createWizard<T extends Record<string, any>>(
 
 | Name | Type | Description |
 |------|------|-------------|
-| `steps` | `WizardStepConfig[]` | Array of step definitions |
-| `form` | `FormConfig<T>` | Form configuration (passed to `FormStore`) |
+| `steps` | `WizardStepConfig[]` | Array of step definitions (required) |
+| `form` | `FormConfig<T>` | Form configuration (passed to `FormStore`) (required) |
 | `persist` | `'localStorage' \| 'sessionStorage' \| false` | Persist wizard state across page reloads |
 | `persistKey` | `string` | Storage key (default `'ereo-wizard'`) |
 | `onComplete` | `SubmitHandler<T>` | Called on final submit |
@@ -42,7 +42,7 @@ function createWizard<T extends Record<string, any>>(
 
 | Name | Type | Description |
 |------|------|-------------|
-| `id` | `string` | Unique step identifier |
+| `id` | `string` | Unique step identifier (required) |
 | `fields` | `string[]` | Field paths that belong to this step (validated on `next()`) |
 | `validate` | `() => Promise<boolean> \| boolean` | Custom step-level validation |
 
@@ -58,7 +58,7 @@ function createWizard<T extends Record<string, any>>(
 | `prev` | `() => void` | Go to previous step |
 | `goTo` | `(stepIdOrIndex: string \| number) => void` | Jump to a step by ID or index |
 | `submit` | `() => Promise<void>` | Validate current step and submit the form |
-| `reset` | `() => void` | Reset form, step, and completed state |
+| `reset` | `() => void` | Reset form, step, and completed state. Clears persisted data. |
 | `dispose` | `() => void` | Clean up subscriptions and timers |
 | `getStepConfig` | `(index: number) => WizardStepConfig \| undefined` | Get config for a step |
 | `canGoNext` | `() => boolean` | Whether there is a next step |
@@ -74,7 +74,7 @@ function createWizard<T extends Record<string, any>>(
 | `totalSteps` | `number` | Total number of steps |
 | `isFirst` | `boolean` | Whether on the first step |
 | `isLast` | `boolean` | Whether on the last step |
-| `progress` | `number` | 0–1 progress ratio |
+| `progress` | `number` | 0-1 progress ratio |
 
 ## useWizard
 
@@ -88,7 +88,7 @@ function useWizard<T extends Record<string, any>>(
 ): WizardHelpers<T> & { currentStepState: WizardState }
 ```
 
-Returns the same `WizardHelpers` plus a reactive `currentStepState` that triggers re-renders when the step or completed steps change.
+Returns the same `WizardHelpers` plus a reactive `currentStepState` that triggers re-renders when the step or completed steps change. The wizard is created once via `useRef` and disposed on unmount.
 
 ## Components
 
@@ -96,10 +96,11 @@ Returns the same `WizardHelpers` plus a reactive `currentStepState` that trigger
 
 Provides wizard context to child components.
 
-```tsx
-<WizardProvider wizard={wizard}>
-  {children}
-</WizardProvider>
+```ts
+function WizardProvider<T extends Record<string, any>>(props: {
+  wizard: WizardHelpers<T>;
+  children: ReactNode;
+}): ReactElement
 ```
 
 ### useWizardContext
@@ -108,7 +109,7 @@ Provides wizard context to child components.
 function useWizardContext<T>(): WizardHelpers<T> | null
 ```
 
-Retrieves the wizard from context.
+Retrieves the wizard from context. Returns `null` if no `WizardProvider` is present.
 
 ### WizardStep
 
@@ -118,11 +119,14 @@ Renders its children only when the step is active.
 |------|------|-------------|
 | `id` | `string` | Step ID (must match a `WizardStepConfig.id`) |
 | `wizard` | `WizardHelpers` | Wizard instance (optional if inside `WizardProvider`) |
-| `keepMounted` | `boolean` | Keep in DOM when inactive (hidden with `display: none`) |
+| `keepMounted` | `boolean` | Keep in DOM when inactive (hidden with `display: none`). Default `false`. |
+| `children` | `ReactNode` | Step content |
+
+Renders a `<div>` with `role="tabpanel"` and `aria-hidden` for accessibility.
 
 ### WizardProgress
 
-Renders a step indicator.
+Renders a step indicator with active/completed states.
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -133,14 +137,14 @@ Default rendering produces a `div[role="tablist"]` with `div[role="tab"]` childr
 
 ### WizardNavigation
 
-Renders Back / Next / Submit buttons.
+Renders Back / Next / Submit buttons based on the current step.
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `wizard` | `WizardHelpers` | Wizard instance (optional if inside `WizardProvider`) |
-| `backLabel` | `string` | Back button text (default `'Back'`) |
-| `nextLabel` | `string` | Next button text (default `'Next'`) |
-| `submitLabel` | `string` | Submit button text (default `'Submit'`) |
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `wizard` | `WizardHelpers` | context | Wizard instance (optional if inside `WizardProvider`) |
+| `backLabel` | `string` | `'Back'` | Back button text |
+| `nextLabel` | `string` | `'Next'` | Next button text |
+| `submitLabel` | `string` | `'Submit'` | Submit button text (shown on last step) |
 
 ## Example: 3-Step Registration
 
@@ -152,6 +156,7 @@ import {
   WizardStep,
   WizardProgress,
   WizardNavigation,
+  Field,
   required,
   email,
   minLength,
@@ -186,52 +191,21 @@ function RegistrationWizard() {
       <WizardProgress />
 
       <WizardStep id="account">
-        <AccountStep form={wizard.form} />
+        <Field name="email" label="Email" />
+        <Field name="password" label="Password" type="password" />
       </WizardStep>
 
       <WizardStep id="profile">
-        <ProfileStep form={wizard.form} />
+        <Field name="name" label="Full Name" />
+        <Field name="bio" label="Bio" />
       </WizardStep>
 
       <WizardStep id="confirm">
-        <ConfirmStep form={wizard.form} />
+        <p>Review your details and submit.</p>
       </WizardStep>
 
       <WizardNavigation />
     </WizardProvider>
-  )
-}
-
-function AccountStep({ form }) {
-  const emailField = useField(form, 'email')
-  const passwordField = useField(form, 'password')
-
-  return (
-    <div>
-      <input {...emailField.inputProps} placeholder="Email" />
-      <input {...passwordField.inputProps} type="password" placeholder="Password" />
-    </div>
-  )
-}
-
-function ProfileStep({ form }) {
-  const name = useField(form, 'name')
-  const bio = useField(form, 'bio')
-
-  return (
-    <div>
-      <input {...name.inputProps} placeholder="Name" />
-      <textarea {...bio.inputProps} placeholder="Bio" />
-    </div>
-  )
-}
-
-function ConfirmStep({ form }) {
-  return (
-    <div>
-      <p>Email: {form.values.email}</p>
-      <p>Name: {form.values.name}</p>
-    </div>
   )
 }
 ```
@@ -240,13 +214,13 @@ function ConfirmStep({ form }) {
 
 When `persist` is set, the wizard auto-saves to `localStorage` or `sessionStorage`:
 
-- Saves after any form value change (debounced 300ms)
-- Saves on step changes
+- Saves after any form value change, step change, or completed steps change (debounced 300ms)
 - Restores values, step, and completed steps on mount
-- Clears storage after successful submit or reset
+- Clears storage after successful submit or `reset()`
 
 ## Related
 
-- [useForm](/api/forms/use-form) — single-step form
-- [FormStore](/api/forms/form-store) — underlying form instance
-- [Validation](/api/forms/validation) — per-step field validation
+- [useForm](/api/forms/use-form) -- single-step form
+- [FormStore](/api/forms/form-store) -- underlying form instance
+- [Context](/api/forms/context) -- `FormProvider` for the form, `WizardProvider` for the wizard
+- [Validation](/api/forms/validation) -- per-step field validation

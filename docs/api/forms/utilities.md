@@ -19,18 +19,15 @@ import {
 
 Parses a dot/bracket-notation path string into an array of segments.
 
-### Signature
-
 ```ts
 function parsePath(path: string): (string | number)[]
 ```
-
-### Examples
 
 ```ts
 parsePath('user.name')        // ['user', 'name']
 parsePath('items.0.title')    // ['items', 0, 'title']
 parsePath('data[0].name')     // ['data', 0, 'name']
+parsePath('a[0][1].b')        // ['a', 0, 1, 'b']
 parsePath('a[b].c')           // ['a', 'b', 'c']
 parsePath('')                 // []
 ```
@@ -41,13 +38,9 @@ Numeric segments (including inside brackets) are converted to numbers.
 
 Retrieves a value from a nested object by path string.
 
-### Signature
-
 ```ts
 function getPath(obj: any, path: string): unknown
 ```
-
-### Examples
 
 ```ts
 const data = { user: { name: 'Alice', tags: ['admin', 'user'] } }
@@ -58,17 +51,15 @@ getPath(data, 'user.missing')  // undefined
 getPath(data, '')               // data (returns the whole object)
 ```
 
+Returns `undefined` if any segment along the path is nullish.
+
 ## setPath
 
 Immutably sets a value at a path, returning a new object. The original is not modified.
 
-### Signature
-
 ```ts
 function setPath<T>(obj: T, path: string, value: unknown): T
 ```
-
-### Examples
 
 ```ts
 const data = { user: { name: 'Alice' } }
@@ -86,13 +77,13 @@ const withArray = setPath({}, 'items.0.title', 'Hello')
 Because `setPath` returns a **new object**, you must reassign when using it in a loop:
 
 ```ts
-// WRONG — each call creates a new object, but result is never updated
+// WRONG -- each call creates a new object, but result is never updated
 let result = {}
 for (const [key, val] of entries) {
   setPath(result, key, val)  // return value discarded!
 }
 
-// CORRECT — reassign result each iteration
+// CORRECT -- reassign result each iteration
 let result = {}
 for (const [key, val] of entries) {
   result = setPath(result, key, val)
@@ -103,13 +94,9 @@ for (const [key, val] of entries) {
 
 Deep-clones a value. Uses `structuredClone` when available, with fallbacks for `Date`, `RegExp`, `Map`, `Set`, arrays, and plain objects.
 
-### Signature
-
 ```ts
 function deepClone<T>(obj: T): T
 ```
-
-### Examples
 
 ```ts
 const original = { a: [1, 2], b: new Date(), c: { d: 'e' } }
@@ -123,33 +110,25 @@ original.a.length // still 2
 
 Deep comparison of two values. Handles primitives, arrays, plain objects, `Date`, `RegExp`, `Map`, and `Set`.
 
-### Signature
-
 ```ts
 function deepEqual(a: unknown, b: unknown): boolean
 ```
 
-### Examples
-
 ```ts
-deepEqual({ a: 1 }, { a: 1 })                   // true
-deepEqual([1, 2, 3], [1, 2, 3])                  // true
-deepEqual(new Date('2024-01-01'), new Date('2024-01-01'))  // true
-deepEqual({ a: 1 }, { a: 2 })                    // false
-deepEqual(null, undefined)                         // false
+deepEqual({ a: 1 }, { a: 1 })                              // true
+deepEqual([1, 2, 3], [1, 2, 3])                             // true
+deepEqual(new Date('2024-01-01'), new Date('2024-01-01'))    // true
+deepEqual({ a: 1 }, { a: 2 })                               // false
+deepEqual(null, undefined)                                    // false
 ```
 
 ## flattenToPaths
 
 Flattens a nested object into a `Map<string, unknown>` of dot-paths to values. Both leaf values and parent objects/arrays are included.
 
-### Signature
-
 ```ts
 function flattenToPaths(obj: any, prefix?: string): Map<string, unknown>
 ```
-
-### Example
 
 ```ts
 const flat = flattenToPaths({ user: { name: 'Alice', tags: ['a', 'b'] } })
@@ -164,5 +143,5 @@ const flat = flattenToPaths({ user: { name: 'Alice', tags: ['a', 'b'] } })
 
 ## Related
 
-- [FormStore](/api/forms/form-store) — uses these utilities internally
-- [Types — PathsOf, PathValue](/api/forms/types) — type-level path utilities
+- [FormStore](/api/forms/form-store) -- uses these utilities internally
+- [Types -- PathsOf, PathValue](/api/forms/types) -- type-level path utilities

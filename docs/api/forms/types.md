@@ -53,7 +53,7 @@ type DeepPartial<T> = T extends object
   : T
 ```
 
-Recursively makes all properties optional.
+Recursively makes all properties optional. Used by `setValues` and `getChanges`.
 
 ## Path Types
 
@@ -107,12 +107,12 @@ interface ValidatorFunction<T = unknown> {
   (value: T, context?: CrossFieldValidationContext<any>):
     | string
     | undefined
-    | Promise<string | undefined>
+    | Promise<string | undefined>;
 
-  _isAsync?: boolean
-  _isRequired?: boolean
-  _crossField?: boolean
-  _debounce?: number
+  _isAsync?: boolean;
+  _isRequired?: boolean;
+  _crossField?: boolean;
+  _debounce?: number;
 }
 ```
 
@@ -122,9 +122,9 @@ A validator function returns a string error message or `undefined` for success. 
 
 ```ts
 interface ValidationRule<T = unknown> {
-  validate: ValidatorFunction<T>
-  message?: string
-  validateOn?: ValidateOn
+  validate: ValidatorFunction<T>;
+  message?: string;
+  validateOn?: ValidateOn;
 }
 ```
 
@@ -132,8 +132,8 @@ interface ValidationRule<T = unknown> {
 
 ```ts
 interface ValidationResult {
-  success: boolean
-  errors?: Record<string, string[]>
+  success: boolean;
+  errors?: Record<string, string[]>;
 }
 ```
 
@@ -141,10 +141,10 @@ interface ValidationResult {
 
 ```ts
 interface ValidationSchema<TInput = unknown, TOutput = unknown> {
-  parse(data: TInput): TOutput
+  parse(data: TInput): TOutput;
   safeParse?(data: TInput):
     | { success: true; data: TOutput }
-    | { success: false; error: { issues: Array<{ path: (string | number)[]; message: string }> } }
+    | { success: false; error: { issues: Array<{ path: (string | number)[]; message: string }> } };
 }
 ```
 
@@ -154,11 +154,13 @@ The interface that schema adapters (Zod, Valibot, ereoSchema) implement.
 
 ```ts
 interface CrossFieldValidationContext<T> {
-  getValue: <P extends string>(path: P) => unknown
-  getValues: () => T
-  signal?: AbortSignal
+  getValue: <P extends string>(path: P) => unknown;
+  getValues: () => T;
+  signal?: AbortSignal;
 }
 ```
+
+Passed as the second argument to `ValidatorFunction` when cross-field access is needed.
 
 ## Field Types
 
@@ -166,11 +168,11 @@ interface CrossFieldValidationContext<T> {
 
 ```ts
 interface FieldState<V = unknown> {
-  value: V
-  errors: string[]
-  touched: boolean
-  dirty: boolean
-  validating: boolean
+  value: V;
+  errors: string[];
+  touched: boolean;
+  dirty: boolean;
+  validating: boolean;
 }
 ```
 
@@ -178,15 +180,15 @@ interface FieldState<V = unknown> {
 
 ```ts
 interface FieldInputProps<V = unknown> {
-  name: string
-  value: V
-  onChange: (e: any) => void
-  onBlur: (e: any) => void
-  onFocus?: (e: any) => void
-  ref?: (el: HTMLElement | null) => void
-  'aria-invalid'?: boolean
-  'aria-describedby'?: string
-  'aria-required'?: boolean
+  name: string;
+  value: V;
+  onChange: (e: any) => void;
+  onBlur: (e: any) => void;
+  onFocus?: (e: any) => void;
+  ref?: (el: HTMLElement | null) => void;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
+  'aria-required'?: boolean;
 }
 ```
 
@@ -196,13 +198,13 @@ Spread this onto any `<input>`, `<select>`, or `<textarea>`.
 
 ```ts
 interface FieldRegistration<V = unknown> {
-  inputProps: FieldInputProps<V>
-  state: FieldState<V>
-  setValue: (value: V) => void
-  setError: (errors: string[]) => void
-  clearErrors: () => void
-  setTouched: (touched: boolean) => void
-  reset: () => void
+  inputProps: FieldInputProps<V>;
+  state: FieldState<V>;
+  setValue: (value: V) => void;
+  setError: (errors: string[]) => void;
+  clearErrors: () => void;
+  setTouched: (touched: boolean) => void;
+  reset: () => void;
 }
 ```
 
@@ -212,17 +214,17 @@ Returned by `FormStore.register()`.
 
 ```ts
 interface FieldHandle<V = unknown> {
-  inputProps: FieldInputProps<V>
-  value: V
-  errors: string[]
-  touched: boolean
-  dirty: boolean
-  validating: boolean
-  setValue: (value: V) => void
-  setError: (errors: string[]) => void
-  clearErrors: () => void
-  setTouched: (touched: boolean) => void
-  reset: () => void
+  inputProps: FieldInputProps<V>;
+  value: V;
+  errors: string[];
+  touched: boolean;
+  dirty: boolean;
+  validating: boolean;
+  setValue: (value: V) => void;
+  setError: (errors: string[]) => void;
+  clearErrors: () => void;
+  setTouched: (touched: boolean) => void;
+  reset: () => void;
 }
 ```
 
@@ -232,11 +234,11 @@ Returned by `useField()`.
 
 ```ts
 interface FieldOptions<V = unknown> {
-  validate?: ValidatorFunction<V> | ValidatorFunction<V>[]
-  validateOn?: ValidateOn
-  defaultValue?: V
-  transform?: (value: unknown) => V
-  parse?: (event: any) => V
+  validate?: ValidatorFunction<V> | ValidatorFunction<V>[];
+  validateOn?: ValidateOn;
+  defaultValue?: V;
+  transform?: (value: unknown) => V;
+  parse?: (event: any) => V;
 }
 ```
 
@@ -246,9 +248,9 @@ interface FieldOptions<V = unknown> {
 
 ```ts
 interface ArrayFieldItem<T> {
-  id: string
-  value: T
-  index: number
+  id: string;
+  value: T;
+  index: number;
 }
 ```
 
@@ -256,16 +258,16 @@ interface ArrayFieldItem<T> {
 
 ```ts
 interface ArrayFieldHelpers<T> {
-  fields: ArrayFieldItem<T>[]
-  append: (value: T) => void
-  prepend: (value: T) => void
-  insert: (index: number, value: T) => void
-  remove: (index: number) => void
-  swap: (indexA: number, indexB: number) => void
-  move: (from: number, to: number) => void
-  replace: (index: number, value: T) => void
-  replaceAll: (values: T[]) => void
-  clone: (index: number) => void
+  fields: ArrayFieldItem<T>[];
+  append: (value: T) => void;
+  prepend: (value: T) => void;
+  insert: (index: number, value: T) => void;
+  remove: (index: number) => void;
+  swap: (indexA: number, indexB: number) => void;
+  move: (from: number, to: number) => void;
+  replace: (index: number, value: T) => void;
+  replaceAll: (values: T[]) => void;
+  clone: (index: number) => void;
 }
 ```
 
@@ -281,11 +283,13 @@ type FormSubmitState = 'idle' | 'submitting' | 'success' | 'error'
 
 ```ts
 interface SubmitContext<T = unknown> {
-  values: T
-  formData: FormData
-  signal: AbortSignal
+  values: T;
+  formData: FormData;
+  signal: AbortSignal;
 }
 ```
+
+Passed as the second argument to `SubmitHandler`. Includes a `FormData` version of the values and an `AbortSignal` that aborts if a new submission starts.
 
 ### SubmitHandler
 
@@ -300,13 +304,13 @@ type SubmitHandler<T = unknown> = (
 
 ```ts
 interface FormConfig<T extends Record<string, any> = Record<string, any>> {
-  defaultValues: T
-  onSubmit?: SubmitHandler<T>
-  schema?: ValidationSchema<unknown, T>
-  validators?: Partial<Record<FormPath<T>, ValidatorFunction<any> | ValidatorFunction<any>[]>>
-  validateOn?: ValidateOn
-  validateOnMount?: boolean
-  resetOnSubmit?: boolean
+  defaultValues: T;
+  onSubmit?: SubmitHandler<T>;
+  schema?: ValidationSchema<unknown, T>;
+  validators?: Partial<Record<FormPath<T>, ValidatorFunction<any> | ValidatorFunction<any>[]>>;
+  validateOn?: ValidateOn;
+  validateOnMount?: boolean;
+  resetOnSubmit?: boolean;
 }
 ```
 
@@ -314,16 +318,16 @@ interface FormConfig<T extends Record<string, any> = Record<string, any>> {
 
 ```ts
 interface FormState<T = unknown> {
-  values: T
-  errors: Record<string, string[]>
-  formErrors: string[]
-  touched: Set<string>
-  dirty: Set<string>
-  isValid: boolean
-  isDirty: boolean
-  isSubmitting: boolean
-  submitState: FormSubmitState
-  submitCount: number
+  values: T;
+  errors: Record<string, string[]>;
+  formErrors: string[];
+  touched: Set<string>;
+  dirty: Set<string>;
+  isValid: boolean;
+  isDirty: boolean;
+  isSubmitting: boolean;
+  submitState: FormSubmitState;
+  submitCount: number;
 }
 ```
 
@@ -337,50 +341,50 @@ type WatchCallback<V = unknown> = (value: V, path: string) => void
 
 ```ts
 interface FormStoreInterface<T extends Record<string, any>> {
-  values: T
-  config: FormConfig<T>
+  values: T;
+  config: FormConfig<T>;
 
-  getValue<P extends string>(path: P): unknown
-  setValue<P extends string>(path: P, value: unknown): void
-  setValues(partial: DeepPartial<T>): void
-  getValues(): T
-  getSignal(path: string): Signal<unknown>
+  getValue<P extends string>(path: P): unknown;
+  setValue<P extends string>(path: P, value: unknown): void;
+  setValues(partial: DeepPartial<T>): void;
+  getValues(): T;
+  getSignal(path: string): Signal<unknown>;
 
-  getErrors(path: string): Signal<string[]>
-  setErrors(path: string, errors: string[]): void
-  clearErrors(path?: string): void
-  getFormErrors(): Signal<string[]>
-  setFormErrors(errors: string[]): void
+  getErrors(path: string): Signal<string[]>;
+  setErrors(path: string, errors: string[]): void;
+  clearErrors(path?: string): void;
+  getFormErrors(): Signal<string[]>;
+  setFormErrors(errors: string[]): void;
 
-  getTouched(path: string): boolean
-  setTouched(path: string, touched?: boolean): void
-  getDirty(path: string): boolean
-  triggerBlurValidation(path: string): void
-  getFieldValidating(path: string): Signal<boolean>
+  getTouched(path: string): boolean;
+  setTouched(path: string, touched?: boolean): void;
+  getDirty(path: string): boolean;
+  triggerBlurValidation(path: string): void;
+  getFieldValidating(path: string): Signal<boolean>;
 
-  isValid: Signal<boolean>
-  isDirty: Signal<boolean>
-  isSubmitting: Signal<boolean>
-  submitState: Signal<FormSubmitState>
-  submitCount: Signal<number>
+  isValid: Signal<boolean>;
+  isDirty: Signal<boolean>;
+  isSubmitting: Signal<boolean>;
+  submitState: Signal<FormSubmitState>;
+  submitCount: Signal<number>;
 
-  register<V = unknown>(path: string, options?: FieldOptions<V>): FieldRegistration<V>
-  unregister(path: string): void
-  handleSubmit(e?: Event): Promise<void>
-  submitWith(handler: SubmitHandler<T>, submitId?: string): Promise<void>
-  validate(): Promise<boolean>
-  reset(): void
-  resetTo(values: T): void
-  setBaseline(values: T): void
-  getChanges(): DeepPartial<T>
+  register<V = unknown>(path: string, options?: FieldOptions<V>): FieldRegistration<V>;
+  unregister(path: string): void;
+  handleSubmit(e?: Event): Promise<void>;
+  submitWith(handler: SubmitHandler<T>, submitId?: string): Promise<void>;
+  validate(): Promise<boolean>;
+  reset(): void;
+  resetTo(values: T): void;
+  setBaseline(values: T): void;
+  getChanges(): DeepPartial<T>;
 
-  watch(path: string, callback: WatchCallback): () => void
-  watchFields(paths: string[], callback: WatchCallback): () => void
-  subscribe(callback: () => void): () => void
+  watch(path: string, callback: WatchCallback): () => void;
+  watchFields(paths: string[], callback: WatchCallback): () => void;
+  subscribe(callback: () => void): () => void;
 
-  toJSON(): T
-  toFormData(): FormData
-  dispose(): void
+  toJSON(): T;
+  toFormData(): FormData;
+  dispose(): void;
 }
 ```
 
@@ -390,20 +394,22 @@ interface FormStoreInterface<T extends Record<string, any>> {
 
 ```ts
 interface ActionResult<T = unknown> {
-  success: boolean
-  data?: T
-  errors?: Record<string, string[]>
+  success: boolean;
+  data?: T;
+  errors?: Record<string, string[]>;
 }
 ```
+
+When `errors` is present, keys are dot-notation field paths. An empty string key (`''`) represents form-level errors.
 
 ### FormActionConfig
 
 ```ts
 interface FormActionConfig<T, TResult = unknown> {
-  schema?: ValidationSchema<unknown, T>
-  onSubmit: (values: T) => Promise<ActionResult<TResult>>
-  onSuccess?: (result: TResult) => void
-  onError?: (errors: Record<string, string[]>) => void
+  schema?: ValidationSchema<unknown, T>;
+  onSubmit: (values: T) => Promise<ActionResult<TResult>>;
+  onSuccess?: (result: TResult) => void;
+  onError?: (errors: Record<string, string[]>) => void;
 }
 ```
 
@@ -413,9 +419,9 @@ interface FormActionConfig<T, TResult = unknown> {
 
 ```ts
 interface WizardStepConfig {
-  id: string
-  fields?: string[]
-  validate?: () => Promise<boolean> | boolean
+  id: string;
+  fields?: string[];
+  validate?: () => Promise<boolean> | boolean;
 }
 ```
 
@@ -423,11 +429,11 @@ interface WizardStepConfig {
 
 ```ts
 interface WizardConfig<T extends Record<string, any>> {
-  steps: WizardStepConfig[]
-  form: FormConfig<T>
-  persist?: 'localStorage' | 'sessionStorage' | false
-  persistKey?: string
-  onComplete?: SubmitHandler<T>
+  steps: WizardStepConfig[];
+  form: FormConfig<T>;
+  persist?: 'localStorage' | 'sessionStorage' | false;
+  persistKey?: string;
+  onComplete?: SubmitHandler<T>;
 }
 ```
 
@@ -435,13 +441,13 @@ interface WizardConfig<T extends Record<string, any>> {
 
 ```ts
 interface WizardState {
-  currentStep: number
-  currentStepId: string
-  completedSteps: Set<string>
-  totalSteps: number
-  isFirst: boolean
-  isLast: boolean
-  progress: number
+  currentStep: number;
+  currentStepId: string;
+  completedSteps: Set<string>;
+  totalSteps: number;
+  isFirst: boolean;
+  isLast: boolean;
+  progress: number;
 }
 ```
 
@@ -449,19 +455,19 @@ interface WizardState {
 
 ```ts
 interface WizardHelpers<T extends Record<string, any>> {
-  form: FormStore<T>
-  currentStep: Signal<number>
-  completedSteps: Signal<Set<string>>
-  state: WizardState
-  next: () => Promise<boolean>
-  prev: () => void
-  goTo: (stepIdOrIndex: string | number) => void
-  submit: () => Promise<void>
-  reset: () => void
-  dispose: () => void
-  getStepConfig: (index: number) => WizardStepConfig | undefined
-  canGoNext: () => boolean
-  canGoPrev: () => boolean
+  form: FormStore<T>;
+  currentStep: Signal<number>;
+  completedSteps: Signal<Set<string>>;
+  state: WizardState;
+  next: () => Promise<boolean>;
+  prev: () => void;
+  goTo: (stepIdOrIndex: string | number) => void;
+  submit: () => Promise<void>;
+  reset: () => void;
+  dispose: () => void;
+  getStepConfig: (index: number) => WizardStepConfig | undefined;
+  canGoNext: () => boolean;
+  canGoPrev: () => boolean;
 }
 ```
 
@@ -470,16 +476,16 @@ interface WizardHelpers<T extends Record<string, any>> {
 ### FieldComponentProps
 
 ```ts
-interface FieldComponentProps<T, K extends string = string> {
-  form?: FormStoreInterface<T>
-  name: K
-  type?: string
-  label?: string
-  placeholder?: string
-  required?: boolean
-  disabled?: boolean
-  className?: string
-  children?: (field: FieldHandle<PathValue<T, K>>) => ReactNode
+interface FieldComponentProps<T extends Record<string, any>, K extends string = string> {
+  form?: FormStoreInterface<T>;
+  name: K;
+  type?: string;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+  children?: (field: FieldHandle<PathValue<T, K>>) => ReactNode;
 }
 ```
 
@@ -488,9 +494,9 @@ interface FieldComponentProps<T, K extends string = string> {
 ```ts
 interface TextareaFieldProps<T, K extends string = string>
   extends FieldComponentProps<T, K> {
-  rows?: number
-  cols?: number
-  maxLength?: number
+  rows?: number;
+  cols?: number;
+  maxLength?: number;
 }
 ```
 
@@ -499,23 +505,25 @@ interface TextareaFieldProps<T, K extends string = string>
 ```ts
 interface SelectFieldProps<T, K extends string = string>
   extends FieldComponentProps<T, K> {
-  options: Array<{ value: string; label: string; disabled?: boolean }>
-  multiple?: boolean
+  options: Array<{ value: string; label: string; disabled?: boolean }>;
+  multiple?: boolean;
 }
 ```
 
 ### FieldArrayComponentProps
 
 ```ts
-interface FieldArrayComponentProps<T, K extends string = string> {
-  form?: FormStoreInterface<T>
-  name: K
-  children: (helpers: ArrayFieldHelpers<any>) => ReactNode
+interface FieldArrayComponentProps<T extends Record<string, any>, K extends string = string> {
+  form?: FormStoreInterface<T>;
+  name: K;
+  children: (helpers: ArrayFieldHelpers<any>) => ReactNode;
 }
 ```
 
 ## Related
 
-- [FormStore](/api/forms/form-store) — implements `FormStoreInterface`
-- [Validation](/api/forms/validation) — `ValidatorFunction` implementations
-- [useField](/api/forms/use-field) — returns `FieldHandle`
+- [FormStore](/api/forms/form-store) -- implements `FormStoreInterface`
+- [Validation](/api/forms/validation) -- `ValidatorFunction` implementations
+- [useField](/api/forms/use-field) -- returns `FieldHandle`
+- [useFieldArray](/api/forms/use-field-array) -- returns `ArrayFieldHelpers`
+- [Wizard](/api/forms/wizard) -- `WizardConfig` and `WizardState` usage
