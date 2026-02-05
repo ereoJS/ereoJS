@@ -6,8 +6,15 @@
  * Usage: bunx create-ereo my-app
  */
 
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 import { mkdir } from 'node:fs/promises';
+
+/**
+ * Read the CLI's own version to use as the @ereo/* dependency version.
+ * All @ereo packages are published at the same version.
+ */
+const pkgJsonPath = join(dirname(import.meta.dir), 'package.json');
+const EREO_VERSION = `^${(await Bun.file(pkgJsonPath).json()).version}`;
 
 /**
  * Available templates.
@@ -110,6 +117,84 @@ function parseArgs(args: string[]): {
 }
 
 /**
+ * Generate an optimized multi-stage Dockerfile for production.
+ */
+function generateDockerfile(typescript: boolean): string {
+  const tsconfigCopy = typescript
+    ? `COPY --from=builder --chown=ereo:ereo /app/tsconfig.json  ./\n`
+    : '';
+
+  return `# syntax=docker/dockerfile:1
+
+# ---- Stage 1: Install production dependencies ----
+FROM oven/bun:1-slim AS deps
+WORKDIR /app
+COPY package.json bun.lockb* ./
+RUN --mount=type=cache,target=/root/.bun/install/cache \\
+    bun install --frozen-lockfile --production --ignore-scripts
+
+# ---- Stage 2: Install all deps + build ----
+FROM oven/bun:1-slim AS builder
+WORKDIR /app
+COPY package.json bun.lockb* ./
+RUN --mount=type=cache,target=/root/.bun/install/cache \\
+    bun install --frozen-lockfile --ignore-scripts
+COPY . .
+RUN bun run build
+
+# ---- Stage 3: Production image ----
+FROM oven/bun:1-slim AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Non-root user for security
+RUN groupadd --system --gid 1001 ereo && \\
+    useradd --system --uid 1001 --gid ereo --no-create-home ereo
+
+# Copy only what's needed to run
+COPY --from=deps    --chown=ereo:ereo /app/node_modules ./node_modules
+COPY --from=builder --chown=ereo:ereo /app/.ereo        ./.ereo
+COPY --from=builder --chown=ereo:ereo /app/package.json  ./
+COPY --from=builder --chown=ereo:ereo /app/ereo.config.* ./
+${tsconfigCopy}COPY --from=builder --chown=ereo:ereo /app/app           ./app
+COPY --from=builder --chown=ereo:ereo /app/public        ./public
+
+USER ereo
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
+  CMD bun -e "fetch('http://localhost:3000').then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"
+
+CMD ["bun", "run", "start"]
+`;
+}
+
+/**
+ * Generate a .dockerignore to keep the build context small.
+ */
+function generateDockerignore(): string {
+  return `node_modules
+dist
+.ereo
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+Dockerfile
+*.log
+*.md
+.DS_Store
+.vscode
+.idea
+coverage
+*.tgz
+`;
+}
+
+/**
  * Generate a minimal project.
  */
 async function generateMinimalProject(
@@ -135,12 +220,12 @@ async function generateMinimalProject(
       start: 'ereo start',
     },
     dependencies: {
-      '@ereo/core': '^0.1.7',
-      '@ereo/router': '^0.1.7',
-      '@ereo/server': '^0.1.7',
-      '@ereo/client': '^0.1.7',
-      '@ereo/data': '^0.1.7',
-      '@ereo/cli': '^0.1.7',
+      '@ereo/core': EREO_VERSION,
+      '@ereo/router': EREO_VERSION,
+      '@ereo/server': EREO_VERSION,
+      '@ereo/client': EREO_VERSION,
+      '@ereo/data': EREO_VERSION,
+      '@ereo/cli': EREO_VERSION,
       react: '^18.2.0',
       'react-dom': '^18.2.0',
     },
@@ -402,6 +487,12 @@ export default function HomePage() {
     join(projectDir, '.gitignore'),
     'node_modules\n.ereo\ndist\n*.log\n.DS_Store\n.env\n.env.local'
   );
+
+  // Dockerfile
+  await Bun.write(join(projectDir, 'Dockerfile'), generateDockerfile(typescript));
+
+  // .dockerignore
+  await Bun.write(join(projectDir, '.dockerignore'), generateDockerignore());
 }
 
 /**
@@ -437,20 +528,20 @@ async function generateTailwindProject(
       typecheck: 'tsc --noEmit',
     },
     dependencies: {
-      '@ereo/core': '^0.1.7',
-      '@ereo/router': '^0.1.7',
-      '@ereo/server': '^0.1.7',
-      '@ereo/client': '^0.1.7',
-      '@ereo/data': '^0.1.7',
-      '@ereo/cli': '^0.1.7',
-      '@ereo/runtime-bun': '^0.1.7',
-      '@ereo/plugin-tailwind': '^0.1.7',
+      '@ereo/core': EREO_VERSION,
+      '@ereo/router': EREO_VERSION,
+      '@ereo/server': EREO_VERSION,
+      '@ereo/client': EREO_VERSION,
+      '@ereo/data': EREO_VERSION,
+      '@ereo/cli': EREO_VERSION,
+      '@ereo/runtime-bun': EREO_VERSION,
+      '@ereo/plugin-tailwind': EREO_VERSION,
       react: '^18.2.0',
       'react-dom': '^18.2.0',
     },
     devDependencies: {
-      '@ereo/testing': '^0.1.7',
-      '@ereo/dev-inspector': '^0.1.7',
+      '@ereo/testing': EREO_VERSION,
+      '@ereo/dev-inspector': EREO_VERSION,
       ...(ts
         ? {
             '@types/bun': '^1.1.0',
@@ -1138,7 +1229,7 @@ export default function HomePage({ loaderData }${ts ? ': HomePageProps' : ''}) {
           {/* Version Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-sm font-medium mb-6 opacity-0 animate-slide-up">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse-slow" />
-            v0.1.7
+            v${EREO_VERSION.slice(1)}
           </div>
 
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 opacity-0 animate-slide-up delay-100">
@@ -1861,6 +1952,16 @@ dist
 .env.local
 .env.*.local`
   );
+
+  // ============================================================================
+  // Dockerfile
+  // ============================================================================
+  await Bun.write(join(projectDir, 'Dockerfile'), generateDockerfile(typescript));
+
+  // ============================================================================
+  // .dockerignore
+  // ============================================================================
+  await Bun.write(join(projectDir, '.dockerignore'), generateDockerignore());
 
   // ============================================================================
   // .env.example
