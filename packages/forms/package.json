@@ -1,0 +1,60 @@
+{
+  "name": "@ereo/forms",
+  "version": "0.1.22",
+  "license": "MIT",
+  "author": "Ereo Team",
+  "homepage": "https://ereo.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ereojs/ereo.git",
+    "directory": "packages/forms"
+  },
+  "bugs": {
+    "url": "https://github.com/ereojs/ereo/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target browser --external @ereo/state --external @ereo/client --external @ereo/data --external react --external react-dom && bun run build:types",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target browser --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ereo/state": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@ereo/client": {
+      "optional": true
+    },
+    "@ereo/data": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "valibot": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.4.0"
+  }
+}

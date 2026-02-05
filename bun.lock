@@ -18,7 +18,7 @@
     },
     "packages/bundler": {
       "name": "@ereo/bundler",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
         "@ereo/router": "workspace:*",
@@ -35,7 +35,7 @@
     },
     "packages/cli": {
       "name": "@ereo/cli",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "bin": {
         "ereo": "./dist/index.js",
       },
@@ -52,7 +52,7 @@
     },
     "packages/client": {
       "name": "@ereo/client",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
       },
@@ -68,7 +68,7 @@
     },
     "packages/client-sdk": {
       "name": "@ereo/client-sdk",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -79,7 +79,7 @@
     },
     "packages/core": {
       "name": "@ereo/core",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "devDependencies": {
         "@types/bun": "^1.1.0",
         "typescript": "^5.4.0",
@@ -90,7 +90,7 @@
     },
     "packages/create-ereo": {
       "name": "create-ereo",
-      "version": "0.1.8",
+      "version": "0.1.22",
       "bin": {
         "create-ereo": "./dist/index.js",
       },
@@ -100,7 +100,7 @@
     },
     "packages/data": {
       "name": "@ereo/data",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -111,7 +111,7 @@
     },
     "packages/db": {
       "name": "@ereo/db",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -122,7 +122,7 @@
     },
     "packages/db-drizzle": {
       "name": "@ereo/db-drizzle",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/db": "^0.1.7",
         "drizzle-orm": "^0.30.0",
@@ -149,7 +149,7 @@
     },
     "packages/db-surrealdb": {
       "name": "@ereo/db-surrealdb",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/db": "^0.1.7",
       },
@@ -164,7 +164,7 @@
     },
     "packages/deploy-cloudflare": {
       "name": "@ereo/deploy-cloudflare",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -175,7 +175,7 @@
     },
     "packages/deploy-vercel": {
       "name": "@ereo/deploy-vercel",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -186,7 +186,7 @@
     },
     "packages/dev-inspector": {
       "name": "@ereo/dev-inspector",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
         "@ereo/data": "^0.1.7",
@@ -199,7 +199,7 @@
     },
     "packages/examples/blog": {
       "name": "@ereo/example-blog",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/cli": "workspace:*",
         "@ereo/client": "workspace:*",
@@ -220,7 +220,7 @@
     },
     "packages/examples/minimal": {
       "name": "@ereo/example-minimal",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/cli": "workspace:*",
         "@ereo/client": "workspace:*",
@@ -237,9 +237,25 @@
         "typescript": "^5.4.0",
       },
     },
+    "packages/forms": {
+      "name": "@ereo/forms",
+      "version": "0.1.22",
+      "dependencies": {
+        "@ereo/state": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.1.0",
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "typescript": "^5.4.0",
+      },
+      "peerDependencies": {
+        "react": "^18.2.0",
+      },
+    },
     "packages/plugin-auth": {
       "name": "@ereo/auth",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
         "@ereo/router": "workspace:*",
@@ -251,7 +267,7 @@
     },
     "packages/plugin-db": {
       "name": "@ereo/plugin-db",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -262,7 +278,7 @@
     },
     "packages/plugin-images": {
       "name": "@ereo/plugin-images",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
         "sharp": "^0.33.0",
@@ -279,7 +295,7 @@
     },
     "packages/plugin-tailwind": {
       "name": "@ereo/plugin-tailwind",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
       },
@@ -296,7 +312,7 @@
     },
     "packages/router": {
       "name": "@ereo/router",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -307,7 +323,7 @@
     },
     "packages/router-conventions": {
       "name": "@ereo/router-conventions",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
         "@ereo/router": "^0.1.7",
@@ -319,7 +335,7 @@
     },
     "packages/rpc": {
       "name": "@ereo/rpc",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -335,7 +351,7 @@
     },
     "packages/rsc": {
       "name": "@ereo/rsc",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "^0.1.7",
       },
@@ -350,7 +366,7 @@
     },
     "packages/runtime-bun": {
       "name": "@ereo/runtime-bun",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
         "@ereo/server": "workspace:*",
@@ -362,7 +378,7 @@
     },
     "packages/server": {
       "name": "@ereo/server",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
         "@ereo/data": "workspace:*",
@@ -381,9 +397,9 @@
     },
     "packages/state": {
       "name": "@ereo/state",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
-        "@ereo/core": "^0.1.7",
+        "@ereo/core": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.1.0",
@@ -396,7 +412,7 @@
     },
     "packages/testing": {
       "name": "@ereo/testing",
-      "version": "0.1.7",
+      "version": "0.1.22",
       "dependencies": {
         "@ereo/core": "workspace:*",
         "@ereo/data": "workspace:*",
@@ -445,6 +461,8 @@
     "@ereo/example-blog": ["@ereo/example-blog@workspace:packages/examples/blog"],
 
     "@ereo/example-minimal": ["@ereo/example-minimal@workspace:packages/examples/minimal"],
+
+    "@ereo/forms": ["@ereo/forms@workspace:packages/forms"],
 
     "@ereo/plugin-db": ["@ereo/plugin-db@workspace:packages/plugin-db"],
 
