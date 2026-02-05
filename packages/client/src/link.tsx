@@ -7,6 +7,7 @@
 import * as React from 'react';
 import { navigate, router, onNavigate, type NavigationState } from './navigation';
 import { prefetch } from './prefetch';
+import type { ViewTransitionOptions } from './view-transition';
 
 /**
  * Prefetch strategy for links.
@@ -31,6 +32,8 @@ export interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorEle
   state?: unknown;
   /** Reload the document instead of client navigation */
   reloadDocument?: boolean;
+  /** Use View Transitions API for this navigation. Pass true or options object. */
+  viewTransition?: boolean | ViewTransitionOptions;
   /** Children elements */
   children?: React.ReactNode;
 }
@@ -99,6 +102,7 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
     preventScrollReset = false,
     state,
     reloadDocument = false,
+    viewTransition,
     onClick,
     onMouseEnter,
     onFocus,
@@ -149,14 +153,14 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(function Link
 
       // Prevent default and navigate
       event.preventDefault();
-      navigate(destination, { replace, state });
+      navigate(destination, { replace, state, viewTransition });
 
       // Handle scroll reset
       if (!preventScrollReset && typeof window !== 'undefined') {
         window.scrollTo(0, 0);
       }
     },
-    [onClick, destination, replace, state, isExternal, reloadDocument, preventScrollReset]
+    [onClick, destination, replace, state, isExternal, reloadDocument, preventScrollReset, viewTransition]
   );
 
   // Handle hover for 'intent' prefetch

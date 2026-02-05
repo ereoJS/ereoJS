@@ -25,7 +25,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun --external @ereo/core --external @ereo/router --external @ereo/data --external react --external react-dom && bun run build:types",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --external @ereo/core --external @ereo/client --external @ereo/router --external @ereo/data --external react --external react-dom && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
     "dev": "bun build ./src/index.ts --outdir ./dist --target bun --watch",
     "test": "bun test",
@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@ereo/core": "workspace:*",
+    "@ereo/client": "workspace:*",
     "@ereo/router": "workspace:*",
     "@ereo/data": "workspace:*"
   },

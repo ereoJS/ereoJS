@@ -5,7 +5,7 @@
  */
 
 import type { ReactElement } from 'react';
-import type { Route, RouteMatch, AppContext, LoaderFunction } from '@ereo/core';
+import type { Route, RouteMatch, AppContext, LoaderFunction, LinkDescriptor } from '@ereo/core';
 import { serializeLoaderData } from '@ereo/data';
 
 /**
@@ -34,6 +34,8 @@ export interface ShellTemplate {
   title?: string;
   /** Meta tags */
   meta?: Array<{ name?: string; property?: string; content: string }>;
+  /** Link descriptors for stylesheets, preloads, etc. */
+  links?: LinkDescriptor[];
   /** Head content */
   head?: string;
   /** Body attributes */
@@ -85,6 +87,16 @@ export function createShell(options: {
     .map((href) => `<link rel="stylesheet" href="${href}">`)
     .join('\n    ');
 
+  const linkTags = (shell.links || [])
+    .map((link) => {
+      const attrs = Object.entries(link)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => `${k}="${escapeAttr(String(v))}"`)
+        .join(' ');
+      return `<link ${attrs}>`;
+    })
+    .join('\n    ');
+
   const scriptTags = scripts
     .map((src) => `<script type="module" src="${src}"></script>`)
     .join('\n    ');
@@ -100,6 +112,7 @@ export function createShell(options: {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     ${shell.title ? `<title>${shell.title}</title>` : ''}
     ${metaTags}
+    ${linkTags}
     ${styleLinks}
     ${shell.head || ''}
 </head>

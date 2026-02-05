@@ -30,6 +30,9 @@ export {
   useActionData,
   useNavigation,
   useError,
+  useParams,
+  useSearchParams,
+  useLocation,
   // Context accessors (for internal use)
   useLoaderDataContext,
   useActionDataContext,
@@ -40,11 +43,15 @@ export {
   ActionDataContext,
   NavigationContext,
   ErrorContext,
+  ParamsContext,
+  LocationContext,
   // Providers
   LoaderDataProvider,
   ActionDataProvider,
   NavigationProvider,
   ErrorProvider,
+  ParamsProvider,
+  LocationProvider,
   EreoProvider,
 } from './hooks';
 
@@ -55,10 +62,15 @@ export type {
   ActionDataContextValue,
   NavigationContextValue,
   ErrorContextValue,
+  ParamsContextValue,
+  LocationContextValue,
+  LocationState,
   LoaderDataProviderProps,
   ActionDataProviderProps,
   NavigationProviderProps,
   ErrorProviderProps,
+  ParamsProviderProps,
+  LocationProviderProps,
   EreoProviderProps,
 } from './hooks';
 
@@ -177,6 +189,17 @@ export type {
   FormNavigationState,
 } from './form';
 
+// Revalidation
+export {
+  getRoutesToRevalidate,
+  checkShouldRevalidate,
+} from './revalidation';
+
+export type {
+  RevalidationRoute,
+  RevalidationContext,
+} from './revalidation';
+
 // Error Boundary
 export {
   ErrorBoundary,
@@ -196,10 +219,101 @@ export type {
   UseErrorBoundaryReturn,
 } from './error-boundary';
 
+// Outlet (Nested Layout Rendering)
+export {
+  Outlet,
+  useOutletContext,
+  OutletProvider,
+  OutletElementContext,
+  OutletDataContext,
+} from './outlet';
+
+export type {
+  OutletProps,
+  OutletProviderProps,
+  OutletElementContextValue,
+  OutletContextValue,
+} from './outlet';
+
+// Matches (useMatches + handle metadata)
+export {
+  useMatches,
+  MatchesProvider,
+  MatchesContext,
+} from './matches';
+
+export type {
+  RouteMatchData,
+  MatchesContextValue,
+  MatchesProviderProps,
+} from './matches';
+
+// Route Links (per-route CSS/asset management)
+export {
+  renderLinkTags,
+  updateRouteLinks,
+  removeRouteLinks,
+  getActiveLinksCount,
+} from './route-links';
+
+// Client Data (clientLoader / clientAction runtime)
+export {
+  executeClientLoader,
+  executeClientAction,
+  shouldHydrateClientLoader,
+} from './client-data';
+
+// Lazy Route Loading (code splitting)
+export {
+  registerLazyRoute,
+  registerLazyRoutes,
+  loadLazyRoute,
+  preloadLazyRoute,
+  isRouteLoaded,
+  getLoadedModule,
+  getLazyRouteIds,
+  clearLazyRouteCache,
+  resetLazyRoutes,
+  setRouteManifest,
+  getRouteManifestEntry,
+  preloadRouteAssets,
+} from './lazy-route';
+
+export type {
+  RouteModuleLoader,
+  LazyRouteDefinition,
+  RouteManifestEntry,
+  RouteManifest,
+} from './lazy-route';
+
 // Await Component (for Streaming SSR)
 export { Await, resolveAwait } from './await';
 
 export type { AwaitProps, DeferredData } from './await';
+
+// Scroll Restoration (React component)
+export { ScrollRestoration, clearScrollPositions } from './scroll-restoration';
+
+export type { ScrollRestorationProps } from './scroll-restoration';
+
+// View Transitions API
+export {
+  startViewTransition,
+  isViewTransitionSupported,
+  enableViewTransitions,
+  disableViewTransitions,
+  areViewTransitionsEnabled,
+  resetViewTransitions,
+  useViewTransitionState,
+  ViewTransitionContext,
+} from './view-transition';
+
+export type {
+  ViewTransition,
+  ViewTransitionOptions,
+  ViewTransitionState,
+  ViewTransitionContextValue,
+} from './view-transition';
 
 /**
  * Initialize the client runtime.

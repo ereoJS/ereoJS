@@ -38,6 +38,13 @@ import type {
   MetaDescriptor,
   InferParams,
   RouteConfig,
+  ShouldRevalidateFunction,
+  ClientLoaderArgs,
+  ClientLoaderFunction,
+  ClientActionArgs,
+  ClientActionFunction,
+  LinkDescriptor,
+  LinksFunction,
 } from '@ereo/core';
 
 // ============================================================================
@@ -184,6 +191,10 @@ interface RouteBuilderState<
   searchParamsSchema?: ValidationSchema<unknown>;
   hashParamsSchema?: ValidationSchema<unknown>;
   actionBodySchema?: ValidationSchema<ActionBody>;
+  shouldRevalidate?: ShouldRevalidateFunction;
+  clientLoader?: ClientLoaderFunction;
+  clientAction?: ClientActionFunction;
+  links?: LinksFunction;
   config?: RouteConfig;
   cache?: CacheOptions;
 }
@@ -234,6 +245,26 @@ export interface RouteBuilder<
    * Set route configuration.
    */
   configure(config: RouteConfig): RouteBuilder<Path, Params>;
+
+  /**
+   * Control when this route's loader re-runs after navigations/mutations.
+   */
+  shouldRevalidate(fn: ShouldRevalidateFunction): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a client-side loader (runs in browser).
+   */
+  clientLoader(fn: ClientLoaderFunction): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a client-side action (runs in browser).
+   */
+  clientAction(fn: ClientActionFunction): RouteBuilder<Path, Params>;
+
+  /**
+   * Define per-route link descriptors (stylesheets, preloads, etc.).
+   */
+  links(fn: LinksFunction): RouteBuilder<Path, Params>;
 
   /**
    * Build the route definition (no loader case).
@@ -309,6 +340,26 @@ export interface RouteBuilderWithLoader<
   configure(config: RouteConfig): RouteBuilderWithLoader<Path, Params, LoaderData>;
 
   /**
+   * Control when this route's loader re-runs after navigations/mutations.
+   */
+  shouldRevalidate(fn: ShouldRevalidateFunction): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define a client-side loader (runs in browser).
+   */
+  clientLoader(fn: ClientLoaderFunction): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define a client-side action (runs in browser).
+   */
+  clientAction(fn: ClientActionFunction): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define per-route link descriptors (stylesheets, preloads, etc.).
+   */
+  links(fn: LinksFunction): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
    * Build the route definition.
    */
   build(): RouteDefinition<Path, Params, LoaderData, never, never>;
@@ -356,6 +407,26 @@ export interface RouteBuilderWithLoaderAndAction<
   configure(config: RouteConfig): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
 
   /**
+   * Control when this route's loader re-runs after navigations/mutations.
+   */
+  shouldRevalidate(fn: ShouldRevalidateFunction): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define a client-side loader (runs in browser).
+   */
+  clientLoader(fn: ClientLoaderFunction): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define a client-side action (runs in browser).
+   */
+  clientAction(fn: ClientActionFunction): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define per-route link descriptors (stylesheets, preloads, etc.).
+   */
+  links(fn: LinksFunction): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
    * Build the route definition.
    */
   build(): RouteDefinition<Path, Params, LoaderData, ActionData, ActionBody>;
@@ -399,6 +470,18 @@ export interface RouteDefinition<
 
   /** Cache options */
   cache?: CacheOptions;
+
+  /** Controls when this route's loader re-runs */
+  shouldRevalidate?: ShouldRevalidateFunction;
+
+  /** Client-side loader (runs in browser) */
+  clientLoader?: ClientLoaderFunction;
+
+  /** Client-side action (runs in browser) */
+  clientAction?: ClientActionFunction;
+
+  /** Per-route link descriptors */
+  links?: LinksFunction;
 
   /** Search params schema */
   searchParamsSchema?: ValidationSchema<unknown>;
@@ -497,11 +580,35 @@ export function defineRoute<Path extends string>(
       return createBuilder();
     },
 
+    shouldRevalidate(fn: ShouldRevalidateFunction) {
+      state.shouldRevalidate = fn;
+      return createBuilder();
+    },
+
+    clientLoader(fn: ClientLoaderFunction) {
+      state.clientLoader = fn;
+      return createBuilder();
+    },
+
+    clientAction(fn: ClientActionFunction) {
+      state.clientAction = fn;
+      return createBuilder();
+    },
+
+    links(fn: LinksFunction) {
+      state.links = fn;
+      return createBuilder();
+    },
+
     build(): RouteDefinition<Path, Params, never, never, never> {
       return {
         path,
         middleware: state.middleware,
         config: state.config,
+        shouldRevalidate: state.shouldRevalidate,
+        clientLoader: state.clientLoader,
+        clientAction: state.clientAction,
+        links: state.links,
         searchParamsSchema: state.searchParamsSchema,
         hashParamsSchema: state.hashParamsSchema,
         _types: {} as RouteDefinition<Path, Params, never, never, never>['_types'],
@@ -550,6 +657,26 @@ export function defineRoute<Path extends string>(
       return createBuilderWithLoader<LoaderData>();
     },
 
+    shouldRevalidate(fn: ShouldRevalidateFunction) {
+      state.shouldRevalidate = fn;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    clientLoader(fn: ClientLoaderFunction) {
+      state.clientLoader = fn;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    clientAction(fn: ClientActionFunction) {
+      state.clientAction = fn;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    links(fn: LinksFunction) {
+      state.links = fn;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
     build(): RouteDefinition<Path, Params, LoaderData, never, never> {
       return {
         path,
@@ -559,6 +686,10 @@ export function defineRoute<Path extends string>(
         middleware: state.middleware,
         config: state.config,
         cache: state.cache,
+        shouldRevalidate: state.shouldRevalidate,
+        clientLoader: state.clientLoader,
+        clientAction: state.clientAction,
+        links: state.links,
         searchParamsSchema: state.searchParamsSchema,
         hashParamsSchema: state.hashParamsSchema,
         _types: {} as RouteDefinition<Path, Params, LoaderData, never, never>['_types'],
@@ -603,6 +734,26 @@ export function defineRoute<Path extends string>(
       return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
     },
 
+    shouldRevalidate(fn: ShouldRevalidateFunction) {
+      state.shouldRevalidate = fn;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    clientLoader(fn: ClientLoaderFunction) {
+      state.clientLoader = fn;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    clientAction(fn: ClientActionFunction) {
+      state.clientAction = fn;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    links(fn: LinksFunction) {
+      state.links = fn;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
     build(): RouteDefinition<Path, Params, LoaderData, ActionData, ActionBody> {
       return {
         path,
@@ -613,6 +764,10 @@ export function defineRoute<Path extends string>(
         middleware: state.middleware,
         config: state.config,
         cache: state.cache,
+        shouldRevalidate: state.shouldRevalidate,
+        clientLoader: state.clientLoader,
+        clientAction: state.clientAction,
+        links: state.links,
         searchParamsSchema: state.searchParamsSchema,
         hashParamsSchema: state.hashParamsSchema,
         actionBodySchema: state.actionBodySchema as ValidationSchema<ActionBody>,

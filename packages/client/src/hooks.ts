@@ -16,6 +16,9 @@ import {
   createElement,
 } from 'react';
 
+import type { RouteParams } from '@ereo/core';
+import { MatchesProvider, type RouteMatchData } from './matches';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -83,6 +86,38 @@ export interface ErrorContextValue {
   clearError: () => void;
 }
 
+/**
+ * Location object returned by useLocation.
+ */
+export interface LocationState {
+  /** Current pathname (e.g., '/users/123') */
+  pathname: string;
+  /** Query string including '?' (e.g., '?page=1&sort=name') */
+  search: string;
+  /** Hash including '#' (e.g., '#section-2') */
+  hash: string;
+  /** History state object */
+  state: unknown;
+  /** Unique key for this location entry (useful for scroll restoration) */
+  key: string;
+}
+
+/**
+ * Context value for route params.
+ */
+export interface ParamsContextValue {
+  params: RouteParams;
+  setParams: (params: RouteParams) => void;
+}
+
+/**
+ * Context value for location.
+ */
+export interface LocationContextValue {
+  location: LocationState;
+  setLocation: (location: LocationState) => void;
+}
+
 // ============================================================================
 // Contexts
 // ============================================================================
@@ -110,6 +145,18 @@ export const NavigationContext: Context<NavigationContextValue | null> =
  */
 export const ErrorContext: Context<ErrorContextValue | null> =
   createContext<ErrorContextValue | null>(null);
+
+/**
+ * Context for route params - populated during route matching.
+ */
+export const ParamsContext: Context<ParamsContextValue | null> =
+  createContext<ParamsContextValue | null>(null);
+
+/**
+ * Context for current location - populated from window.location or SSR.
+ */
+export const LocationContext: Context<LocationContextValue | null> =
+  createContext<LocationContextValue | null>(null);
 
 // ============================================================================
 // Hooks
@@ -247,6 +294,165 @@ export function useError(): Error | undefined {
   }
 
   return context.error;
+}
+
+/**
+ * Access the current route params.
+ *
+ * @returns The params object for the current matched route
+ * @throws Error if used outside of EreoProvider
+ *
+ * @example
+ * ```tsx
+ * // In a route file at /users/[id].tsx
+ * function UserProfile() {
+ *   const { id } = useParams<{ id: string }>();
+ *   return <div>User ID: {id}</div>;
+ * }
+ * ```
+ */
+export function useParams<T extends RouteParams = RouteParams>(): T {
+  const context = useContext(ParamsContext);
+
+  if (context === null) {
+    throw new Error(
+      'useParams must be used within an EreoProvider. ' +
+        'Make sure your component is wrapped with <EreoProvider>.'
+    );
+  }
+
+  return context.params as T;
+}
+
+/**
+ * Access and modify the current URL search parameters.
+ *
+ * Returns a tuple of [searchParams, setSearchParams] similar to useState.
+ * setSearchParams updates the URL without a full page reload.
+ *
+ * @returns [URLSearchParams, setter function]
+ *
+ * @example
+ * ```tsx
+ * function ProductList() {
+ *   const [searchParams, setSearchParams] = useSearchParams();
+ *   const page = searchParams.get('page') || '1';
+ *   const sort = searchParams.get('sort') || 'name';
+ *
+ *   return (
+ *     <div>
+ *       <button onClick={() => setSearchParams({ page: '2', sort })}>
+ *         Next Page
+ *       </button>
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useSearchParams(): [
+  URLSearchParams,
+  (
+    nextParams:
+      | URLSearchParams
+      | Record<string, string>
+      | ((prev: URLSearchParams) => URLSearchParams | Record<string, string>),
+    options?: { replace?: boolean }
+  ) => void,
+] {
+  const locationCtx = useContext(LocationContext);
+
+  if (locationCtx === null) {
+    throw new Error(
+      'useSearchParams must be used within an EreoProvider. ' +
+        'Make sure your component is wrapped with <EreoProvider>.'
+    );
+  }
+
+  const searchParams = useMemo(
+    () => new URLSearchParams(locationCtx.location.search),
+    [locationCtx.location.search]
+  );
+
+  const setSearchParams = useCallback(
+    (
+      nextParams:
+        | URLSearchParams
+        | Record<string, string>
+        | ((prev: URLSearchParams) => URLSearchParams | Record<string, string>),
+      options?: { replace?: boolean }
+    ) => {
+      let resolved: URLSearchParams;
+      if (typeof nextParams === 'function') {
+        const result = nextParams(searchParams);
+        resolved =
+          result instanceof URLSearchParams
+            ? result
+            : new URLSearchParams(result);
+      } else if (nextParams instanceof URLSearchParams) {
+        resolved = nextParams;
+      } else {
+        resolved = new URLSearchParams(nextParams);
+      }
+
+      const newSearch = resolved.toString();
+      const newLocation: LocationState = {
+        ...locationCtx.location,
+        search: newSearch ? `?${newSearch}` : '',
+        key: Math.random().toString(36).slice(2, 10),
+      };
+
+      locationCtx.setLocation(newLocation);
+
+      // Update the browser URL if in browser environment
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.search = newLocation.search;
+        if (options?.replace) {
+          window.history.replaceState(locationCtx.location.state, '', url.toString());
+        } else {
+          window.history.pushState(locationCtx.location.state, '', url.toString());
+        }
+      }
+    },
+    [searchParams, locationCtx]
+  );
+
+  return [searchParams, setSearchParams];
+}
+
+/**
+ * Access the current location.
+ *
+ * @returns The current location object with pathname, search, hash, state, and key
+ * @throws Error if used outside of EreoProvider
+ *
+ * @example
+ * ```tsx
+ * function Breadcrumbs() {
+ *   const location = useLocation();
+ *   const segments = location.pathname.split('/').filter(Boolean);
+ *
+ *   return (
+ *     <nav>
+ *       {segments.map((seg, i) => (
+ *         <span key={i}> / {seg}</span>
+ *       ))}
+ *     </nav>
+ *   );
+ * }
+ * ```
+ */
+export function useLocation(): LocationState {
+  const context = useContext(LocationContext);
+
+  if (context === null) {
+    throw new Error(
+      'useLocation must be used within an EreoProvider. ' +
+        'Make sure your component is wrapped with <EreoProvider>.'
+    );
+  }
+
+  return context.location;
 }
 
 // ============================================================================
@@ -401,6 +607,64 @@ export function ErrorProvider({
 }
 
 /**
+ * Props for ParamsProvider.
+ */
+export interface ParamsProviderProps {
+  children: ReactNode;
+  initialParams?: RouteParams;
+}
+
+/**
+ * Provider for route params context.
+ */
+export function ParamsProvider({
+  children,
+  initialParams = {},
+}: ParamsProviderProps): ReactNode {
+  const [params, setParams] = useState<RouteParams>(initialParams);
+
+  const value = useMemo<ParamsContextValue>(
+    () => ({ params, setParams }),
+    [params]
+  );
+
+  return createElement(ParamsContext.Provider, { value }, children);
+}
+
+/**
+ * Props for LocationProvider.
+ */
+export interface LocationProviderProps {
+  children: ReactNode;
+  initialLocation?: LocationState;
+}
+
+const defaultLocation: LocationState = {
+  pathname: '/',
+  search: '',
+  hash: '',
+  state: null,
+  key: 'default',
+};
+
+/**
+ * Provider for location context.
+ */
+export function LocationProvider({
+  children,
+  initialLocation = defaultLocation,
+}: LocationProviderProps): ReactNode {
+  const [location, setLocation] = useState<LocationState>(initialLocation);
+
+  const value = useMemo<LocationContextValue>(
+    () => ({ location, setLocation }),
+    [location]
+  );
+
+  return createElement(LocationContext.Provider, { value }, children);
+}
+
+/**
  * Props for EreoProvider - the combined provider that wraps your app.
  */
 export interface EreoProviderProps {
@@ -413,6 +677,12 @@ export interface EreoProviderProps {
   navigationState?: NavigationStateHook;
   /** Initial error (if rendering an error boundary) */
   error?: Error;
+  /** Initial route params (from route matching) */
+  params?: RouteParams;
+  /** Initial location (from request URL or window.location) */
+  location?: LocationState;
+  /** Initial matched routes (from route matching) */
+  matches?: RouteMatchData[];
 }
 
 /**
@@ -438,16 +708,28 @@ export function EreoProvider({
   actionData,
   navigationState,
   error,
+  params,
+  location,
+  matches,
 }: EreoProviderProps): ReactNode {
   return createElement(
-    ErrorProvider,
-    { initialError: error, children: createElement(
-      NavigationProvider,
-      { initialState: navigationState, children: createElement(
-        ActionDataProvider,
-        { initialData: actionData, children: createElement(
-          LoaderDataProvider,
-          { initialData: loaderData, children }
+    MatchesProvider,
+    { initialMatches: matches, children: createElement(
+      LocationProvider,
+      { initialLocation: location, children: createElement(
+        ParamsProvider,
+        { initialParams: params, children: createElement(
+          ErrorProvider,
+          { initialError: error, children: createElement(
+            NavigationProvider,
+            { initialState: navigationState, children: createElement(
+              ActionDataProvider,
+              { initialData: actionData, children: createElement(
+                LoaderDataProvider,
+                { initialData: loaderData, children }
+              )}
+            )}
+          )}
         )}
       )}
     )}

@@ -1050,6 +1050,884 @@ describe('@ereo/server - BunServer', () => {
   });
 
   // ============================================================================
+  // Layout Loader Tests
+  // ============================================================================
+  describe('Layout loaders', () => {
+    test('runs layout loaders in parallel with route loader', async () => {
+      server = createServer({ port: 4610, logging: false });
+
+      const executionOrder: string[] = [];
+
+      const RootLayout = ({ loaderData, children }: any) =>
+        createElement('div', { id: 'root-layout' },
+          createElement('header', null, `User: ${loaderData?.user}`),
+          children
+        );
+
+      const PageComponent = ({ loaderData }: any) =>
+        createElement('main', null, `Posts: ${loaderData?.posts?.length}`);
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/posts',
+            path: '/posts',
+            file: '/posts.tsx',
+            module: {
+              default: PageComponent,
+              loader: async () => {
+                executionOrder.push('route-loader');
+                return { posts: [{ id: 1 }, { id: 2 }] };
+              },
+            },
+          },
+          params: {},
+          pathname: '/posts',
+          layouts: [
+            {
+              id: '_layout',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                default: RootLayout,
+                loader: async () => {
+                  executionOrder.push('layout-loader');
+                  return { user: 'Alice' };
+                },
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4610/posts');
+      expect(response.status).toBe(200);
+
+      const html = await response.text();
+      expect(html).toContain('User: Alice');
+      expect(html).toContain('Posts: 2');
+      // Both loaders ran
+      expect(executionOrder).toContain('route-loader');
+      expect(executionOrder).toContain('layout-loader');
+    });
+
+    test('layout loader data is included in JSON response', async () => {
+      server = createServer({ port: 4611, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/dashboard',
+            path: '/dashboard',
+            file: '/dashboard.tsx',
+            module: {
+              loader: async () => ({ stats: { views: 100 } }),
+            },
+          },
+          params: {},
+          pathname: '/dashboard',
+          layouts: [
+            {
+              id: 'root-layout',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                loader: async () => ({ user: { name: 'Bob', role: 'admin' } }),
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4611/dashboard', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json.data).toEqual({ stats: { views: 100 } });
+      expect(json.layoutData).toBeDefined();
+      expect(json.layoutData['root-layout']).toEqual({
+        user: { name: 'Bob', role: 'admin' },
+      });
+    });
+
+    test('JSON response has no layoutData when no layout loaders exist', async () => {
+      server = createServer({ port: 4612, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/simple',
+            path: '/simple',
+            file: '/simple.tsx',
+            module: {
+              loader: async () => ({ data: 'hello' }),
+            },
+          },
+          params: {},
+          pathname: '/simple',
+          layouts: [
+            {
+              id: 'root-layout',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                default: ({ children }: any) => createElement('div', null, children),
+                // No loader
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4612/simple', {
+        headers: { Accept: 'application/json' },
+      });
+
+      const json = await response.json();
+      expect(json.data).toEqual({ data: 'hello' });
+      expect(json.layoutData).toBeUndefined();
+    });
+
+    test('layout loader returning Response (redirect) short-circuits', async () => {
+      server = createServer({ port: 4613, logging: false });
+
+      let routeLoaderCalled = false;
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/protected',
+            path: '/protected',
+            file: '/protected.tsx',
+            module: {
+              loader: async () => {
+                routeLoaderCalled = true;
+                return { data: 'secret' };
+              },
+            },
+          },
+          params: {},
+          pathname: '/protected',
+          layouts: [
+            {
+              id: 'auth-layout',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                loader: async () => {
+                  // Auth check fails — redirect
+                  return new Response(null, {
+                    status: 302,
+                    headers: { Location: '/login' },
+                  });
+                },
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4613/protected', {
+        redirect: 'manual',
+      });
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toBe('/login');
+    });
+
+    test('multiple nested layouts with loaders', async () => {
+      server = createServer({ port: 4614, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/admin/users',
+            path: '/admin/users',
+            file: '/admin/users.tsx',
+            module: {
+              loader: async () => ({ users: ['Alice', 'Bob'] }),
+            },
+          },
+          params: {},
+          pathname: '/admin/users',
+          layouts: [
+            {
+              id: 'root-layout',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                loader: async () => ({ theme: 'dark' }),
+              },
+            },
+            {
+              id: 'admin-layout',
+              path: '/admin',
+              file: '/admin/_layout.tsx',
+              layout: true,
+              module: {
+                loader: async () => ({ permissions: ['read', 'write'] }),
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4614/admin/users', {
+        headers: { Accept: 'application/json' },
+      });
+
+      const json = await response.json();
+      expect(json.data).toEqual({ users: ['Alice', 'Bob'] });
+      expect(json.layoutData['root-layout']).toEqual({ theme: 'dark' });
+      expect(json.layoutData['admin-layout']).toEqual({
+        permissions: ['read', 'write'],
+      });
+    });
+
+    test('layout without loader gets null loaderData', async () => {
+      server = createServer({ port: 4615, logging: false, renderMode: 'string' });
+
+      const RootLayout = ({ loaderData, children }: any) => {
+        return createElement('html', null,
+          createElement('body', null,
+            createElement('div', { 'data-layout-data': String(loaderData) }),
+            children
+          )
+        );
+      };
+
+      const PageComponent = ({ loaderData }: any) =>
+        createElement('p', null, loaderData.message);
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/page',
+            path: '/page',
+            file: '/page.tsx',
+            module: {
+              default: PageComponent,
+              loader: async () => ({ message: 'Hello' }),
+            },
+          },
+          params: {},
+          pathname: '/page',
+          layouts: [
+            {
+              id: 'root',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                default: RootLayout,
+                // No loader — loaderData should be null
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4615/page');
+      const html = await response.text();
+      expect(html).toContain('data-layout-data="null"');
+      expect(html).toContain('Hello');
+    });
+  });
+
+  // ============================================================================
+  // Outlet integration tests
+  // ============================================================================
+  describe('Outlet integration with server rendering', () => {
+    test('layout using Outlet renders child content', async () => {
+      server = createServer({ port: 4616, logging: false, renderMode: 'string' });
+
+      // Import Outlet for use in the layout component
+      const { Outlet } = await import('@ereo/client');
+
+      // Layout that uses <Outlet /> instead of {children}
+      const OutletLayout = ({ loaderData }: any) =>
+        createElement('html', null,
+          createElement('body', null,
+            createElement('nav', null, `Theme: ${loaderData?.theme}`),
+            createElement(Outlet)
+          )
+        );
+
+      const PageComponent = ({ loaderData }: any) =>
+        createElement('main', null, `Content: ${loaderData?.title}`);
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/home',
+            path: '/home',
+            file: '/home.tsx',
+            module: {
+              default: PageComponent,
+              loader: async () => ({ title: 'Welcome' }),
+            },
+          },
+          params: {},
+          pathname: '/home',
+          layouts: [
+            {
+              id: 'outlet-root',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                default: OutletLayout,
+                loader: async () => ({ theme: 'light' }),
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4616/home');
+      const html = await response.text();
+      expect(html).toContain('Theme: light');
+      expect(html).toContain('Content: Welcome');
+    });
+
+    test('nested layouts both using Outlet', async () => {
+      server = createServer({ port: 4617, logging: false, renderMode: 'string' });
+
+      const { Outlet } = await import('@ereo/client');
+
+      const RootLayout = () =>
+        createElement('html', null,
+          createElement('body', null,
+            createElement('div', { id: 'root' }, createElement(Outlet))
+          )
+        );
+
+      const DashLayout = ({ loaderData }: any) =>
+        createElement('div', { id: 'dashboard' },
+          createElement('aside', null, `Role: ${loaderData?.role}`),
+          createElement(Outlet)
+        );
+
+      const PageComponent = ({ loaderData }: any) =>
+        createElement('article', null, `Stats: ${loaderData?.count}`);
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/dash/stats',
+            path: '/dash/stats',
+            file: '/dash/stats.tsx',
+            module: {
+              default: PageComponent,
+              loader: async () => ({ count: 42 }),
+            },
+          },
+          params: {},
+          pathname: '/dash/stats',
+          layouts: [
+            {
+              id: 'root',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: { default: RootLayout },
+            },
+            {
+              id: 'dash',
+              path: '/dash',
+              file: '/dash/_layout.tsx',
+              layout: true,
+              module: {
+                default: DashLayout,
+                loader: async () => ({ role: 'admin' }),
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4617/dash/stats');
+      const html = await response.text();
+      expect(html).toContain('id="root"');
+      expect(html).toContain('id="dashboard"');
+      expect(html).toContain('Role: admin');
+      expect(html).toContain('Stats: 42');
+    });
+
+    test('backwards compatible: layout using children prop still works', async () => {
+      server = createServer({ port: 4618, logging: false, renderMode: 'string' });
+
+      // Layout that uses {children} (old pattern)
+      const ChildrenLayout = ({ children }: any) =>
+        createElement('html', null,
+          createElement('body', null,
+            createElement('header', null, 'Old Style'),
+            children
+          )
+        );
+
+      const PageComponent = ({ loaderData }: any) =>
+        createElement('p', null, `Data: ${loaderData?.value}`);
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/old',
+            path: '/old',
+            file: '/old.tsx',
+            module: {
+              default: PageComponent,
+              loader: async () => ({ value: 'works' }),
+            },
+          },
+          params: {},
+          pathname: '/old',
+          layouts: [
+            {
+              id: 'compat-root',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: { default: ChildrenLayout },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4618/old');
+      const html = await response.text();
+      expect(html).toContain('Old Style');
+      expect(html).toContain('Data: works');
+    });
+  });
+
+  // ============================================================================
+  // Links route export tests
+  // ============================================================================
+  describe('Links route export', () => {
+    test('route links are rendered in HTML head', async () => {
+      server = createServer({ port: 4619, logging: false, renderMode: 'string' });
+
+      const PageComponent = ({ loaderData }: any) =>
+        createElement('div', null, `Page: ${loaderData?.title}`);
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/styled',
+            path: '/styled',
+            file: '/styled.tsx',
+            module: {
+              default: PageComponent,
+              loader: async () => ({ title: 'Styled Page' }),
+              links: () => [
+                { rel: 'stylesheet', href: '/styles/dashboard.css' },
+                { rel: 'preload', href: '/fonts/inter.woff2', as: 'font', type: 'font/woff2' },
+              ],
+            },
+          },
+          params: {},
+          pathname: '/styled',
+          layouts: [],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4619/styled');
+      const html = await response.text();
+      expect(html).toContain('rel="stylesheet"');
+      expect(html).toContain('href="/styles/dashboard.css"');
+      expect(html).toContain('as="font"');
+      expect(html).toContain('Page: Styled Page');
+    });
+
+    test('links from route and layout are both included', async () => {
+      server = createServer({ port: 4620, logging: false, renderMode: 'string' });
+
+      const Layout = ({ children }: any) =>
+        createElement('html', null, createElement('body', null, children));
+
+      const Page = ({ loaderData }: any) =>
+        createElement('p', null, loaderData?.text);
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/page',
+            path: '/page',
+            file: '/page.tsx',
+            module: {
+              default: Page,
+              loader: async () => ({ text: 'hello' }),
+              links: () => [{ rel: 'stylesheet', href: '/page.css' }],
+            },
+          },
+          params: {},
+          pathname: '/page',
+          layouts: [
+            {
+              id: 'root',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                default: Layout,
+                links: () => [{ rel: 'stylesheet', href: '/layout.css' }],
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      // JSON response includes links
+      const jsonRes = await fetch('http://localhost:4620/page', {
+        headers: { Accept: 'application/json' },
+      });
+      const json = await jsonRes.json();
+      expect(json.links).toBeDefined();
+      expect(json.links).toHaveLength(2);
+      expect(json.links[0].href).toBe('/layout.css');
+      expect(json.links[1].href).toBe('/page.css');
+    });
+
+    test('JSON response has no links when routes have none', async () => {
+      server = createServer({ port: 4621, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/no-links',
+            path: '/no-links',
+            file: '/no-links.tsx',
+            module: {
+              loader: async () => ({ ok: true }),
+            },
+          },
+          params: {},
+          pathname: '/no-links',
+          layouts: [],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4621/no-links', {
+        headers: { Accept: 'application/json' },
+      });
+      const json = await response.json();
+      expect(json.links).toBeUndefined();
+    });
+  });
+
+  // ============================================================================
+  // useMatches / handle tests
+  // ============================================================================
+  describe('useMatches data in JSON response', () => {
+    test('JSON response includes matches with handle metadata', async () => {
+      server = createServer({ port: 4622, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/users/[id]',
+            path: '/users/:id',
+            file: '/users/[id].tsx',
+            module: {
+              loader: async () => ({ user: { name: 'Alice' } }),
+              handle: { breadcrumb: 'User Profile', analytics: 'user-view' },
+            },
+          },
+          params: { id: '42' },
+          pathname: '/users/42',
+          layouts: [
+            {
+              id: 'root',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                handle: { breadcrumb: 'Home' },
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4622/users/42', {
+        headers: { Accept: 'application/json' },
+      });
+      const json = await response.json();
+
+      expect(json.matches).toBeDefined();
+      expect(json.matches).toHaveLength(2);
+
+      // First match is the layout (outermost)
+      expect(json.matches[0].id).toBe('root');
+      expect(json.matches[0].handle.breadcrumb).toBe('Home');
+      expect(json.matches[0].data).toBeNull(); // no layout loader
+
+      // Second match is the route (innermost)
+      expect(json.matches[1].id).toBe('/users/[id]');
+      expect(json.matches[1].handle.breadcrumb).toBe('User Profile');
+      expect(json.matches[1].handle.analytics).toBe('user-view');
+      expect(json.matches[1].data.user.name).toBe('Alice');
+      expect(json.matches[1].params.id).toBe('42');
+    });
+
+    test('matches include layout loader data', async () => {
+      server = createServer({ port: 4623, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/settings',
+            path: '/settings',
+            file: '/settings.tsx',
+            module: {
+              loader: async () => ({ settings: { theme: 'dark' } }),
+            },
+          },
+          params: {},
+          pathname: '/settings',
+          layouts: [
+            {
+              id: 'app-layout',
+              path: '/',
+              file: '/_layout.tsx',
+              layout: true,
+              module: {
+                loader: async () => ({ user: { name: 'Bob' } }),
+                handle: { breadcrumb: 'App' },
+              },
+            },
+          ],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4623/settings', {
+        headers: { Accept: 'application/json' },
+      });
+      const json = await response.json();
+
+      expect(json.matches[0].data).toEqual({ user: { name: 'Bob' } });
+      expect(json.matches[1].data).toEqual({ settings: { theme: 'dark' } });
+    });
+
+    test('matches with no handle have handle undefined', async () => {
+      server = createServer({ port: 4624, logging: false });
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/plain',
+            path: '/plain',
+            file: '/plain.tsx',
+            module: {
+              loader: async () => ({ ok: true }),
+              // No handle export
+            },
+          },
+          params: {},
+          pathname: '/plain',
+          layouts: [],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4624/plain', {
+        headers: { Accept: 'application/json' },
+      });
+      const json = await response.json();
+
+      expect(json.matches).toHaveLength(1);
+      expect(json.matches[0].id).toBe('/plain');
+      expect(json.matches[0].handle).toBeUndefined();
+    });
+  });
+
+  // ============================================================================
+  // notFound() helper tests
+  // ============================================================================
+  describe('notFound() helper', () => {
+    test('loader throwing notFound() returns 404', async () => {
+      server = createServer({ port: 4625, logging: false });
+
+      const { notFound } = await import('@ereo/core');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/users/[id]',
+            path: '/users/:id',
+            file: '/users/[id].tsx',
+            module: {
+              loader: async ({ params }: any) => {
+                if (params.id === '999') {
+                  notFound({ message: 'User not found' });
+                }
+                return { user: { id: params.id } };
+              },
+            },
+          },
+          params: { id: '999' },
+          pathname: '/users/999',
+          layouts: [],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4625/users/999', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.status).toBe(404);
+      const json = await response.json();
+      expect(json.error).toBe('Not Found');
+      expect(json.status).toBe(404);
+      expect(json.data).toEqual({ message: 'User not found' });
+    });
+
+    test('loader throwing notFound() without data returns 404', async () => {
+      server = createServer({ port: 4626, logging: false });
+
+      const { notFound } = await import('@ereo/core');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/missing',
+            path: '/missing',
+            file: '/missing.tsx',
+            module: {
+              loader: async () => {
+                notFound();
+              },
+            },
+          },
+          params: {},
+          pathname: '/missing',
+          layouts: [],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4626/missing', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.status).toBe(404);
+      const json = await response.json();
+      expect(json.error).toBe('Not Found');
+    });
+
+    test('action throwing notFound() returns 404', async () => {
+      server = createServer({ port: 4627, logging: false });
+
+      const { notFound } = await import('@ereo/core');
+
+      const mockRouter = {
+        match: () => ({
+          route: {
+            id: '/api/delete',
+            path: '/api/delete',
+            file: '/api/delete.tsx',
+            module: {
+              action: async () => {
+                notFound({ resource: 'item', id: '123' });
+              },
+            },
+          },
+          params: {},
+          pathname: '/api/delete',
+          layouts: [],
+        }),
+        loadModule: async () => {},
+      };
+
+      server.setRouter(mockRouter as any);
+      await server.start();
+
+      const response = await fetch('http://localhost:4627/api/delete', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.status).toBe(404);
+      const json = await response.json();
+      expect(json.data).toEqual({ resource: 'item', id: '123' });
+    });
+  });
+
+  // ============================================================================
   // Bun-Native API Tests (Critical Fix Verification)
   // ============================================================================
   describe('Bun-native API usage (no Node.js Buffer/stream)', () => {
@@ -1184,5 +2062,538 @@ describe('@ereo/server - BunServer', () => {
       // Content-Length should match actual byte length
       expect(parseInt(contentLength!)).toBe(body.byteLength);
     });
+  });
+});
+
+// =================================================================
+// Headers Function Tests
+// =================================================================
+
+describe('@ereo/server - Headers Function', () => {
+  let server: any;
+
+  test('route headers function adds custom headers to JSON response', async () => {
+    server = createServer({ port: 4628, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/headers-test',
+          path: '/headers-test',
+          file: '/headers-test.tsx',
+          module: {
+            loader: async () => ({ message: 'hello' }),
+            headers: ({ parentHeaders }: any) => ({
+              'Cache-Control': 'max-age=300',
+              'X-Custom': 'test-value',
+            }),
+          },
+        },
+        params: {},
+        pathname: '/headers-test',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4628/headers-test', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.headers.get('Cache-Control')).toBe('max-age=300');
+      expect(response.headers.get('X-Custom')).toBe('test-value');
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('route headers function adds custom headers to HTML response', async () => {
+    server = createServer({ port: 4629, logging: false, renderMode: 'string' });
+
+    const PageComponent = () => createElement('div', null, 'Test');
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/headers-html',
+          path: '/headers-html',
+          file: '/headers-html.tsx',
+          module: {
+            default: PageComponent,
+            loader: async () => ({ data: 'test' }),
+            headers: () => ({
+              'Cache-Control': 'public, max-age=600',
+              'X-Powered-By': 'ereo',
+            }),
+          },
+        },
+        params: {},
+        pathname: '/headers-html',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4629/headers-html');
+
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=600');
+      expect(response.headers.get('X-Powered-By')).toBe('ereo');
+      // Content-Type should still be html
+      expect(response.headers.get('Content-Type')).toContain('text/html');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('layout headers cascade to route headers via parentHeaders', async () => {
+    server = createServer({ port: 4630, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/cascade-test',
+          path: '/cascade-test',
+          file: '/cascade-test.tsx',
+          module: {
+            loader: async () => ({ data: 'test' }),
+            headers: ({ parentHeaders }: any) => {
+              // Route sees the parent layout's headers
+              const headers = new Headers(parentHeaders);
+              headers.set('X-Route', 'true');
+              return headers;
+            },
+          },
+        },
+        params: {},
+        pathname: '/cascade-test',
+        layouts: [
+          {
+            id: 'root-layout',
+            path: '/',
+            file: '/layout.tsx',
+            module: {
+              headers: () => ({
+                'Cache-Control': 'public, max-age=3600',
+                'X-Layout': 'root',
+              }),
+            },
+          },
+        ],
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4630/cascade-test', {
+        headers: { Accept: 'application/json' },
+      });
+
+      // Route's headers function received parentHeaders from layout
+      // and added X-Route while keeping layout headers
+      expect(response.headers.get('X-Route')).toBe('true');
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600');
+      expect(response.headers.get('X-Layout')).toBe('root');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('headers function does not override Content-Type', async () => {
+    server = createServer({ port: 4631, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/no-override',
+          path: '/no-override',
+          file: '/no-override.tsx',
+          module: {
+            loader: async () => ({}),
+            headers: () => ({
+              'Content-Type': 'text/plain',
+              'X-Works': 'yes',
+            }),
+          },
+        },
+        params: {},
+        pathname: '/no-override',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4631/no-override', {
+        headers: { Accept: 'application/json' },
+      });
+
+      // Content-Type should not be overridden
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+      // But custom header should be set
+      expect(response.headers.get('X-Works')).toBe('yes');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('action response headers are passed to headers function', async () => {
+    server = createServer({ port: 4632, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/action-headers',
+          path: '/action-headers',
+          file: '/action-headers.tsx',
+          module: {
+            action: async () => ({ success: true }),
+            headers: ({ actionHeaders }: any) => ({
+              'X-Action-Seen': actionHeaders ? 'yes' : 'no',
+              'X-Custom-Action': 'processed',
+            }),
+          },
+        },
+        params: {},
+        pathname: '/action-headers',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4632/action-headers', {
+        method: 'POST',
+        body: JSON.stringify({ test: true }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(response.headers.get('X-Custom-Action')).toBe('processed');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('no headers function means no extra headers', async () => {
+    server = createServer({ port: 4633, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/no-headers-fn',
+          path: '/no-headers-fn',
+          file: '/no-headers-fn.tsx',
+          module: {
+            loader: async () => ({ data: 'test' }),
+          },
+        },
+        params: {},
+        pathname: '/no-headers-fn',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4633/no-headers-fn', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+      expect(response.headers.get('X-Custom')).toBeNull();
+    } finally {
+      server.stop();
+    }
+  });
+});
+
+// =================================================================
+// Inline Route Middleware Tests
+// =================================================================
+
+describe('@ereo/server - Inline Route Middleware', () => {
+  let server: any;
+
+  test('inline middleware runs before loader', async () => {
+    server = createServer({ port: 4634, logging: false, renderMode: 'string' });
+
+    const executionOrder: string[] = [];
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/mw-test',
+          path: '/mw-test',
+          file: '/mw-test.tsx',
+          module: {
+            loader: async () => {
+              executionOrder.push('loader');
+              return { data: 'loaded' };
+            },
+            middleware: [
+              async (req: Request, ctx: any, next: () => Promise<Response>) => {
+                executionOrder.push('middleware');
+                return next();
+              },
+            ],
+          },
+        },
+        params: {},
+        pathname: '/mw-test',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      await fetch('http://localhost:4634/mw-test', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(executionOrder).toEqual(['middleware', 'loader']);
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('inline middleware can short-circuit with a Response', async () => {
+    server = createServer({ port: 4635, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/mw-block',
+          path: '/mw-block',
+          file: '/mw-block.tsx',
+          module: {
+            loader: async () => ({ data: 'should not reach' }),
+            middleware: [
+              async (req: Request, ctx: any, next: () => Promise<Response>) => {
+                // Block the request - don't call next()
+                return new Response(JSON.stringify({ error: 'Blocked by middleware' }), {
+                  status: 403,
+                  headers: { 'Content-Type': 'application/json' },
+                });
+              },
+            ],
+          },
+        },
+        params: {},
+        pathname: '/mw-block',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4635/mw-block', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.status).toBe(403);
+      const data = await response.json();
+      expect(data.error).toBe('Blocked by middleware');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('multiple inline middlewares execute in order', async () => {
+    server = createServer({ port: 4636, logging: false, renderMode: 'string' });
+
+    const order: string[] = [];
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/mw-chain',
+          path: '/mw-chain',
+          file: '/mw-chain.tsx',
+          module: {
+            loader: async () => {
+              order.push('loader');
+              return { data: 'test' };
+            },
+            middleware: [
+              async (req: Request, ctx: any, next: () => Promise<Response>) => {
+                order.push('mw1-before');
+                const res = await next();
+                order.push('mw1-after');
+                return res;
+              },
+              async (req: Request, ctx: any, next: () => Promise<Response>) => {
+                order.push('mw2-before');
+                const res = await next();
+                order.push('mw2-after');
+                return res;
+              },
+            ],
+          },
+        },
+        params: {},
+        pathname: '/mw-chain',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      await fetch('http://localhost:4636/mw-chain', {
+        headers: { Accept: 'application/json' },
+      });
+
+      // Middleware executes in order, wrapping the loader
+      expect(order).toEqual(['mw1-before', 'mw2-before', 'loader', 'mw2-after', 'mw1-after']);
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('inline middleware can modify the response', async () => {
+    server = createServer({ port: 4637, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/mw-modify',
+          path: '/mw-modify',
+          file: '/mw-modify.tsx',
+          module: {
+            loader: async () => ({ data: 'test' }),
+            middleware: [
+              async (req: Request, ctx: any, next: () => Promise<Response>) => {
+                const response = await next();
+                // Add a custom header to the response
+                const newResponse = new Response(response.body, {
+                  status: response.status,
+                  headers: response.headers,
+                });
+                newResponse.headers.set('X-Middleware', 'applied');
+                return newResponse;
+              },
+            ],
+          },
+        },
+        params: {},
+        pathname: '/mw-modify',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4637/mw-modify', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.headers.get('X-Middleware')).toBe('applied');
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('inline middleware works with actions (POST)', async () => {
+    server = createServer({ port: 4638, logging: false, renderMode: 'string' });
+
+    const order: string[] = [];
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/mw-action',
+          path: '/mw-action',
+          file: '/mw-action.tsx',
+          module: {
+            action: async () => {
+              order.push('action');
+              return { success: true };
+            },
+            middleware: [
+              async (req: Request, ctx: any, next: () => Promise<Response>) => {
+                order.push('middleware');
+                return next();
+              },
+            ],
+          },
+        },
+        params: {},
+        pathname: '/mw-action',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4638/mw-action', {
+        method: 'POST',
+        body: JSON.stringify({ test: true }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(response.status).toBe(200);
+      expect(order).toEqual(['middleware', 'action']);
+    } finally {
+      server.stop();
+    }
+  });
+
+  test('route without inline middleware works normally', async () => {
+    server = createServer({ port: 4639, logging: false, renderMode: 'string' });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/no-mw',
+          path: '/no-mw',
+          file: '/no-mw.tsx',
+          module: {
+            loader: async () => ({ data: 'no middleware' }),
+          },
+        },
+        params: {},
+        pathname: '/no-mw',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    try {
+      const response = await fetch('http://localhost:4639/no-mw', {
+        headers: { Accept: 'application/json' },
+      });
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.data.data).toBe('no middleware');
+    } finally {
+      server.stop();
+    }
   });
 });

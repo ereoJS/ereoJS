@@ -69,6 +69,9 @@ export type {
   EnvTypes,
 } from './env';
 
+// Not Found Helper (value export)
+export { notFound, NotFoundError } from './types';
+
 // Types
 export type {
   // Configuration
@@ -118,6 +121,20 @@ export type {
   LoaderFunction,
   ActionFunction,
   LoaderData,
+
+  // Revalidation
+  ShouldRevalidateArgs,
+  ShouldRevalidateFunction,
+
+  // Client Loader / Client Action
+  ClientLoaderArgs,
+  ClientLoaderFunction,
+  ClientActionArgs,
+  ClientActionFunction,
+
+  // Links
+  LinkDescriptor,
+  LinksFunction,
 
   // Meta
   MetaArgs,

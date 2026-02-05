@@ -391,9 +391,20 @@ export interface RouteModule {
   default?: ComponentType<RouteComponentProps>;
   loader?: LoaderFunction;
   action?: ActionFunction;
+  /** Client-side loader — runs in the browser before/instead of fetching from server */
+  clientLoader?: ClientLoaderFunction;
+  /** Client-side action — runs in the browser before/instead of posting to server */
+  clientAction?: ClientActionFunction;
   meta?: MetaFunction;
   headers?: HeadersFunction;
+  /** Per-route link descriptors for CSS/assets injected into <head> */
+  links?: LinksFunction;
   handle?: RouteHandle;
+  /**
+   * Inline middleware exported directly from the route module.
+   * Runs before the route's loader/action, after file-based middleware.
+   */
+  middleware?: MiddlewareHandler[];
   ErrorBoundary?: ComponentType<ErrorBoundaryProps>;
   /** Route-level configuration export */
   config?: RouteConfig;
@@ -401,6 +412,12 @@ export interface RouteModule {
   params?: ParamValidationSchema;
   /** Search parameter validation schema */
   searchParams?: SearchParamValidationSchema;
+  /**
+   * Controls whether this route's loader should re-run after a navigation or mutation.
+   * Return `true` to revalidate, `false` to skip.
+   * If not exported, the framework defaults to always revalidating.
+   */
+  shouldRevalidate?: ShouldRevalidateFunction;
 }
 
 export interface RouteHandle {
@@ -434,6 +451,236 @@ export type ActionFunction<T = unknown, P = RouteParams> = (
 export interface LoaderData<T = unknown> {
   data: T;
   headers?: Headers;
+}
+
+// ============================================================================
+// Revalidation Types
+// ============================================================================
+
+/**
+ * Arguments passed to the `shouldRevalidate` function exported from route files.
+ *
+ * This function controls whether a route's loader should re-run after a navigation
+ * or mutation. Without it, every loader on the page re-runs on every navigation,
+ * which is wasteful for routes whose data hasn't changed.
+ */
+export interface ShouldRevalidateArgs {
+  /** The URL being navigated away from */
+  currentUrl: URL;
+  /** The URL being navigated to */
+  nextUrl: URL;
+  /** Current route params */
+  currentParams: RouteParams;
+  /** Next route params */
+  nextParams: RouteParams;
+  /** The form method if this revalidation was triggered by an action (e.g., 'POST') */
+  formMethod?: string;
+  /** The form action URL if this revalidation was triggered by an action */
+  formAction?: string;
+  /** The form data if this revalidation was triggered by an action */
+  formData?: FormData;
+  /** The action result if this revalidation was triggered by an action */
+  actionResult?: unknown;
+  /** Whether the framework would revalidate by default (true in most cases) */
+  defaultShouldRevalidate: boolean;
+}
+
+/**
+ * Function exported from route files to control when a route's loader re-runs.
+ *
+ * Return `true` to revalidate (re-run the loader), `false` to skip.
+ * If not exported, the framework defaults to always revalidating.
+ *
+ * @example
+ * ```typescript
+ * // Only revalidate when search params change
+ * export function shouldRevalidate({ currentUrl, nextUrl }: ShouldRevalidateArgs) {
+ *   return currentUrl.search !== nextUrl.search;
+ * }
+ *
+ * // Skip revalidation for non-mutating navigations
+ * export function shouldRevalidate({ formMethod, defaultShouldRevalidate }: ShouldRevalidateArgs) {
+ *   if (!formMethod) return false; // Don't revalidate on GET navigations
+ *   return defaultShouldRevalidate;
+ * }
+ * ```
+ */
+export type ShouldRevalidateFunction = (args: ShouldRevalidateArgs) => boolean;
+
+// ============================================================================
+// Client Loader / Client Action Types
+// ============================================================================
+
+/**
+ * Arguments passed to a clientLoader function.
+ * Runs in the browser. Can call the server loader via `serverLoader()`.
+ */
+export interface ClientLoaderArgs<P = RouteParams> {
+  /** Route params */
+  params: P;
+  /** Current request URL (constructed from window.location) */
+  request: Request;
+  /** Call the server loader to get server data */
+  serverLoader: <T = unknown>() => Promise<T>;
+}
+
+/**
+ * Client-side loader function. Runs in the browser on client-side navigations.
+ *
+ * Use cases:
+ * - Client-side caching (localStorage, IndexedDB)
+ * - Optimistic data from local state
+ * - Offline-first with fallback to server
+ * - Skip server round-trip when data is already available
+ *
+ * @example
+ * ```typescript
+ * export const clientLoader: ClientLoaderFunction = async ({ serverLoader, params }) => {
+ *   // Check cache first
+ *   const cached = localStorage.getItem(`user-${params.id}`);
+ *   if (cached) return JSON.parse(cached);
+ *
+ *   // Fall back to server
+ *   const data = await serverLoader();
+ *   localStorage.setItem(`user-${params.id}`, JSON.stringify(data));
+ *   return data;
+ * };
+ * // Set hydrate to true to also run clientLoader on initial SSR hydration
+ * clientLoader.hydrate = true;
+ * ```
+ */
+export type ClientLoaderFunction<T = unknown, P = RouteParams> = ((
+  args: ClientLoaderArgs<P>
+) => T | Promise<T>) & {
+  /**
+   * If true, the clientLoader runs during initial hydration (after SSR).
+   * Default is false — only runs on client-side navigations.
+   */
+  hydrate?: boolean;
+};
+
+/**
+ * Arguments passed to a clientAction function.
+ * Runs in the browser. Can call the server action via `serverAction()`.
+ */
+export interface ClientActionArgs<P = RouteParams> {
+  /** Route params */
+  params: P;
+  /** The request (with form data) */
+  request: Request;
+  /** Call the server action to submit data */
+  serverAction: <T = unknown>() => Promise<T>;
+}
+
+/**
+ * Client-side action function. Runs in the browser on form submissions.
+ *
+ * Use cases:
+ * - Optimistic UI updates
+ * - Client-side validation before server round-trip
+ * - Offline form queuing
+ *
+ * @example
+ * ```typescript
+ * export const clientAction: ClientActionFunction = async ({ request, serverAction }) => {
+ *   const formData = await request.formData();
+ *   // Optimistic update
+ *   updateLocalState(formData);
+ *   // Then send to server
+ *   return serverAction();
+ * };
+ * ```
+ */
+export type ClientActionFunction<T = unknown, P = RouteParams> = (
+  args: ClientActionArgs<P>
+) => T | Promise<T>;
+
+// ============================================================================
+// Links Types
+// ============================================================================
+
+/**
+ * A single link descriptor for injecting into <head>.
+ * Supports stylesheets, preloads, prefetches, icons, and more.
+ */
+export interface LinkDescriptor {
+  /** Relationship type (e.g., 'stylesheet', 'preload', 'prefetch', 'icon') */
+  rel: string;
+  /** URL of the resource */
+  href: string;
+  /** MIME type */
+  type?: string;
+  /** For preload: resource type (e.g., 'script', 'style', 'image', 'font') */
+  as?: string;
+  /** Cross-origin setting */
+  crossOrigin?: 'anonymous' | 'use-credentials' | '';
+  /** Media query for conditional loading */
+  media?: string;
+  /** Subresource integrity hash */
+  integrity?: string;
+  /** Image sizes (for rel="icon") */
+  sizes?: string;
+  /** Image srcSet (for rel="preload" as="image") */
+  imageSrcSet?: string;
+  /** Image sizes attribute */
+  imageSizes?: string;
+  /** Title (for alternate stylesheets) */
+  title?: string;
+  /** Additional attributes */
+  [key: string]: string | undefined;
+}
+
+/**
+ * Function exported from route files to declare per-route CSS and assets.
+ * Links are injected into <head> when the route is active and removed on navigation.
+ *
+ * @example
+ * ```typescript
+ * export const links: LinksFunction = () => [
+ *   { rel: 'stylesheet', href: '/styles/dashboard.css' },
+ *   { rel: 'preload', href: '/fonts/inter.woff2', as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' },
+ *   { rel: 'icon', href: '/favicon-dashboard.png', type: 'image/png' },
+ * ];
+ * ```
+ */
+export type LinksFunction = () => LinkDescriptor[];
+
+// ============================================================================
+// Not Found Helper
+// ============================================================================
+
+/**
+ * A special error class thrown by `notFound()` to signal a 404 response.
+ * The server catches this and renders the nearest error boundary with status 404.
+ */
+export class NotFoundError extends Error {
+  readonly status = 404;
+  readonly data: unknown;
+
+  constructor(data?: unknown) {
+    super('Not Found');
+    this.name = 'NotFoundError';
+    this.data = data;
+  }
+}
+
+/**
+ * Throw from a loader or action to trigger a 404 response.
+ * The framework catches this and renders the nearest error boundary.
+ *
+ * @param data - Optional data to pass to the error boundary
+ *
+ * @example
+ * ```typescript
+ * export async function loader({ params }: LoaderArgs) {
+ *   const user = await db.user.findUnique({ where: { id: params.id } });
+ *   if (!user) throw notFound({ message: 'User not found' });
+ *   return { user };
+ * }
+ * ```
+ */
+export function notFound(data?: unknown): never {
+  throw new NotFoundError(data);
 }
 
 // ============================================================================

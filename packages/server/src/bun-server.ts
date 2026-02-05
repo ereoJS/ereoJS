@@ -6,8 +6,8 @@
  */
 
 import type { Server } from 'bun';
-import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler } from '@ereo/core';
-import { createContext, RequestContext, EreoApp } from '@ereo/core';
+import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler, HeadersFunction } from '@ereo/core';
+import { createContext, RequestContext, EreoApp, NotFoundError } from '@ereo/core';
 import { FileRouter, createFileRouter, matchWithLayouts, type MatchResult } from '@ereo/router';
 import {
   MiddlewareChain,
@@ -19,7 +19,8 @@ import {
 import { serveStatic, type StaticOptions } from './static';
 import { createShell, createResponse, renderToString, type ShellTemplate } from './streaming';
 import { serializeLoaderData } from '@ereo/data';
-import { createElement, type ReactElement, type ComponentType } from 'react';
+import { createElement, type ReactElement, type ComponentType, type ReactNode } from 'react';
+import { OutletProvider } from '@ereo/client';
 
 /**
  * Type for the streaming renderer result.
@@ -275,8 +276,8 @@ export class BunServer {
               await this.router.loadModule(match.route);
             }
 
-            // Handle without layouts
-            return this.handleRoute(request, { ...match, layouts: [] }, context);
+            // Preserve layouts if provided in match result, otherwise empty
+            return this.handleRoute(request, { ...match, layouts: (match as any).layouts || [] }, context);
           }
         }
 
@@ -337,6 +338,52 @@ export class BunServer {
       return new Response('Route module not loaded', { status: 500 });
     }
 
+    // Execute inline middleware if the route module exports any
+    if (module.middleware && module.middleware.length > 0) {
+      return this.executeInlineMiddleware(
+        request,
+        context,
+        module.middleware,
+        () => this.handleRouteInner(request, match, context)
+      );
+    }
+
+    return this.handleRouteInner(request, match, context);
+  }
+
+  /**
+   * Execute inline middleware exported from the route module.
+   */
+  private async executeInlineMiddleware(
+    request: Request,
+    context: RequestContext,
+    middleware: MiddlewareHandler[],
+    handler: () => Promise<Response>
+  ): Promise<Response> {
+    let index = 0;
+
+    const next = async (): Promise<Response> => {
+      if (index >= middleware.length) {
+        return handler();
+      }
+
+      const mw = middleware[index++];
+      return mw(request, context as any, next);
+    };
+
+    return next();
+  }
+
+  /**
+   * Inner route handler (after middleware).
+   */
+  private async handleRouteInner(
+    request: Request,
+    match: MatchResult,
+    context: RequestContext
+  ): Promise<Response> {
+    const module = match.route.module!;
+
     // Handle actions (POST, PUT, DELETE, PATCH)
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       if (module.action) {
@@ -347,39 +394,103 @@ export class BunServer {
         });
 
         if (result instanceof Response) {
-          return result;
+          // Apply route headers to action Response
+          const actionHeaders = new Headers(result.headers);
+          const routeHeaders = this.buildRouteHeaders(match, actionHeaders);
+          return this.applyRouteHeaders(result, routeHeaders);
         }
 
-        return new Response(JSON.stringify(result), {
+        const actionResponse = new Response(JSON.stringify(result), {
           headers: { 'Content-Type': 'application/json' },
         });
+        const routeHeaders = this.buildRouteHeaders(match);
+        return this.applyRouteHeaders(actionResponse, routeHeaders);
       }
       return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // Handle loaders
-    let loaderData: unknown = null;
-    if (module.loader) {
-      loaderData = await module.loader({
-        request,
-        params: match.params,
-        context,
-      });
+    // Run all loaders in parallel: route loader + layout loaders
+    const layouts = match.layouts || [];
+    const loaderArgs = { request, params: match.params, context };
 
-      if (loaderData instanceof Response) {
-        return loaderData;
+    // Build array of loader promises: [route, ...layouts]
+    const loaderPromises: Promise<unknown>[] = [];
+
+    // Route loader
+    loaderPromises.push(
+      module.loader ? Promise.resolve(module.loader(loaderArgs)) : Promise.resolve(null)
+    );
+
+    // Layout loaders (run in parallel with route loader)
+    for (const layout of layouts) {
+      loaderPromises.push(
+        layout.module?.loader ? Promise.resolve(layout.module.loader(loaderArgs)) : Promise.resolve(null)
+      );
+    }
+
+    const loaderResults = await Promise.all(loaderPromises);
+
+    // First result is the route loader data
+    const loaderData = loaderResults[0];
+    if (loaderData instanceof Response) {
+      return loaderData;
+    }
+
+    // Build layout data map (keyed by layout route ID)
+    const layoutLoaderData = new Map<string, unknown>();
+    for (let i = 0; i < layouts.length; i++) {
+      const layoutData = loaderResults[i + 1];
+      if (layoutData instanceof Response) {
+        return layoutData; // Layout loader threw a Response (e.g., redirect)
+      }
+      if (layoutData !== null) {
+        layoutLoaderData.set(layouts[i].id, layoutData);
       }
     }
 
+    // Build merged route headers from headers functions
+    const routeHeaders = this.buildRouteHeaders(match);
+
     // JSON request (client-side navigation)
     if (request.headers.get('Accept')?.includes('application/json')) {
-      return new Response(JSON.stringify({ data: loaderData, params: match.params }), {
+      const jsonPayload: Record<string, unknown> = {
+        data: loaderData,
+        params: match.params,
+      };
+
+      // Include layout data if any layouts have loaders
+      if (layoutLoaderData.size > 0) {
+        const layoutDataObj: Record<string, unknown> = {};
+        for (const [id, data] of layoutLoaderData) {
+          layoutDataObj[id] = data;
+        }
+        jsonPayload.layoutData = layoutDataObj;
+      }
+
+      // Include link descriptors for client-side link management
+      const module = match.route.module;
+      const routeLinks = module?.links ? module.links() : [];
+      const layoutLinksList = (match.layouts || []).flatMap(
+        (layout: any) => layout.module?.links ? layout.module.links() : []
+      );
+      const allLinks = [...layoutLinksList, ...routeLinks];
+      if (allLinks.length > 0) {
+        jsonPayload.links = allLinks;
+      }
+
+      // Include route matches for useMatches (handle metadata, etc.)
+      const matchesData = this.buildMatchesData(match, loaderData, layoutLoaderData);
+      jsonPayload.matches = matchesData;
+
+      const jsonResponse = new Response(JSON.stringify(jsonPayload), {
         headers: { 'Content-Type': 'application/json' },
       });
+      return this.applyRouteHeaders(jsonResponse, routeHeaders);
     }
 
     // Full page render - render React component to HTML with layouts
-    return this.renderPage(request, match, context, loaderData);
+    const htmlResponse = await this.renderPage(request, match, context, loaderData, layoutLoaderData);
+    return this.applyRouteHeaders(htmlResponse, routeHeaders);
   }
 
   /**
@@ -389,7 +500,8 @@ export class BunServer {
     request: Request,
     match: MatchResult,
     context: RequestContext,
-    loaderData: unknown
+    loaderData: unknown,
+    layoutLoaderData: Map<string, unknown> = new Map()
   ): Promise<Response> {
     const module = match.route.module;
     if (!module?.default) {
@@ -402,11 +514,19 @@ export class BunServer {
     // Build meta descriptors from route's meta function
     const metaDescriptors = this.buildMeta(module, loaderData, match.params, url);
 
+    // Collect link descriptors from route and layouts
+    const routeLinks = module.links ? module.links() : [];
+    const layoutLinks = (match.layouts || []).flatMap(
+      (layout) => layout.module?.links ? layout.module.links() : []
+    );
+    const allLinks = [...layoutLinks, ...routeLinks];
+
     // Build the shell template (only used if no root layout provides html/head/body)
     const shell: ShellTemplate = {
       ...this.options.shell,
       title: this.extractTitle(metaDescriptors) || this.options.shell?.title,
       meta: this.extractMetaTags(metaDescriptors),
+      links: allLinks.length > 0 ? allLinks : undefined,
     };
 
     // Create the page component element
@@ -417,19 +537,32 @@ export class BunServer {
     });
 
     // Compose with layouts from innermost to outermost
-    // Layouts wrap the page component, with children passed down
+    // Each layout is wrapped with OutletProvider so <Outlet /> renders child content.
+    // Layouts also receive `children` as a prop for backwards compatibility.
     const layouts = match.layouts || [];
     for (let i = layouts.length - 1; i >= 0; i--) {
       const layout = layouts[i];
       if (layout.module?.default) {
         const LayoutComponent = layout.module.default;
-        element = createElement(LayoutComponent, {
-          loaderData: null, // Layouts could have their own loaders in the future
-          params: match.params,
-          children: element,
-        });
+        const childElement = element;
+        // Wrap in OutletProvider so <Outlet /> inside the layout renders childElement
+        element = createElement(
+          OutletProvider,
+          { element: childElement } as any,
+          createElement(LayoutComponent, {
+            loaderData: layoutLoaderData.get(layout.id) ?? null,
+            params: match.params,
+            children: childElement,
+          })
+        );
       }
     }
+
+    // Combine all loader data for hydration script
+    // Include layout data so the client can access it
+    const allLoaderData = layoutLoaderData.size > 0
+      ? { __routeData: loaderData, __layoutData: Object.fromEntries(layoutLoaderData) }
+      : loaderData;
 
     // Check if the outermost layout already provides the html structure
     // If so, we render directly without the shell wrapper
@@ -438,17 +571,17 @@ export class BunServer {
     if (hasRootLayout) {
       // Layout provides the full HTML document structure
       if (this.options.renderMode === 'streaming') {
-        return this.renderStreamingPageDirect(element, loaderData);
+        return this.renderStreamingPageDirect(element, allLoaderData);
       } else {
-        return this.renderStringPageDirect(element, loaderData);
+        return this.renderStringPageDirect(element, allLoaderData);
       }
     }
 
     // No layout - use shell template wrapper
     if (this.options.renderMode === 'streaming') {
-      return this.renderStreamingPage(element, shell, loaderData);
+      return this.renderStreamingPage(element, shell, allLoaderData);
     } else {
-      return this.renderStringPage(element, shell, loaderData);
+      return this.renderStringPage(element, shell, allLoaderData);
     }
   }
 
@@ -784,6 +917,113 @@ export class BunServer {
   }
 
   /**
+   * Build matches data for useMatches hook.
+   * Returns array of matched routes from outermost layout to page.
+   */
+  private buildMatchesData(
+    match: MatchResult,
+    loaderData: unknown,
+    layoutLoaderData: Map<string, unknown>
+  ): Array<{ id: string; pathname: string; params: Record<string, string | string[] | undefined>; data: unknown; handle: unknown }> {
+    const matches: Array<{ id: string; pathname: string; params: Record<string, string | string[] | undefined>; data: unknown; handle: unknown }> = [];
+
+    // Add layouts (outermost first)
+    for (const layout of match.layouts || []) {
+      matches.push({
+        id: layout.id,
+        pathname: match.pathname,
+        params: match.params,
+        data: layoutLoaderData.get(layout.id) ?? null,
+        handle: layout.module?.handle ?? undefined,
+      });
+    }
+
+    // Add the route itself
+    matches.push({
+      id: match.route.id,
+      pathname: match.pathname,
+      params: match.params,
+      data: loaderData,
+      handle: match.route.module?.handle ?? undefined,
+    });
+
+    return matches;
+  }
+
+  /**
+   * Build merged response headers from route and layout headers functions.
+   * Cascades from outermost layout → innermost layout → route.
+   * Each headers function receives the parent headers from the layout above it.
+   */
+  private buildRouteHeaders(
+    match: MatchResult,
+    actionHeaders: Headers = new Headers()
+  ): Headers {
+    const layouts = match.layouts || [];
+    const module = match.route.module;
+
+    // Start with empty parent headers
+    let parentHeaders = new Headers();
+
+    // Process layouts from outermost to innermost
+    for (const layout of layouts) {
+      const headersFn = layout.module?.headers as HeadersFunction | undefined;
+      if (headersFn) {
+        try {
+          const result = headersFn({
+            loaderHeaders: new Headers(),
+            actionHeaders,
+            parentHeaders,
+          });
+          parentHeaders = result instanceof Headers ? result : new Headers(result as HeadersInit);
+        } catch (error) {
+          console.error(`Error in layout headers function (${layout.id}):`, error);
+        }
+      }
+    }
+
+    // Process route headers function
+    if (module?.headers) {
+      try {
+        const result = (module.headers as HeadersFunction)({
+          loaderHeaders: new Headers(),
+          actionHeaders,
+          parentHeaders,
+        });
+        return result instanceof Headers ? result : new Headers(result as HeadersInit);
+      } catch (error) {
+        console.error('Error in route headers function:', error);
+      }
+    }
+
+    return parentHeaders;
+  }
+
+  /**
+   * Apply custom route headers to a Response, preserving required headers.
+   */
+  private applyRouteHeaders(response: Response, routeHeaders: Headers): Response {
+    // If no custom headers, return as-is
+    let hasHeaders = false;
+    routeHeaders.forEach(() => { hasHeaders = true; });
+    if (!hasHeaders) return response;
+
+    const newHeaders = new Headers(response.headers);
+    routeHeaders.forEach((value, key) => {
+      // Don't override content-type or content-length set by the framework
+      const lower = key.toLowerCase();
+      if (lower === 'content-type' || lower === 'content-length') return;
+      newHeaders.set(key, value);
+    });
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
+  }
+
+  /**
    * Escape HTML special characters.
    */
   private escapeHtml(str: string): string {
@@ -799,9 +1039,24 @@ export class BunServer {
    * Handle errors.
    */
   private handleError(error: unknown, context: RequestContext): Response {
-    // Check if error is a thrown Response (e.g., for 404s thrown from loaders)
+    // Check if error is a thrown Response (e.g., for redirects thrown from loaders)
     if (error instanceof Response) {
       return error;
+    }
+
+    // Handle notFound() errors — return 404 with optional data
+    if (error instanceof NotFoundError) {
+      return new Response(
+        JSON.stringify({
+          error: 'Not Found',
+          status: 404,
+          data: error.data,
+        }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const message = error instanceof Error ? error.message : 'Internal Server Error';

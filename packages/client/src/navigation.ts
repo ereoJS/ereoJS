@@ -5,6 +5,11 @@
  */
 
 import type { RouteParams } from '@ereo/core';
+import {
+  startViewTransition,
+  areViewTransitionsEnabled,
+  type ViewTransitionOptions,
+} from './view-transition';
 
 /**
  * Navigation state.
@@ -81,35 +86,53 @@ class ClientRouter {
    */
   async navigate(
     to: string,
-    options: { replace?: boolean; state?: unknown } = {}
+    options: { replace?: boolean; state?: unknown; viewTransition?: boolean | ViewTransitionOptions } = {}
   ): Promise<void> {
     if (typeof window === 'undefined') return;
 
-    const url = new URL(to, window.location.origin);
-    const from = this.currentState;
+    const useTransition = options.viewTransition === true
+      ? areViewTransitionsEnabled() || options.viewTransition
+      : options.viewTransition
+        ? true
+        : areViewTransitionsEnabled();
 
-    const newState: NavigationState = {
-      pathname: url.pathname,
-      search: url.search,
-      hash: url.hash,
-      state: options.state,
+    const transitionOptions = typeof options.viewTransition === 'object'
+      ? options.viewTransition
+      : undefined;
+
+    const doNavigate = () => {
+      const url = new URL(to, window.location.origin);
+      const from = this.currentState;
+
+      const newState: NavigationState = {
+        pathname: url.pathname,
+        search: url.search,
+        hash: url.hash,
+        state: options.state,
+      };
+
+      // Update history
+      if (options.replace) {
+        window.history.replaceState(options.state, '', to);
+      } else {
+        window.history.pushState(options.state, '', to);
+      }
+
+      this.currentState = newState;
+
+      // Notify listeners
+      this.notify({
+        type: options.replace ? 'replace' : 'push',
+        from,
+        to: newState,
+      });
     };
 
-    // Update history
-    if (options.replace) {
-      window.history.replaceState(options.state, '', to);
+    if (useTransition) {
+      startViewTransition(doNavigate, transitionOptions);
     } else {
-      window.history.pushState(options.state, '', to);
+      doNavigate();
     }
-
-    this.currentState = newState;
-
-    // Notify listeners
-    this.notify({
-      type: options.replace ? 'replace' : 'push',
-      from,
-      to: newState,
-    });
   }
 
   /**
@@ -184,7 +207,7 @@ export const router = new ClientRouter();
  */
 export function navigate(
   to: string,
-  options?: { replace?: boolean; state?: unknown }
+  options?: { replace?: boolean; state?: unknown; viewTransition?: boolean | ViewTransitionOptions }
 ): Promise<void> {
   return router.navigate(to, options);
 }
