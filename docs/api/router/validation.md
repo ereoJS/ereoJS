@@ -151,7 +151,7 @@ import type { MiddlewareHandler } from '@ereo/core'
 export function validateParams<T extends z.ZodType>(
   schema: T
 ): MiddlewareHandler {
-  return async (request, next, context) => {
+  return async (request, context, next) => {
     const params = context.get('params')
     const result = schema.safeParse(params)
 
@@ -167,7 +167,7 @@ export function validateParams<T extends z.ZodType>(
 export function validateQuery<T extends z.ZodType>(
   schema: T
 ): MiddlewareHandler {
-  return async (request, next, context) => {
+  return async (request, context, next) => {
     const url = new URL(request.url)
     const query = Object.fromEntries(url.searchParams)
     const result = schema.safeParse(query)

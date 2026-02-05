@@ -201,6 +201,28 @@ export default defineConfig({
           ]
         },
         {
+          text: '@ereo/forms',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/api/forms/' },
+            { text: 'useForm', link: '/api/forms/use-form' },
+            { text: 'useField', link: '/api/forms/use-field' },
+            { text: 'useFieldArray', link: '/api/forms/use-field-array' },
+            { text: 'useFormStatus', link: '/api/forms/use-form-status' },
+            { text: 'FormStore', link: '/api/forms/form-store' },
+            { text: 'Validation', link: '/api/forms/validation' },
+            { text: 'Schema Adapters', link: '/api/forms/schema-adapters' },
+            { text: 'Components', link: '/api/forms/components' },
+            { text: 'Context', link: '/api/forms/context' },
+            { text: 'Wizard', link: '/api/forms/wizard' },
+            { text: 'Server Actions', link: '/api/forms/server-actions' },
+            { text: 'Accessibility', link: '/api/forms/accessibility' },
+            { text: 'Composition', link: '/api/forms/composition' },
+            { text: 'Utilities', link: '/api/forms/utilities' },
+            { text: 'Types', link: '/api/forms/types' },
+          ]
+        },
+        {
           text: '@ereo/rpc',
           collapsed: false,
           items: [

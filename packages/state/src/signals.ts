@@ -11,7 +11,6 @@ type Subscriber<T> = (value: T) => void;
 export class Signal<T> {
   private _value: T;
   private _subscribers: Set<Subscriber<T>> = new Set();
-  private _derivedFrom: Signal<unknown>[] = [];
 
   constructor(initialValue: T) {
     this._value = initialValue;
@@ -50,7 +49,12 @@ export class Signal<T> {
 
   private _notify(): void {
     for (const subscriber of this._subscribers) {
-      subscriber(this._value);
+      try {
+        subscriber(this._value);
+      } catch (e) {
+        // Isolate subscriber errors so one failing subscriber doesn't block others
+        console.error('Signal subscriber error:', e);
+      }
     }
   }
 }
@@ -110,6 +114,11 @@ export class Store<T extends Record<string, unknown>> {
     } else {
       this._state.set(key as string, signal(value));
     }
+  }
+
+  /** Iterate over all signal entries */
+  entries(): IterableIterator<[string, Signal<unknown>]> {
+    return this._state.entries();
   }
 
   /** Get current snapshot of all values */

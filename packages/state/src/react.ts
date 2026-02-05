@@ -69,7 +69,7 @@ export function useStore<T extends Record<string, unknown>>(store: Store<T>): T 
   return useSyncExternalStore(
     useCallback((callback) => {
       const unsubscribers: (() => void)[] = [];
-      for (const [key, sig] of (store as any)._state.entries()) {
+      for (const [key, sig] of store.entries()) {
         unsubscribers.push(sig.subscribe(callback));
       }
       return () => unsubscribers.forEach((unsub) => unsub());

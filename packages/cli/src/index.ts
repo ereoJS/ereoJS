@@ -155,7 +155,7 @@ async function main(): Promise<void> {
     switch (command) {
       case 'dev': {
         const devOptions: DevOptions = {
-          port: options.port ? parseInt(options.port as string) : undefined,
+          port: options.port ? parseInt(options.port as string, 10) : undefined,
           host: (options.host || options.h) as string | undefined,
           open: !!(options.open || options.o),
         };
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
 
       case 'start': {
         const startOptions: StartOptions = {
-          port: options.port ? parseInt(options.port as string) : undefined,
+          port: options.port ? parseInt(options.port as string, 10) : undefined,
           host: (options.host || options.h) as string | undefined,
         };
         await start(startOptions);
@@ -243,7 +243,7 @@ async function main(): Promise<void> {
 
       case 'db:studio': {
         const studioOptions: DbStudioOptions = {
-          port: options.port ? parseInt(options.port as string) : undefined,
+          port: options.port ? parseInt(options.port as string, 10) : undefined,
           config: options.config as string | undefined,
           open: options.open !== false,
         };

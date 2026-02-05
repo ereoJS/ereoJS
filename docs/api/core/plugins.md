@@ -48,7 +48,7 @@ interface Plugin {
 
   // Framework hooks
   configResolved?: (config: FrameworkConfig) => void
-  middlewares?: MiddlewareHandler[]
+  runtimeMiddleware?: MiddlewareHandler[]
 }
 ```
 
@@ -212,8 +212,8 @@ export function requestIdPlugin() {
   return definePlugin({
     name: 'request-id',
 
-    middlewares: [
-      async (request, next, context) => {
+    runtimeMiddleware: [
+      async (request, context, next) => {
         const requestId = crypto.randomUUID()
         context.set('requestId', requestId)
 

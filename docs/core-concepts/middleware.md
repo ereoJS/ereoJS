@@ -254,7 +254,7 @@ Use the request context to pass data from middleware to routes:
 
 ```tsx
 // Middleware
-export const middleware: MiddlewareHandler = async (request, next, context) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   const user = await getUser(request)
   context.set('user', user)
   return next()
@@ -334,7 +334,7 @@ interface AuthContext {
 }
 
 export const authMiddleware = createMiddleware<AuthContext>(
-  async (request, next, context) => {
+  async (request, context, next) => {
     const user = await getUser(request)
     if (!user) return Response.redirect('/login')
 
@@ -367,7 +367,7 @@ const server = createServer(app)
 ### Authentication
 
 ```tsx
-export const middleware: MiddlewareHandler = async (request, next, context) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '')
 
   if (!token) {

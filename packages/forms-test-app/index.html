@@ -4,29 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ereo/forms Test App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: {
-                50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
-                400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
-                800: '#1e40af', 900: '#1e3a8a',
-              }
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      .btn { @apply px-4 py-2 rounded-lg font-medium transition-colors; }
-      .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
-      .btn-secondary { @apply bg-gray-200 text-gray-900 hover:bg-gray-300; }
-      .input { @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent; }
-      .card { @apply bg-white rounded-xl shadow-lg p-6; }
-    </style>
   </head>
   <body class="min-h-screen bg-white text-gray-900">
     <div id="root"></div>

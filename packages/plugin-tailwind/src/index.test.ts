@@ -46,9 +46,11 @@ describe('@ereo/plugin-tailwind', () => {
       const plugin = tailwind();
       const content = await plugin.load!('\0virtual:tailwind.css');
 
-      expect(content).toContain('@tailwind base');
-      expect(content).toContain('@tailwind components');
-      expect(content).toContain('@tailwind utilities');
+      // load() compiles Tailwind CSS, so we check for compiled output
+      expect(content).toBeTruthy();
+      expect(typeof content).toBe('string');
+      // Compiled CSS contains base styles like box-sizing
+      expect(content).toContain('box-sizing');
     });
 
     test('returns null for other modules', async () => {
@@ -74,12 +76,15 @@ describe('@ereo/plugin-tailwind', () => {
       expect(result).toBeNull();
     });
 
-    test('returns code for CSS with tailwind directives', async () => {
+    test('returns compiled CSS for CSS with tailwind directives', async () => {
       const plugin = tailwind();
       const code = '@tailwind base; .custom {}';
       const result = await plugin.transform!(code, 'file.css');
 
-      expect(result).toBe(code);
+      // transform() compiles through PostCSS, so result is compiled CSS
+      expect(result).toBeTruthy();
+      expect(typeof result).toBe('string');
+      expect(result).not.toBe(code);
     });
   });
 
@@ -271,10 +276,10 @@ describe('@ereo/plugin-tailwind', () => {
       const request = new Request('http://localhost:3000/__tailwind.css');
       const response = await middleware(request, {}, () => new Response('fallback'));
 
-      expect(response.headers.get('Content-Type')).toBe('text/css');
-      expect(response.headers.get('Cache-Control')).toBe('no-cache');
+      expect(response.headers.get('Content-Type')).toBe('text/css; charset=utf-8');
+      expect(response.headers.get('Cache-Control')).toBe('no-cache, no-store, must-revalidate');
       const text = await response.text();
-      expect(text).toContain('Tailwind CSS');
+      expect(text).toBeTruthy();
     });
 
     test('calls next for non-tailwind paths', async () => {

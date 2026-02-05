@@ -85,7 +85,16 @@ function parseArgs(args: string[]): {
     }
 
     if (arg === '-t' || arg === '--template') {
-      options.template = args[++i] as Template;
+      if (i + 1 >= args.length) {
+        console.error('  \x1b[31m✗\x1b[0m --template requires a value (minimal, default, tailwind)\n');
+        process.exit(1);
+      }
+      const tmpl = args[++i];
+      if (tmpl !== 'minimal' && tmpl !== 'default' && tmpl !== 'tailwind') {
+        console.error(`  \x1b[31m✗\x1b[0m Unknown template "${tmpl}". Valid options: minimal, default, tailwind\n`);
+        process.exit(1);
+      }
+      options.template = tmpl;
     } else if (arg === '--no-typescript') {
       options.typescript = false;
     } else if (arg === '--no-git') {
@@ -1640,8 +1649,20 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Validate project name
+  if (/[<>:"|?*]/.test(projectName) || projectName.startsWith('.')) {
+    console.error('  \x1b[31m✗\x1b[0m Invalid project name. Avoid special characters and leading dots.\n');
+    process.exit(1);
+  }
+
   const finalOptions: CreateOptions = { ...defaultOptions, ...options };
   const projectDir = resolve(process.cwd(), projectName);
+
+  // Prevent path traversal
+  if (!projectDir.startsWith(process.cwd())) {
+    console.error('  \x1b[31m✗\x1b[0m Invalid project name: path traversal detected.\n');
+    process.exit(1);
+  }
 
   console.log(`  Creating \x1b[36m${projectName}\x1b[0m...\n`);
   console.log(`  Template: ${finalOptions.template}`);

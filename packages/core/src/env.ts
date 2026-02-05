@@ -142,8 +142,8 @@ export const env = {
       type: 'number',
       required: false,
       transform: (value: string) => {
-        const num = parseFloat(value);
-        if (isNaN(num)) {
+        const num = Number(value);
+        if (Number.isNaN(num)) {
           throw new Error(`Invalid number: ${value}`);
         }
         return num;

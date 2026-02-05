@@ -834,7 +834,16 @@ export class BunServer {
     const serverOptions: Parameters<typeof Bun.serve>[0] = {
       port,
       hostname,
-      fetch: (request) => this.handleRequest(request),
+      fetch: (request: Request, server: Server<unknown>) => {
+        // Handle WebSocket upgrade for HMR
+        if (websocket) {
+          const url = new URL(request.url);
+          if (url.pathname === '/__hmr') {
+            if (server.upgrade(request, { data: {} })) return undefined as any;
+          }
+        }
+        return this.handleRequest(request);
+      },
       error: (error) => this.handleError(error, {} as RequestContext),
     };
 

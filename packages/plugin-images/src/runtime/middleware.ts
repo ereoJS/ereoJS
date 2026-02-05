@@ -5,7 +5,7 @@
  */
 
 import { readFile, stat } from 'node:fs/promises';
-import { join, extname } from 'node:path';
+import { join, extname, resolve, normalize } from 'node:path';
 import type { AppContext, MiddlewareHandler } from '@ereo/core';
 import type { ImagePluginConfig, ImageOptimizationParams } from '../components/types';
 import { createImageProcessor, type ImageProcessor } from '../processing/processor';
@@ -221,10 +221,14 @@ export function createImageMiddleware(options: ImageMiddlewareOptions) {
         }
         sourceBuffer = Buffer.from(await response.arrayBuffer());
       } else {
-        // Load local file
-        const localPath = params.src.startsWith('/')
-          ? join(options.root, 'public', params.src)
-          : join(options.root, params.src);
+        // Load local file with path traversal protection
+        const baseDir = resolve(options.root, 'public');
+        const localPath = resolve(baseDir, normalize(params.src.replace(/^\//, '')));
+
+        // Prevent directory traversal attacks
+        if (!localPath.startsWith(baseDir)) {
+          return new Response('Forbidden', { status: 403 });
+        }
 
         try {
           sourceBuffer = await readFile(localPath);

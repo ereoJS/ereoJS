@@ -15,7 +15,7 @@ Creates a store with multiple signals.
 ### Signature
 
 ```ts
-function createStore<T extends Record<string, any>>(
+function createStore<T extends Record<string, unknown>>(
   initialState: T
 ): Store<T>
 ```

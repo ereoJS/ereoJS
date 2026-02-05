@@ -73,10 +73,11 @@ export function createShell(options: {
     .map(([k, v]) => `${k}="${v}"`)
     .join(' ');
 
+  const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const metaTags = (shell.meta || [])
     .map((m) => {
-      const key = m.name ? `name="${m.name}"` : `property="${m.property}"`;
-      return `<meta ${key} content="${m.content}">`;
+      const key = m.name ? `name="${escapeAttr(m.name)}"` : `property="${escapeAttr(m.property || '')}"`;
+      return `<meta ${key} content="${escapeAttr(m.content || '')}">`;
     })
     .join('\n    ');
 

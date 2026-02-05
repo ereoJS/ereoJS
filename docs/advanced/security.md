@@ -84,7 +84,7 @@ function generateCSRFToken(): string {
 }
 
 // Middleware to add CSRF token
-const csrfMiddleware: MiddlewareHandler = async (request, next, context) => {
+const csrfMiddleware: MiddlewareHandler = async (request, context, next) => {
   // Generate token for GET requests
   if (request.method === 'GET') {
     const token = generateCSRFToken()

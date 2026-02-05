@@ -13,8 +13,8 @@ import type { MiddlewareHandler } from '@ereo/core'
 ```ts
 type MiddlewareHandler = (
   request: Request,
-  next: () => Promise<Response>,
-  context: RequestContext
+  context: RequestContext,
+  next: () => Promise<Response>
 ) => Promise<Response> | Response
 ```
 
@@ -23,8 +23,8 @@ type MiddlewareHandler = (
 | Name | Type | Description |
 |------|------|-------------|
 | request | `Request` | The incoming HTTP request |
-| next | `() => Promise<Response>` | Call to continue to next middleware/handler |
 | context | `RequestContext` | Shared request context for storing data |
+| next | `() => Promise<Response>` | Call to continue to next middleware/handler |
 
 ## Built-in Middleware
 
@@ -173,7 +173,7 @@ interface SecurityHeadersOptions {
 ### Logging Middleware
 
 ```ts
-const loggingMiddleware: MiddlewareHandler = async (request, next, context) => {
+const loggingMiddleware: MiddlewareHandler = async (request, context, next) => {
   const start = performance.now()
   const requestId = crypto.randomUUID()
 
@@ -193,7 +193,7 @@ const loggingMiddleware: MiddlewareHandler = async (request, next, context) => {
 ### Authentication Middleware
 
 ```ts
-const authMiddleware: MiddlewareHandler = async (request, next, context) => {
+const authMiddleware: MiddlewareHandler = async (request, context, next) => {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '')
 
   if (token) {
@@ -212,7 +212,7 @@ const authMiddleware: MiddlewareHandler = async (request, next, context) => {
 ### Error Handling Middleware
 
 ```ts
-const errorMiddleware: MiddlewareHandler = async (request, next, context) => {
+const errorMiddleware: MiddlewareHandler = async (request, context, next) => {
   try {
     return await next()
   } catch (error) {
@@ -274,7 +274,7 @@ export const config = {
   middleware: [requireAdmin]
 }
 
-const requireAdmin: MiddlewareHandler = async (request, next, context) => {
+const requireAdmin: MiddlewareHandler = async (request, context, next) => {
   const user = context.get('user')
 
   if (!user || user.role !== 'admin') {

@@ -243,7 +243,7 @@ export const loader = createLoader(async ({ context }) => {
 ```ts
 import type { MiddlewareHandler } from '@ereo/router'
 
-const authMiddleware: MiddlewareHandler = async (request, next, context) => {
+const authMiddleware: MiddlewareHandler = async (request, context, next) => {
   const user = await getUser(request)
 
   if (!user) {

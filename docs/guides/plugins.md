@@ -69,8 +69,8 @@ export function requestIdPlugin() {
   return definePlugin({
     name: 'request-id',
 
-    middlewares: [
-      async (request, next, context) => {
+    runtimeMiddleware: [
+      async (request, context, next) => {
         const requestId = crypto.randomUUID()
         context.set('requestId', requestId)
 
@@ -248,8 +248,8 @@ export function analyticsPlugin(options: { trackingId: string }) {
   return definePlugin({
     name: 'analytics',
 
-    middlewares: [
-      async (request, next, context) => {
+    runtimeMiddleware: [
+      async (request, context, next) => {
         const start = Date.now()
         const response = await next()
         const duration = Date.now() - start
@@ -293,8 +293,8 @@ export function databasePlugin(options: { url: string }) {
       context.logger.info('Database connected')
     },
 
-    middlewares: [
-      async (request, next, context) => {
+    runtimeMiddleware: [
+      async (request, context, next) => {
         context.set('db', db)
         return next()
       }
@@ -314,8 +314,8 @@ export function featureFlagsPlugin(flags: Record<string, boolean>) {
   return definePlugin({
     name: 'feature-flags',
 
-    middlewares: [
-      async (request, next, context) => {
+    runtimeMiddleware: [
+      async (request, context, next) => {
         context.set('features', flags)
         return next()
       }

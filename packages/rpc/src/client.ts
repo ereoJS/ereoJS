@@ -337,7 +337,8 @@ export function createClient<T extends Router<RouterDef>>(
               return handleHttpResponse(response, path);
             } else {
               // GET method (default) - with URL length check
-              const url = new URL(options.httpEndpoint, window.location.origin);
+              const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+              const url = new URL(options.httpEndpoint, base);
               url.searchParams.set('path', path.join('.'));
               if (input !== undefined) {
                 const inputStr = JSON.stringify(input);

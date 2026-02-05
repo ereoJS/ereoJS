@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import './styles.css';
 
 import LoginFormPage from './routes/forms/login';
 import RegisterFormPage from './routes/forms/register';

@@ -38,7 +38,7 @@ describe('@ereo/bundler - HMR', () => {
 
     test('handles connection close with reconnect', () => {
       expect(HMR_CLIENT_CODE).toContain('onclose');
-      expect(HMR_CLIENT_CODE).toContain('reconnect');
+      expect(HMR_CLIENT_CODE).toContain('retrying');
     });
   });
 

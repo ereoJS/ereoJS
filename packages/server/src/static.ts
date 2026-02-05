@@ -5,7 +5,7 @@
  */
 
 import { stat } from 'node:fs/promises';
-import { join, extname } from 'node:path';
+import { join, extname, resolve, normalize } from 'node:path';
 
 /**
  * MIME types for common file extensions.
@@ -164,8 +164,13 @@ export function serveStatic(options: StaticOptions): (request: Request) => Promi
       return new Response('Forbidden', { status: 403 });
     }
 
-    // Build file path
-    let filepath = join(root, pathname);
+    // Build file path with additional traversal protection
+    const resolvedRoot = resolve(root);
+    let filepath = resolve(root, normalize(pathname.replace(/^\//, '')));
+
+    if (!filepath.startsWith(resolvedRoot)) {
+      return new Response('Forbidden', { status: 403 });
+    }
 
     try {
       let stats = await stat(filepath);

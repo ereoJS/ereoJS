@@ -188,7 +188,7 @@ Create `src/middleware/auth.ts`:
 import type { MiddlewareHandler } from '@ereo/core'
 import { getSession } from '../lib/auth'
 
-export const authMiddleware: MiddlewareHandler = async (request, next, context) => {
+export const authMiddleware: MiddlewareHandler = async (request, context, next) => {
   const cookies = request.headers.get('cookie') || ''
   const sessionId = cookies.match(/session=([^;]+)/)?.[1]
 
@@ -202,7 +202,7 @@ export const authMiddleware: MiddlewareHandler = async (request, next, context) 
   return next()
 }
 
-export const requireAuth: MiddlewareHandler = async (request, next, context) => {
+export const requireAuth: MiddlewareHandler = async (request, context, next) => {
   const user = context.get('user')
 
   if (!user) {

@@ -108,7 +108,6 @@ async function runDrizzleKit(
     const proc = spawn(runner, ['drizzle-kit', command, ...args], {
       cwd: process.cwd(),
       stdio: 'inherit',
-      shell: true,
     });
 
     proc.on('close', (code) => {
@@ -294,7 +293,6 @@ export async function dbSeed(options: DbSeedOptions = {}): Promise<void> {
       const proc = spawn(runner, runArgs, {
         cwd,
         stdio: 'inherit',
-        shell: true,
         env: {
           ...process.env,
           DB_SEED_RESET: options.reset ? '1' : '',

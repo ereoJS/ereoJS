@@ -123,6 +123,7 @@ interface CacheControl {
   set(options: CacheOptions): void
   get(): CacheOptions | undefined
   getTags(): string[]
+  addTags(tags: string[]): void
 }
 
 interface CacheOptions {
@@ -213,7 +214,7 @@ if (isRequestContext(maybeContext)) {
 
 ```ts
 // routes/_middleware.ts
-export const middleware = async (request, next, context) => {
+export const middleware = async (request, context, next) => {
   // Authenticate user
   const token = request.headers.get('Authorization')?.replace('Bearer ', '')
 
@@ -283,7 +284,7 @@ export const loader = createLoader(async ({ params, context }) => {
 
 ```ts
 // First middleware
-const timingMiddleware = async (request, next, context) => {
+const timingMiddleware = async (request, context, next) => {
   const start = Date.now()
   context.set('requestStart', start)
 
@@ -296,7 +297,7 @@ const timingMiddleware = async (request, next, context) => {
 }
 
 // Second middleware
-const loggingMiddleware = async (request, next, context) => {
+const loggingMiddleware = async (request, context, next) => {
   const response = await next()
 
   const start = context.get('requestStart')

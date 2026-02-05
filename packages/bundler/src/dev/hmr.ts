@@ -64,8 +64,6 @@ export interface ModuleDependencyGraph {
  */
 export const HMR_CLIENT_CODE = `
 (function() {
-  const ws = new WebSocket('ws://' + location.host + '/__hmr');
-
   // Module registry for hot updates
   window.__EREO_HMR__ = window.__EREO_HMR__ || {
     modules: new Map(),
@@ -73,75 +71,115 @@ export const HMR_CLIENT_CODE = `
     acceptedModules: new Set(),
   };
 
-  ws.onmessage = function(event) {
-    const update = JSON.parse(event.data);
-    const startTime = performance.now();
+  var MAX_RETRIES = 20;
+  var retryCount = 0;
+  var retryDelay = 1000;
+  var intentionalClose = false;
 
-    // Log with timing info
-    const logUpdate = (msg) => {
-      const duration = (performance.now() - startTime).toFixed(1);
-      console.log('[HMR] ' + msg + ' (' + duration + 'ms)');
+  function connect() {
+    var ws = new WebSocket('ws://' + location.host + '/__hmr');
+
+    ws.onopen = function() {
+      if (retryCount > 0) {
+        console.log('[HMR] Reconnected after ' + retryCount + ' retries');
+        // Server came back — reload to pick up changes
+        location.reload();
+        return;
+      }
+      console.log('[HMR] Connected');
+      retryCount = 0;
+      retryDelay = 1000;
     };
 
-    switch (update.type) {
-      case 'full-reload':
-        logHMRReason(update);
-        location.reload();
-        break;
+    ws.onmessage = function(event) {
+      var update = JSON.parse(event.data);
+      var startTime = performance.now();
 
-      case 'css-update':
-        updateCSS(update.path);
-        logUpdate('CSS updated: ' + update.path);
-        break;
+      var logUpdate = function(msg) {
+        var duration = (performance.now() - startTime).toFixed(1);
+        console.log('[HMR] ' + msg + ' (' + duration + 'ms)');
+      };
 
-      case 'island-update':
-        if (handleIslandUpdate(update)) {
-          logUpdate('Island hot-updated: ' + (update.module?.id || update.path));
-        } else {
+      switch (update.type) {
+        case 'full-reload':
           logHMRReason(update);
           location.reload();
-        }
-        break;
+          break;
 
-      case 'component-update':
-        if (handleComponentUpdate(update)) {
-          logUpdate('Component hot-updated: ' + (update.module?.id || update.path));
-        } else {
-          logHMRReason(update);
-          location.reload();
-        }
-        break;
+        case 'css-update':
+          updateCSS(update.path);
+          logUpdate('CSS updated: ' + update.path);
+          break;
 
-      case 'loader-update':
-        // Loaders require data refetch, do soft reload
-        logUpdate('Loader changed, refreshing data...');
-        refreshLoaderData(update.path);
-        break;
+        case 'island-update':
+          if (handleIslandUpdate(update)) {
+            logUpdate('Island hot-updated: ' + (update.module?.id || update.path));
+          } else {
+            logHMRReason(update);
+            location.reload();
+          }
+          break;
 
-      case 'js-update':
-        // Check if we can do granular update
-        if (update.module?.isIsland && handleIslandUpdate(update)) {
-          logUpdate('Island hot-updated: ' + (update.module?.id || update.path));
-        } else if (update.module?.isComponent && handleComponentUpdate(update)) {
-          logUpdate('Component hot-updated: ' + (update.module?.id || update.path));
-        } else {
-          logHMRReason(update);
-          location.reload();
-        }
-        break;
+        case 'component-update':
+          if (handleComponentUpdate(update)) {
+            logUpdate('Component hot-updated: ' + (update.module?.id || update.path));
+          } else {
+            logHMRReason(update);
+            location.reload();
+          }
+          break;
 
-      case 'error':
-        showErrorOverlay(update.error);
-        break;
-    }
-  };
+        case 'loader-update':
+          logUpdate('Loader changed, refreshing data...');
+          refreshLoaderData(update.path);
+          break;
 
-  ws.onclose = function() {
-    console.log('[HMR] Connection lost, attempting reconnect...');
-    setTimeout(function() {
-      location.reload();
-    }, 1000);
-  };
+        case 'js-update':
+          if (update.module?.isIsland && handleIslandUpdate(update)) {
+            logUpdate('Island hot-updated: ' + (update.module?.id || update.path));
+          } else if (update.module?.isComponent && handleComponentUpdate(update)) {
+            logUpdate('Component hot-updated: ' + (update.module?.id || update.path));
+          } else {
+            logHMRReason(update);
+            location.reload();
+          }
+          break;
+
+        case 'error':
+          showErrorOverlay(update.error);
+          break;
+      }
+
+      // Clear error overlay on successful (non-error) updates
+      if (update.type !== 'error') {
+        var overlay = document.getElementById('ereo-error-overlay');
+        if (overlay) overlay.remove();
+      }
+    };
+
+    ws.onclose = function() {
+      if (intentionalClose) return;
+      if (retryCount >= MAX_RETRIES) {
+        console.log('[HMR] Max retries reached, giving up. Reload manually when server is back.');
+        return;
+      }
+      retryCount++;
+      console.log('[HMR] Connection lost, retrying (' + retryCount + '/' + MAX_RETRIES + ')...');
+      setTimeout(connect, retryDelay);
+      retryDelay = Math.min(retryDelay * 1.5, 5000);
+    };
+
+    ws.onerror = function() {
+      // onclose will fire after this
+    };
+
+    window.addEventListener('beforeunload', function() {
+      intentionalClose = true;
+      ws.close();
+    });
+  }
+
+  connect();
 
   function updateCSS(path) {
     const links = document.querySelectorAll('link[rel="stylesheet"]');
@@ -257,14 +295,6 @@ export const HMR_CLIENT_CODE = `
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // Clear error overlay on successful update
-  ws.addEventListener('message', function(event) {
-    const update = JSON.parse(event.data);
-    if (update.type !== 'error') {
-      const overlay = document.getElementById('ereo-error-overlay');
-      if (overlay) overlay.remove();
-    }
-  });
 })();
 `;
 
