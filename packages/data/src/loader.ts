@@ -143,6 +143,43 @@ export async function resolveDeferred<T>(deferred: DeferredData<T>): Promise<T> 
 }
 
 /**
+ * Recursively check if any value in a data structure is DeferredData.
+ * Used as a fast-path guard: skip async resolution when no deferred data exists.
+ */
+export function hasDeferredData(data: unknown): boolean {
+  if (data == null || typeof data !== 'object') return false;
+  if (isDeferred(data)) return true;
+  if (Array.isArray(data)) return data.some(hasDeferredData);
+  for (const value of Object.values(data as Record<string, unknown>)) {
+    if (hasDeferredData(value)) return true;
+  }
+  return false;
+}
+
+/**
+ * Recursively walk a data structure, await all DeferredData.promise values,
+ * and return a new object with plain resolved values.
+ * Uses Promise.all for parallel resolution of sibling deferred values.
+ */
+export async function resolveAllDeferred<T>(data: T): Promise<T> {
+  if (data == null || typeof data !== 'object') return data;
+
+  if (isDeferred(data)) {
+    return await (data as DeferredData<unknown>).promise as T;
+  }
+
+  if (Array.isArray(data)) {
+    return await Promise.all(data.map(resolveAllDeferred)) as T;
+  }
+
+  const entries = Object.entries(data as Record<string, unknown>);
+  const resolvedEntries = await Promise.all(
+    entries.map(async ([key, value]) => [key, await resolveAllDeferred(value)])
+  );
+  return Object.fromEntries(resolvedEntries) as T;
+}
+
+/**
  * Helper to extract data from a fetch response.
  */
 export async function fetchData<T>(

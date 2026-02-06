@@ -23,7 +23,6 @@ Level 1 (depends on core only):
   @ereo/deploy-vercel → core
   @ereo/plugin-tailwind → core
   @ereo/plugin-images → core
-  @ereo/rsc → core
   @ereo/rpc → core
 
 Level 2 (depends on Level 0+1):
@@ -62,7 +61,6 @@ Deprecated:
 - [ ] @ereo/deploy-vercel
 - [ ] @ereo/plugin-tailwind
 - [ ] @ereo/plugin-images
-- [ ] @ereo/rsc
 - [ ] @ereo/rpc
 
 ### Batch 3 — Level 2

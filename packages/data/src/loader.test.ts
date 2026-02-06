@@ -4,6 +4,8 @@ import {
   defer,
   isDeferred,
   resolveDeferred,
+  hasDeferredData,
+  resolveAllDeferred,
   fetchData,
   FetchError,
   serializeLoaderData,
@@ -437,6 +439,128 @@ describe('@ereo/data - Loader', () => {
       } finally {
         globalThis.fetch = originalFetch;
       }
+    });
+  });
+
+  describe('hasDeferredData', () => {
+    test('returns false for primitives', () => {
+      expect(hasDeferredData(null)).toBe(false);
+      expect(hasDeferredData(undefined)).toBe(false);
+      expect(hasDeferredData(42)).toBe(false);
+      expect(hasDeferredData('hello')).toBe(false);
+      expect(hasDeferredData(true)).toBe(false);
+    });
+
+    test('returns false for plain objects without deferred data', () => {
+      expect(hasDeferredData({ a: 1, b: 'two' })).toBe(false);
+      expect(hasDeferredData({ nested: { deep: [1, 2, 3] } })).toBe(false);
+    });
+
+    test('returns true for a DeferredData value', () => {
+      const deferred = defer(Promise.resolve('data'));
+      expect(hasDeferredData(deferred)).toBe(true);
+    });
+
+    test('returns true for nested deferred data in object', () => {
+      const deferred = defer(Promise.resolve('data'));
+      expect(hasDeferredData({ user: 'John', comments: deferred })).toBe(true);
+    });
+
+    test('returns true for deferred data in array', () => {
+      const deferred = defer(Promise.resolve('data'));
+      expect(hasDeferredData([1, deferred, 3])).toBe(true);
+    });
+
+    test('returns true for deeply nested deferred data', () => {
+      const deferred = defer(Promise.resolve('data'));
+      expect(hasDeferredData({ a: { b: { c: [deferred] } } })).toBe(true);
+    });
+
+    test('returns false for empty objects and arrays', () => {
+      expect(hasDeferredData({})).toBe(false);
+      expect(hasDeferredData([])).toBe(false);
+    });
+  });
+
+  describe('resolveAllDeferred', () => {
+    test('returns primitives unchanged', async () => {
+      expect(await resolveAllDeferred(null)).toBe(null);
+      expect(await resolveAllDeferred(42)).toBe(42);
+      expect(await resolveAllDeferred('hello')).toBe('hello');
+      expect(await resolveAllDeferred(undefined)).toBe(undefined);
+    });
+
+    test('resolves a single DeferredData value', async () => {
+      const deferred = defer(Promise.resolve('resolved'));
+      const result = await resolveAllDeferred(deferred);
+      expect(result).toBe('resolved');
+    });
+
+    test('resolves nested deferred data in objects', async () => {
+      const deferred = defer(Promise.resolve([{ id: 1 }, { id: 2 }]));
+      const data = { user: 'John', comments: deferred, count: 5 };
+      const result = await resolveAllDeferred(data);
+
+      expect(result).toEqual({
+        user: 'John',
+        comments: [{ id: 1 }, { id: 2 }],
+        count: 5,
+      });
+    });
+
+    test('resolves deferred data in arrays', async () => {
+      const d1 = defer(Promise.resolve('a'));
+      const d2 = defer(Promise.resolve('b'));
+      const result = await resolveAllDeferred([d1, 'plain', d2]);
+      expect(result).toEqual(['a', 'plain', 'b']);
+    });
+
+    test('resolves deeply nested deferred data', async () => {
+      const deferred = defer(Promise.resolve(42));
+      const data = { a: { b: { c: deferred } } };
+      const result = await resolveAllDeferred(data);
+      expect(result).toEqual({ a: { b: { c: 42 } } });
+    });
+
+    test('resolves multiple deferred values in parallel', async () => {
+      const order: number[] = [];
+      const d1 = defer(new Promise<string>((resolve) => {
+        setTimeout(() => { order.push(1); resolve('first'); }, 20);
+      }));
+      const d2 = defer(new Promise<string>((resolve) => {
+        setTimeout(() => { order.push(2); resolve('second'); }, 10);
+      }));
+
+      const result = await resolveAllDeferred({ a: d1, b: d2 });
+      expect(result).toEqual({ a: 'first', b: 'second' });
+      // d2 should resolve before d1 (shorter timeout) proving parallel execution
+      expect(order).toEqual([2, 1]);
+    });
+
+    test('propagates rejection from deferred data', async () => {
+      const deferred = defer(Promise.reject(new Error('failed')));
+      await expect(resolveAllDeferred({ data: deferred })).rejects.toThrow('failed');
+    });
+
+    test('produces JSON-serializable output', async () => {
+      const deferred = defer(Promise.resolve({ nested: [1, 2, 3] }));
+      const data = { user: 'test', extra: deferred };
+      const result = await resolveAllDeferred(data);
+
+      // Should not throw when serialized
+      const json = JSON.stringify(result);
+      expect(json).not.toContain('"promise"');
+      expect(json).not.toContain('"status"');
+      expect(JSON.parse(json)).toEqual({
+        user: 'test',
+        extra: { nested: [1, 2, 3] },
+      });
+    });
+
+    test('handles plain objects without deferred data', async () => {
+      const data = { a: 1, b: [2, 3], c: { d: 'four' } };
+      const result = await resolveAllDeferred(data);
+      expect(result).toEqual(data);
     });
   });
 });

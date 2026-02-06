@@ -6,7 +6,7 @@
 
 import type { ReactElement } from 'react';
 import type { Route, RouteMatch, AppContext, LoaderFunction, LinkDescriptor } from '@ereo/core';
-import { serializeLoaderData } from '@ereo/data';
+import { serializeLoaderData, hasDeferredData, resolveAllDeferred } from '@ereo/data';
 
 /**
  * Render options.
@@ -151,6 +151,11 @@ export async function renderToStream(
     });
   }
 
+  // Resolve any deferred data before serialization into the shell
+  if (hasDeferredData(loaderData)) {
+    loaderData = await resolveAllDeferred(loaderData);
+  }
+
   const { head, tail } = createShell({ shell, scripts, styles, loaderData });
 
   return new Promise((resolve, reject) => {
@@ -223,6 +228,11 @@ export async function renderToString(
       params: options.match.params,
       context: options.context,
     });
+  }
+
+  // Resolve any deferred data before serialization
+  if (hasDeferredData(loaderData)) {
+    loaderData = await resolveAllDeferred(loaderData);
   }
 
   const { head, tail } = createShell({ shell, scripts, styles, loaderData });

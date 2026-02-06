@@ -239,13 +239,6 @@ export default defineConfig({
           ]
         },
         {
-          text: '@ereo/rsc',
-          collapsed: true,
-          items: [
-            { text: 'Overview', link: '/api/rsc/' }
-          ]
-        },
-        {
           text: '@ereo/bundler',
           collapsed: true,
           items: [

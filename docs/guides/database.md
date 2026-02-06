@@ -2,6 +2,102 @@
 
 This guide covers database integration patterns in EreoJS.
 
+## Two Approaches
+
+EreoJS gives you two ways to work with databases:
+
+| Approach | Best For | Packages |
+|----------|----------|----------|
+| **Framework adapter** (recommended) | Most apps — gives you request-scoped deduplication, connection pooling, and plugin integration | `@ereo/db` + `@ereo/db-drizzle` or `@ereo/db-surrealdb` |
+| **Direct library** | Quick prototyping or when you want full control | Any ORM or driver directly (Drizzle, Prisma, better-sqlite3, etc.) |
+
+> **New to EreoJS?** Start with the framework adapter approach — it integrates with the plugin system, gives you automatic query deduplication (preventing N+1 problems), and provides a consistent `useDb(context)` pattern across all your loaders and actions.
+
+## Framework Adapter (Recommended)
+
+EreoJS provides `@ereo/db` as a core database abstraction layer with adapter packages for specific ORMs:
+
+- **`@ereo/db-drizzle`** — Drizzle ORM adapter supporting PostgreSQL, SQLite, MySQL (PlanetScale), and edge-compatible drivers (Neon, Turso, Cloudflare D1)
+- **`@ereo/db-surrealdb`** — SurrealDB adapter with multi-model database support, graph relationships, and real-time subscriptions
+
+### Quick Start with Drizzle
+
+```bash
+bun add @ereo/db @ereo/db-drizzle drizzle-orm postgres
+```
+
+```ts
+// db/schema.ts
+import { pgTable, serial, varchar, text, timestamp } from 'drizzle-orm/pg-core'
+
+export const posts = pgTable('posts', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 255 }).notNull(),
+  content: text('content'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+```
+
+```ts
+// ereo.config.ts
+import { defineConfig } from '@ereo/core'
+import { createDatabasePlugin } from '@ereo/db'
+import { createDrizzleAdapter, definePostgresConfig } from '@ereo/db-drizzle'
+import * as schema from './db/schema'
+
+const adapter = createDrizzleAdapter(
+  definePostgresConfig({
+    url: process.env.DATABASE_URL!,
+    schema,
+  })
+)
+
+export default defineConfig({
+  plugins: [createDatabasePlugin(adapter)],
+})
+```
+
+```ts
+// routes/posts/page.tsx
+import { createLoader, createAction } from '@ereo/data'
+import { useDb, withTransaction } from '@ereo/db'
+import { posts } from '~/db/schema'
+import { eq } from 'drizzle-orm'
+
+export const loader = createLoader({
+  load: async ({ context }) => {
+    const db = useDb(context)
+    const allPosts = await db.client.select().from(posts)
+    return { posts: allPosts }
+  },
+})
+
+export const action = createAction({
+  handler: async ({ context, formData }) => {
+    return withTransaction(context, async (tx) => {
+      await tx.insert(posts).values({
+        title: formData.get('title') as string,
+        content: formData.get('content') as string,
+      })
+      return { success: true }
+    })
+  },
+})
+```
+
+For full details, see the API docs:
+- [@ereo/db](/api/db) — Core abstractions (adapters, deduplication, pooling, retry utilities)
+- [@ereo/db-drizzle](/api/db/drizzle) — Drizzle adapter with 8 supported drivers
+- [@ereo/db-surrealdb](/api/db/surrealdb) — SurrealDB adapter
+
+---
+
+## Direct Library Usage
+
+If you prefer to use a database library directly without the framework adapter, the patterns below show how. These work well for quick prototyping or when you need full control.
+
+> **Tip:** You can always start with direct usage and migrate to the framework adapter later. The adapter just wraps your chosen library with deduplication and plugin integration.
+
 ## SQLite with better-sqlite3
 
 SQLite is perfect for small to medium applications.
@@ -368,7 +464,7 @@ export const loader = createLoader(async ({ params }) => {
   const post = await cached(
     `post:${params.id}`,
     () => db.prepare('SELECT * FROM posts WHERE id = ?').get(params.id),
-    { ttl: 300, tags: ['posts', `post-${params.id}`] }
+    { maxAge: 300, tags: ['posts', `post-${params.id}`] }
   )
 
   return { post }
@@ -377,9 +473,18 @@ export const loader = createLoader(async ({ params }) => {
 
 ## Best Practices
 
-1. **Use connection pooling** - Don't create connections per request
-2. **Use prepared statements** - Prevent SQL injection
-3. **Index frequently queried columns** - Improve performance
-4. **Use transactions for multi-step operations** - Ensure consistency
-5. **Cache expensive queries** - With appropriate invalidation
-6. **Use migrations** - Track schema changes
+1. **Use the framework adapter for production apps** - `@ereo/db` + `@ereo/db-drizzle` gives you request-scoped query deduplication, connection pooling, and plugin integration out of the box
+2. **Use connection pooling** - Don't create connections per request
+3. **Use prepared statements** - Prevent SQL injection
+4. **Index frequently queried columns** - Improve performance
+5. **Use transactions for multi-step operations** - Ensure consistency
+6. **Cache expensive queries** - With appropriate invalidation via tags
+7. **Use migrations** - Track schema changes (Drizzle Kit, Prisma Migrate, etc.)
+
+## Related
+
+- [@ereo/db](/api/db) — Core database abstractions
+- [@ereo/db-drizzle](/api/db/drizzle) — Drizzle ORM adapter (recommended)
+- [@ereo/db-surrealdb](/api/db/surrealdb) — SurrealDB adapter
+- [Caching](/core-concepts/caching) — Cache strategies for database queries
+- [Data Loading](/core-concepts/data-loading) — Loaders and actions

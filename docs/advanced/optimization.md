@@ -245,7 +245,7 @@ export const loader = createLoader(async () => {
         FROM posts
       `)
     },
-    { ttl: 300, tags: ['stats'] }
+    { maxAge: 300, tags: ['stats'] }
   )
 
   return { stats }

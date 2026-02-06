@@ -390,14 +390,15 @@ export const loader = createLoader({
 
 ### In Actions
 
+When using the options-object form of `createAction`, `formData` is already parsed and available in the handler arguments — no need to call `request.formData()` yourself:
+
 ```ts
 import { createAction } from '@ereo/data'
 import { useDb } from '@ereo/db-surrealdb'
 
 export const action = createAction({
-  handler: async ({ context, request }) => {
+  handler: async ({ context, formData }) => {
     const db = useDb(context)
-    const formData = await request.formData()
 
     await db.client.create('posts', {
       title: formData.get('title'),
@@ -412,19 +413,18 @@ export const action = createAction({
 
 ### Transactions
 
+Use `withTransaction` from `@ereo/db` to run multiple operations atomically. It takes the request `context` as the first argument and automatically clears the dedup cache after the transaction completes:
+
 ```ts
 import { withTransaction } from '@ereo/db-surrealdb'
 
 export const action = createAction({
   handler: async ({ context }) => {
-    const db = useDb(context)
-
-    await withTransaction(db.client, async (tx) => {
+    return withTransaction(context, async (tx) => {
       await tx.query('UPDATE users:john SET balance -= 100')
       await tx.query('UPDATE users:jane SET balance += 100')
+      return { success: true }
     })
-
-    return { success: true }
   },
 })
 ```

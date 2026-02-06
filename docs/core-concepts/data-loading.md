@@ -397,6 +397,76 @@ export const action = typedAction({
 })
 ```
 
+### JSON-Only Actions
+
+For API endpoints that only accept JSON, use `jsonAction`. It optionally enforces `Content-Type: application/json`:
+
+```tsx
+import { jsonAction } from '@ereo/data'
+
+export const action = jsonAction<{ title: string }, Post>({
+  handler: async ({ body }) => {
+    return db.posts.create({ data: body })
+  },
+  strict: true,  // Returns 415 error if Content-Type is not application/json
+})
+```
+
+### Simple Action Wrapper
+
+The `action()` function is a convenience wrapper that creates an action with automatic `ActionResult` wrapping:
+
+```tsx
+import { action } from '@ereo/data'
+
+// Automatically wraps return value in { success: true, data: ... }
+export const myAction = action(async ({ formData }) => {
+  const title = formData.get('title') as string
+  return db.posts.create({ title })
+})
+```
+
+This is equivalent to `createAction({ handler })` — use it when you want `ActionResult` wrapping without validation or error handling.
+
+### FormData Utilities
+
+EreoJS provides utilities for working with form data:
+
+```tsx
+import {
+  formDataToObject,
+  parseFormData,
+  validateRequired,
+  combineValidators,
+  coerceValue,
+} from '@ereo/data'
+
+// Convert FormData to a typed object with automatic type coercion
+// Supports nested objects (user.name), arrays (tags[]), indexed arrays (items[0])
+const data = formDataToObject<MyType>(formData)
+// { coerce: false } disables automatic type coercion
+const rawData = formDataToObject<MyType>(formData, { coerce: false })
+
+// Simpler FormData parsing (supports field[] arrays only)
+const parsed = parseFormData<{ title: string; tags: string[] }>(formData)
+
+// Validate required fields
+const result = validateRequired(formData, ['title', 'content', 'email'])
+// Returns: { success: false, errors: { title: ['title is required'] } }
+
+// Combine multiple validators into one
+const validate = combineValidators(
+  (fd) => validateRequired(fd, ['title']),
+  (fd) => {
+    const email = fd.get('email') as string
+    if (!email.includes('@')) {
+      return { success: false, errors: { email: ['Invalid email'] } }
+    }
+    return { success: true }
+  },
+)
+```
+
 ### Multiple Actions in One Route
 
 Use an `intent` field to handle different actions on the same route:
@@ -522,25 +592,26 @@ Combine multiple loaders to run in parallel for complex data requirements:
 import { createLoader, combineLoaders } from '@ereo/data'
 
 const userLoader = createLoader(async ({ request }) => {
-  const user = await getUser(request)
-  return { user }
+  return getUser(request)
 })
 
 const postsLoader = createLoader(async () => {
-  const posts = await db.posts.findMany()
-  return { posts }
+  return db.posts.findMany()
 })
 
-// Both run in parallel. Returns { user, posts }
+// Both run in parallel.
+// Returns { user: User, posts: Post[] } — each key holds the return value of its loader
 export const loader = combineLoaders({ user: userLoader, posts: postsLoader })
 ```
+
+> **Tip:** Each loader's return value is assigned to its key. If `userLoader` returns a `User` object, the combined result has `{ user: User }`. Avoid wrapping in extra objects like `{ user }` — just return the value directly.
 
 ## Client Loaders
 
 Add client-side data fetching that runs after hydration — useful for real-time data or client-only state:
 
 ```tsx
-import { createLoader, clientLoader } from '@ereo/data'
+import { createLoader, clientLoader as createClientLoader } from '@ereo/data'
 
 // Server loader — runs on the server
 export const loader = createLoader(async () => {
@@ -549,7 +620,7 @@ export const loader = createLoader(async () => {
 })
 
 // Client loader — runs in the browser after hydration
-export const clientLoader = clientLoader(async () => {
+export const clientLoader = createClientLoader(async () => {
   const response = await fetch('/api/posts')
   const posts = await response.json()
   return { posts }
@@ -582,20 +653,264 @@ export const action = createAction(async ({ request }) => {
 EreoJS provides helpers for common response types:
 
 ```tsx
-import { json, redirect, error } from '@ereo/data'
+import { json, data, redirect, throwRedirect, error } from '@ereo/data'
 
 // JSON response with custom status
 return json({ success: true })
-return json({ data }, { status: 201 })
+return json({ post }, { status: 201 })
+
+// XSS-safe data response (escapes <, >, &, ' characters)
+// Use this when embedding data in HTML/script tags
+return data({ post })
 
 // Redirect (default 302)
 return redirect('/posts')
 return redirect('/posts', 303)  // 303 after POST
 
-// Error response
+// Throw a redirect — useful inside loaders to stop execution immediately
+throwRedirect('/login')  // throws, never returns
+
+// Error response (default status 500)
 throw error('Not found', 404)
 throw error('Unauthorized', 401)
 ```
+
+| Helper | Description |
+|--------|-------------|
+| `json(data, init?)` | Standard JSON response |
+| `data(value, init?)` | XSS-safe JSON response (escapes dangerous characters) |
+| `redirect(url, statusOrInit?)` | HTTP redirect (default 302) |
+| `throwRedirect(url, statusOrInit?)` | Throws a redirect response (stops execution) |
+| `error(message, status?)` | JSON error response (default 500) |
+
+## Data Pipelines
+
+For complex pages that load data from multiple sources, use `createPipeline` to automatically parallelize independent data fetches and manage dependencies between them:
+
+```tsx
+import { createPipeline, dataSource, cachedSource, optionalSource } from '@ereo/data'
+
+const pipeline = createPipeline({
+  loaders: {
+    // Regular data source
+    post: dataSource(async ({ params }) => {
+      return db.posts.find(params.id)
+    }),
+
+    // Cached data source — ttl is in seconds
+    categories: cachedSource(
+      async () => db.categories.findMany(),
+      { ttl: 300, tags: ['categories'] }
+    ),
+
+    // Optional data source — uses fallback value on failure
+    analytics: optionalSource(
+      async ({ params }) => db.analytics.get(params.id),
+      { views: 0, likes: 0 }  // fallback
+    ),
+
+    // This depends on 'post' — declared below in dependencies
+    comments: dataSource(async ({ params }) => {
+      return db.comments.findByPost(params.id)
+    }),
+  },
+  dependencies: {
+    comments: ['post'],  // comments waits for post to load first
+  },
+  metrics: true,  // Enable timing metrics
+})
+
+// Convert to a standard loader export
+export const loader = pipeline.toLoader()
+```
+
+The pipeline automatically:
+- Runs independent loaders in parallel (`post`, `categories`, `analytics` start together)
+- Respects dependencies (`comments` waits for `post`)
+- Detects unnecessary waterfalls and suggests optimizations
+- Tracks timing metrics for each loader
+
+### Pipeline Metrics
+
+When `metrics: true`, the pipeline result includes detailed timing data:
+
+```tsx
+const result = await pipeline.execute(args)
+// result.data — the loaded data
+// result.metrics.total — total execution time (ms)
+// result.metrics.parallelEfficiency — 0 to 1 (higher = better parallelization)
+// result.metrics.waterfalls — detected unnecessary sequential waits
+
+// Format metrics for console output
+import { formatMetrics } from '@ereo/data'
+console.log(formatMetrics(result.metrics))
+```
+
+---
+
+## Fetching External Data
+
+Use `fetchData` for type-safe external API calls with automatic JSON/text detection:
+
+```tsx
+import { fetchData, FetchError } from '@ereo/data'
+
+export const loader = createLoader(async () => {
+  try {
+    // Automatically parses JSON based on Content-Type header
+    const posts = await fetchData<Post[]>('https://api.example.com/posts')
+    return { posts }
+  } catch (err) {
+    if (err instanceof FetchError) {
+      // Access the original Response for status info
+      console.error(`API failed: ${err.status} ${err.statusText}`)
+    }
+    throw err
+  }
+})
+```
+
+---
+
+## Data Serialization
+
+For embedding loader data in HTML (e.g., during SSR hydration), use the XSS-safe serialization helpers:
+
+```tsx
+import { serializeLoaderData, parseLoaderData } from '@ereo/data'
+
+// Server: serialize with XSS protection (escapes <, >, &, ')
+const html = `<script>window.__DATA__ = ${serializeLoaderData(loaderData)}</script>`
+
+// Client: parse it back
+const data = parseLoaderData<MyData>(window.__DATA__)
+```
+
+---
+
+## Revalidation Helpers
+
+Beyond `revalidateTag` and `revalidatePath`, EreoJS provides additional revalidation utilities:
+
+```tsx
+import {
+  revalidate,
+  onDemandRevalidate,
+  createRevalidationHandler,
+  tags,
+} from '@ereo/data'
+
+// Revalidate with options — supports tags, paths, or clearing everything
+await revalidate({ tags: ['posts'], paths: ['/blog'] })
+await revalidate({ all: true })  // Clear entire cache
+
+// onDemandRevalidate auto-detects tags vs paths (paths start with "/")
+await onDemandRevalidate('posts', '/blog', `user-${userId}`)
+// Equivalent to: revalidate({ tags: ['posts', `user-${userId}`], paths: ['/blog'] })
+
+// Tag name helpers for consistent naming
+tags.resource('post', '123')        // 'post:123'
+tags.collection('posts')            // 'posts'
+tags.userScoped('456', 'bookmarks') // 'user:456:bookmarks'
+```
+
+### Webhook Revalidation Handler
+
+Expose an API route for external services (CMS, webhooks) to trigger cache invalidation:
+
+```tsx
+// routes/api/revalidate.ts
+import { createRevalidationHandler } from '@ereo/data'
+
+// Accepts POST requests with { tags?, paths?, all? } body
+// Optional secret enables Bearer token authentication
+export const POST = createRevalidationHandler(process.env.REVALIDATION_SECRET)
+```
+
+External services can then call:
+```bash
+curl -X POST https://your-app.com/api/revalidate \
+  -H "Authorization: Bearer your-secret" \
+  -H "Content-Type: application/json" \
+  -d '{"tags": ["posts"]}'
+```
+
+---
+
+## Schema Adapters
+
+EreoJS includes schema utilities for parsing and validating URL parameters, especially useful with `defineRoute`:
+
+### ereoSchema (Zod Alignment)
+
+When using Zod with `z.coerce`, TypeScript types may not align with the actual runtime output. `ereoSchema` wraps your Zod schema to fix this:
+
+```tsx
+import { ereoSchema } from '@ereo/data'
+import { z } from 'zod'
+
+// Without ereoSchema: z.coerce.number() has input type string but output type number
+// This can break type inference in defineRoute
+const schema = ereoSchema(z.object({
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(20),
+}))
+
+export const route = defineRoute('/posts')
+  .searchParams(schema)
+  .loader(async ({ searchParams }) => {
+    // searchParams.page is correctly typed as number
+    return db.posts.paginate(searchParams.page, searchParams.limit)
+  })
+  .build()
+```
+
+### Schema Builder (No Zod Required)
+
+Build validation schemas without a Zod dependency using `schemaBuilder`:
+
+```tsx
+import { schemaBuilder } from '@ereo/data'
+
+const searchSchema = schemaBuilder()
+  .string('q', { optional: true })
+  .number('page', { default: 1, min: 1 })
+  .number('limit', { default: 20, min: 1, max: 100 })
+  .enum('sort', ['newest', 'oldest', 'popular'], { default: 'newest' })
+  .build()
+```
+
+### Pagination, Sort, and Filter Parsers
+
+Pre-built parsers for common URL parameter patterns:
+
+```tsx
+import {
+  createPaginationParser,
+  createSortParser,
+  createFilterParser,
+} from '@ereo/data'
+
+const pagination = createPaginationParser({ defaultLimit: 20, maxLimit: 100 })
+const sort = createSortParser(['title', 'createdAt', 'views'], 'createdAt', 'desc')
+const filter = createFilterParser({ status: ['draft', 'published', 'archived'] })
+```
+
+### Type Coercion Utilities
+
+Low-level helpers for parsing URL/form values:
+
+```tsx
+import { parseBoolean, parseStringArray, parseDate, parseEnum } from '@ereo/data'
+
+parseBoolean('true')              // true
+parseBoolean('0')                 // false
+parseStringArray('a,b,c')         // ['a', 'b', 'c']
+parseDate('2024-01-15')           // Date object
+parseEnum('admin', ['admin', 'user'])  // 'admin'
+```
+
+---
 
 ## Best Practices
 

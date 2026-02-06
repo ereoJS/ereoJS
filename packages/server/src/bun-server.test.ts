@@ -2597,3 +2597,262 @@ describe('@ereo/server - Inline Route Middleware', () => {
     }
   });
 });
+
+// =================================================================
+// Deferred Data Resolution Tests
+// =================================================================
+
+describe('@ereo/server - Deferred Data Resolution', () => {
+  let server: any;
+
+  afterEach(() => {
+    if (server) {
+      server.stop();
+    }
+  });
+
+  test('JSON response resolves deferred loader data', async () => {
+    const { defer } = await import('@ereo/data');
+
+    server = createServer({ port: 4650, logging: false });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/deferred-json',
+          path: '/deferred-json',
+          file: '/deferred-json.tsx',
+          module: {
+            loader: async () => ({
+              title: 'My Post',
+              comments: defer(Promise.resolve([{ id: 1, text: 'Great!' }, { id: 2, text: 'Nice' }])),
+            }),
+          },
+        },
+        params: {},
+        pathname: '/deferred-json',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    const response = await fetch('http://localhost:4650/deferred-json', {
+      headers: { Accept: 'application/json' },
+    });
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+
+    // Deferred data should be resolved — no promise/status fields
+    expect(json.data.title).toBe('My Post');
+    expect(json.data.comments).toEqual([{ id: 1, text: 'Great!' }, { id: 2, text: 'Nice' }]);
+    expect(json.data.comments).not.toHaveProperty('promise');
+    expect(json.data.comments).not.toHaveProperty('status');
+  });
+
+  test('HTML response hydration script contains resolved deferred data', async () => {
+    const { defer } = await import('@ereo/data');
+
+    server = createServer({ port: 4651, logging: false, renderMode: 'string' });
+
+    const TestComponent = ({ loaderData }: any) =>
+      createElement('div', null, loaderData.title);
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/deferred-html',
+          path: '/deferred-html',
+          file: '/deferred-html.tsx',
+          module: {
+            default: TestComponent,
+            loader: async () => ({
+              title: 'Deferred Page',
+              sidebar: defer(Promise.resolve({ widgets: ['recent', 'popular'] })),
+            }),
+          },
+        },
+        params: {},
+        pathname: '/deferred-html',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    const response = await fetch('http://localhost:4651/deferred-html');
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    // Hydration script should contain resolved data
+    expect(html).toContain('window.__EREO_DATA__');
+    expect(html).toContain('widgets');
+    expect(html).toContain('recent');
+    expect(html).toContain('popular');
+    // Should not contain DeferredData artifacts
+    expect(html).not.toContain('"status":"pending"');
+    expect(html).not.toContain('"promise"');
+  });
+
+  test('streaming mode resolves deferred data in hydration script', async () => {
+    const { defer } = await import('@ereo/data');
+
+    server = createServer({ port: 4652, logging: false, renderMode: 'streaming' });
+
+    const TestComponent = ({ loaderData }: any) =>
+      createElement('div', null, loaderData.title);
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/deferred-stream',
+          path: '/deferred-stream',
+          file: '/deferred-stream.tsx',
+          module: {
+            default: TestComponent,
+            loader: async () => ({
+              title: 'Streamed Page',
+              data: defer(Promise.resolve({ count: 42 })),
+            }),
+          },
+        },
+        params: {},
+        pathname: '/deferred-stream',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    const response = await fetch('http://localhost:4652/deferred-stream');
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    expect(html).toContain('window.__EREO_DATA__');
+    expect(html).toContain('"count":42');
+    expect(html).not.toContain('"status":"pending"');
+  });
+
+  test('minimal page resolves deferred data', async () => {
+    const { defer } = await import('@ereo/data');
+
+    server = createServer({ port: 4653, logging: false });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/deferred-minimal',
+          path: '/deferred-minimal',
+          file: '/deferred-minimal.tsx',
+          module: {
+            // No default component — triggers renderMinimalPage
+            loader: async () => ({
+              items: defer(Promise.resolve(['a', 'b', 'c'])),
+            }),
+          },
+        },
+        params: {},
+        pathname: '/deferred-minimal',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    const response = await fetch('http://localhost:4653/deferred-minimal');
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    expect(html).toContain('window.__EREO_DATA__');
+    // Resolved array values should appear
+    expect(html).toContain('"a"');
+    expect(html).toContain('"b"');
+    expect(html).toContain('"c"');
+    expect(html).not.toContain('"status":"pending"');
+  });
+
+  test('loader with no deferred data still works (fast path)', async () => {
+    server = createServer({ port: 4654, logging: false });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/no-defer',
+          path: '/no-defer',
+          file: '/no-defer.tsx',
+          module: {
+            loader: async () => ({ plain: 'data', count: 5 }),
+          },
+        },
+        params: {},
+        pathname: '/no-defer',
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    const response = await fetch('http://localhost:4654/no-defer', {
+      headers: { Accept: 'application/json' },
+    });
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.data).toEqual({ plain: 'data', count: 5 });
+  });
+
+  test('layout loader with deferred data is resolved in JSON response', async () => {
+    const { defer } = await import('@ereo/data');
+
+    server = createServer({ port: 4655, logging: false });
+
+    const mockRouter = {
+      match: () => ({
+        route: {
+          id: '/page',
+          path: '/page',
+          file: '/page.tsx',
+          module: {
+            loader: async () => ({ content: 'hello' }),
+          },
+        },
+        params: {},
+        pathname: '/page',
+        layouts: [
+          {
+            id: 'root-layout',
+            path: '/',
+            file: '/_layout.tsx',
+            layout: true,
+            module: {
+              loader: async () => ({
+                nav: defer(Promise.resolve(['Home', 'About', 'Contact'])),
+              }),
+            },
+          },
+        ],
+      }),
+      loadModule: async () => {},
+    };
+
+    server.setRouter(mockRouter as any);
+    await server.start();
+
+    const response = await fetch('http://localhost:4655/page', {
+      headers: { Accept: 'application/json' },
+    });
+
+    const json = await response.json();
+    expect(json.data).toEqual({ content: 'hello' });
+    expect(json.layoutData['root-layout'].nav).toEqual(['Home', 'About', 'Contact']);
+  });
+});

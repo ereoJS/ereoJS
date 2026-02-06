@@ -73,12 +73,12 @@ export const action = createAction(async ({ request, params }) => {
 
 ## revalidatePath
 
-Invalidates cached data for a specific path.
+Invalidates cached data for one or more paths. Accepts variadic arguments.
 
 ### Signature
 
 ```ts
-function revalidatePath(path: string): Promise<void>
+function revalidatePath(...paths: string[]): Promise<RevalidateResult>
 ```
 
 ### Example
@@ -87,11 +87,11 @@ function revalidatePath(path: string): Promise<void>
 // Invalidate specific path
 await revalidatePath('/posts')
 
-// Invalidate with wildcard
-await revalidatePath('/posts/*')
+// Invalidate multiple paths at once
+await revalidatePath('/posts', `/posts/${postId}`, '/homepage')
 
-// Invalidate specific post
-await revalidatePath(`/posts/${postId}`)
+// Invalidate with pattern matching
+await revalidatePath('/posts/*')
 ```
 
 ## revalidate
@@ -101,19 +101,17 @@ Invalidates cache with flexible options.
 ### Signature
 
 ```ts
-function revalidate(options: RevalidateOptions): Promise<void>
+function revalidate(options: RevalidateOptions): Promise<RevalidateResult>
 ```
 
 ### Options
 
 ```ts
 interface RevalidateOptions {
-  // Invalidate by tag
-  tag?: string
+  // Invalidate by tags
   tags?: string[]
 
-  // Invalidate by path
-  path?: string
+  // Invalidate by paths
   paths?: string[]
 
   // Invalidate everything
@@ -124,14 +122,14 @@ interface RevalidateOptions {
 ### Example
 
 ```ts
-// Invalidate by tag
-await revalidate({ tag: 'posts' })
+// Invalidate by tags
+await revalidate({ tags: ['posts'] })
 
 // Invalidate multiple tags
 await revalidate({ tags: ['posts', 'users'] })
 
-// Invalidate by path
-await revalidate({ path: '/posts' })
+// Invalidate by paths
+await revalidate({ paths: ['/posts'] })
 
 // Invalidate multiple paths
 await revalidate({ paths: ['/posts', '/users'] })
@@ -139,7 +137,7 @@ await revalidate({ paths: ['/posts', '/users'] })
 // Invalidate everything
 await revalidate({ all: true })
 
-// Combined
+// Combined — tags and paths together
 await revalidate({
   tags: ['posts'],
   paths: ['/home']
@@ -460,7 +458,7 @@ interface RevalidateResult {
 
 1. **Use granular tags** - More specific tags allow more precise invalidation
 2. **Invalidate conservatively** - Better to over-invalidate than miss stale data
-3. **Combine related invalidations** - Use `revalidateTags` for related data
+3. **Combine related invalidations** - Use `revalidateTag` with multiple arguments for related data
 4. **Secure revalidation endpoints** - Always verify webhook signatures
 5. **Log revalidations** - Track what gets invalidated and when
 6. **Test invalidation paths** - Verify cache clears correctly

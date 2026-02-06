@@ -27,7 +27,6 @@
       "@ereo/dev-inspector": ["./packages/dev-inspector/src/index.ts"],
       "@ereo/plugin-auth": ["./packages/plugin-auth/src/index.ts"],
       "@ereo/plugin-db": ["./packages/plugin-db/src/index.ts"],
-      "@ereo/rsc": ["./packages/rsc/src/index.ts"],
       "@ereo/state": ["./packages/state/src/index.ts"],
       "@ereo/client-sdk": ["./packages/client-sdk/src/index.ts"],
       "@ereo/router-conventions": ["./packages/router-conventions/src/index.ts"],

@@ -18,7 +18,7 @@ import {
 } from './middleware';
 import { serveStatic, type StaticOptions } from './static';
 import { createShell, createResponse, renderToString, type ShellTemplate } from './streaming';
-import { serializeLoaderData } from '@ereo/data';
+import { serializeLoaderData, hasDeferredData, resolveAllDeferred } from '@ereo/data';
 import { createElement, type ReactElement, type ComponentType, type ReactNode } from 'react';
 import { OutletProvider } from '@ereo/client';
 
@@ -483,8 +483,13 @@ export class BunServer {
 
     // JSON request (client-side navigation)
     if (request.headers.get('Accept')?.includes('application/json')) {
+      // Resolve any deferred data before JSON serialization
+      const resolvedLoaderData = hasDeferredData(loaderData)
+        ? await resolveAllDeferred(loaderData)
+        : loaderData;
+
       const jsonPayload: Record<string, unknown> = {
-        data: loaderData,
+        data: resolvedLoaderData,
         params: match.params,
       };
 
@@ -492,7 +497,7 @@ export class BunServer {
       if (layoutLoaderData.size > 0) {
         const layoutDataObj: Record<string, unknown> = {};
         for (const [id, data] of layoutLoaderData) {
-          layoutDataObj[id] = data;
+          layoutDataObj[id] = hasDeferredData(data) ? await resolveAllDeferred(data) : data;
         }
         jsonPayload.layoutData = layoutDataObj;
       }
@@ -636,12 +641,20 @@ export class BunServer {
         return this.renderStringPage(element, shell, loaderData);
       }
 
+      const hasDeferred = hasDeferredData(loaderData);
       const scripts = [this.options.clientEntry!];
-      const { head, tail } = createShell({ shell, scripts, loaderData });
+
+      // If deferred data exists, send head without loader data — the tail
+      // will be constructed after the React stream ends (all Suspense resolved).
+      const { head, tail } = createShell({
+        shell,
+        scripts,
+        loaderData: hasDeferred ? null : loaderData,
+      });
 
       const encoder = new TextEncoder();
       const headBytes = encoder.encode(head);
-      const tailBytes = encoder.encode(tail);
+      const tailBytes = hasDeferred ? null : encoder.encode(tail);
 
       // Use renderToReadableStream which is the Web Streams API version
       const reactStream = await renderToReadableStream(element, {
@@ -649,6 +662,8 @@ export class BunServer {
           console.error('Streaming render error:', error);
         },
       });
+
+      const clientEntry = this.options.clientEntry!;
 
       // Pipe progressively: head → React content → tail
       // Do NOT await allReady — that defeats streaming by buffering everything.
@@ -666,8 +681,17 @@ export class BunServer {
             case 'body': {
               const { done, value } = await reader.read();
               if (done) {
-                // React finished rendering — send the closing HTML
-                controller.enqueue(tailBytes);
+                // React finished rendering — all Suspense boundaries resolved.
+                if (hasDeferred) {
+                  // Resolve deferred data now that React stream is complete
+                  const resolved = await resolveAllDeferred(loaderData);
+                  const loaderScript = `<script>window.__EREO_DATA__=${serializeLoaderData(resolved)}</script>`;
+                  const scriptTag = `<script type="module" src="${clientEntry}"></script>`;
+                  const resolvedTail = `</div>\n    ${loaderScript}\n    ${scriptTag}\n</body>\n</html>`;
+                  controller.enqueue(encoder.encode(resolvedTail));
+                } else {
+                  controller.enqueue(tailBytes!);
+                }
                 controller.close();
                 phase = 'done';
               } else {
@@ -706,8 +730,13 @@ export class BunServer {
     try {
       const { renderToString: reactRenderToString } = await import('react-dom/server');
 
+      // String mode doesn't support Suspense streaming — resolve deferred data upfront
+      const resolvedData = hasDeferredData(loaderData)
+        ? await resolveAllDeferred(loaderData)
+        : loaderData;
+
       const scripts = [this.options.clientEntry!];
-      const { head, tail } = createShell({ shell, scripts, loaderData });
+      const { head, tail } = createShell({ shell, scripts, loaderData: resolvedData });
 
       const content = reactRenderToString(element);
       const html = head + content + tail;
@@ -754,13 +783,17 @@ export class BunServer {
         },
       });
 
-      // Build the hydration scripts to inject after the stream
       const encoder = new TextEncoder();
-      const loaderScript = loaderData
-        ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
-        : '';
-      const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
-      const injectedScripts = encoder.encode(loaderScript + clientScript);
+      const hasDeferred = hasDeferredData(loaderData);
+      const clientEntry = this.options.clientEntry;
+
+      // Pre-build scripts if no deferred data (fast path)
+      const injectedScripts = hasDeferred ? null : encoder.encode(
+        (loaderData
+          ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
+          : '') +
+        `<script type="module" src="${clientEntry}"></script>`
+      );
 
       // Pipe progressively: React content → hydration scripts
       // Do NOT await allReady — stream bytes to the client as React renders.
@@ -773,8 +806,17 @@ export class BunServer {
 
           const result = await reader.read();
           if (result.done) {
-            // React finished — append hydration scripts and close
-            controller.enqueue(injectedScripts);
+            // React finished — all Suspense boundaries resolved.
+            if (hasDeferred) {
+              const resolved = await resolveAllDeferred(loaderData);
+              const loaderScript = resolved
+                ? `<script>window.__EREO_DATA__=${serializeLoaderData(resolved)}</script>`
+                : '';
+              const clientScript = `<script type="module" src="${clientEntry}"></script>`;
+              controller.enqueue(encoder.encode(loaderScript + clientScript));
+            } else {
+              controller.enqueue(injectedScripts!);
+            }
             controller.close();
             done = true;
           } else {
@@ -808,11 +850,16 @@ export class BunServer {
     try {
       const { renderToString: reactRenderToString } = await import('react-dom/server');
 
+      // String mode doesn't support Suspense streaming — resolve deferred data upfront
+      const resolvedData = hasDeferredData(loaderData)
+        ? await resolveAllDeferred(loaderData)
+        : loaderData;
+
       let html = reactRenderToString(element);
 
       // Inject loader data and client script before closing body tag
-      const loaderScript = loaderData
-        ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
+      const loaderScript = resolvedData
+        ? `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
         : '';
       const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
       html = html.replace('</body>', `${loaderScript}${clientScript}</body>`);
@@ -836,9 +883,14 @@ export class BunServer {
   /**
    * Render a minimal HTML page when no component is available.
    */
-  private renderMinimalPage(match: RouteMatch, loaderData: unknown): Response {
+  private async renderMinimalPage(match: RouteMatch, loaderData: unknown): Promise<Response> {
+    // Resolve any deferred data before serialization
+    const resolvedData = hasDeferredData(loaderData)
+      ? await resolveAllDeferred(loaderData)
+      : loaderData;
+
     const serializedData = serializeLoaderData({
-      loaderData,
+      loaderData: resolvedData,
       params: match.params,
     });
 

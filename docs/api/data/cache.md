@@ -258,15 +258,14 @@ const post = await cached(
 
 > **Note:** The `cached` function always caches the result. For conditional caching, consider using `getCache()` and `setCache()` directly to control when values are stored.
 
-## cacheKey / generateCacheKey
+## cacheKey
 
-Generates cache keys from parts.
+Generates a cache key from a prefix and parts, joined with `:`.
 
-### Signatures
+### Signature
 
 ```ts
-function cacheKey(...parts: string[]): string
-function generateCacheKey(...parts: string[]): string
+function cacheKey(prefix: string, ...parts: (string | number)[]): string
 ```
 
 ### Example
@@ -274,64 +273,74 @@ function generateCacheKey(...parts: string[]): string
 ```ts
 const key = cacheKey('posts', userId, 'page', page)
 // 'posts:123:page:1'
-
-const key2 = generateCacheKey('user', id, 'profile')
-// 'user:456:profile'
 ```
 
-## buildCacheControl
+## generateCacheKey
 
-Builds a Cache-Control header string.
+Generates a cache key from a `Request` object using the HTTP method and URL.
 
 ### Signature
 
 ```ts
-function buildCacheControl(options: CacheControlOptions): string
+function generateCacheKey(request: Request): string
+```
+
+### Example
+
+```ts
+const key = generateCacheKey(request)
+// 'GET:/posts?page=2'
+```
+
+## buildCacheControl
+
+Builds a Cache-Control header string from `CacheOptions`.
+
+### Signature
+
+```ts
+function buildCacheControl(options: CacheOptions): string
 ```
 
 ### Options
 
+Uses the `CacheOptions` interface from `@ereo/core`:
+
 ```ts
-interface CacheControlOptions {
-  maxAge?: number
-  sMaxAge?: number
-  staleWhileRevalidate?: number
-  staleIfError?: number
-  private?: boolean
-  public?: boolean
-  noCache?: boolean
-  noStore?: boolean
-  mustRevalidate?: boolean
-  immutable?: boolean
+interface CacheOptions {
+  maxAge?: number               // Seconds to cache
+  staleWhileRevalidate?: number // Seconds to serve stale while revalidating
+  tags?: string[]               // Cache tags (not included in header output)
+  private?: boolean             // Use private instead of public directive
 }
 ```
+
+> **Note:** For advanced Cache-Control directives like `s-maxage`, `no-cache`, `no-store`, `must-revalidate`, or `immutable`, set the `Cache-Control` header manually via `context.responseHeaders`.
 
 ### Example
 
 ```ts
 const header = buildCacheControl({
   maxAge: 3600,
-  staleWhileRevalidate: 86400,
-  public: true
+  staleWhileRevalidate: 86400
 })
 // 'public, max-age=3600, stale-while-revalidate=86400'
 
 const privateHeader = buildCacheControl({
   maxAge: 60,
-  private: true,
-  mustRevalidate: true
+  private: true
 })
-// 'private, max-age=60, must-revalidate'
+// 'private, max-age=60'
 ```
 
 ## parseCacheControl
 
-Parses a Cache-Control header string.
+Parses a Cache-Control header string back into `CacheOptions`.
 
 ### Signature
 
 ```ts
-function parseCacheControl(header: string): CacheControlOptions
+function parseCacheControl(header: string): CacheOptions
 ```
 
 ### Example
@@ -353,12 +362,12 @@ Decorator for caching class methods.
 
 ```ts
 class PostService {
-  @Cached({ ttl: 3600, tags: ['posts'] })
+  @Cached({ maxAge: 3600, tags: ['posts'] })
   async getPost(id: string) {
     return await db.posts.find(id)
   }
 
-  @Cached({ ttl: 300 })
+  @Cached({ maxAge: 300 })
   async getPopularPosts() {
     return await db.posts.findPopular()
   }
@@ -378,7 +387,7 @@ function createDataCacheAdapter(cache: MemoryCache): CacheAdapter
 ### Example
 
 ```ts
-const memCache = new MemoryCache({ maxSize: 1000 })
+const memCache = new MemoryCache()
 const adapter = createDataCacheAdapter(memCache)
 
 // Use as CacheAdapter

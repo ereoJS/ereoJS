@@ -11,6 +11,8 @@ export {
   defer,
   isDeferred,
   resolveDeferred,
+  hasDeferredData,
+  resolveAllDeferred,
   fetchData,
   FetchError,
   serializeLoaderData,

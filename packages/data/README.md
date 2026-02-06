@@ -40,15 +40,17 @@ export const action = createAction(async ({ request }) => {
 ## Caching Example
 
 ```typescript
-import { cached, revalidateTag } from '@ereo/data';
+import { cached, cacheKey, revalidateTag } from '@ereo/data';
 
-const getUser = cached(
-  async (id: string) => fetchUser(id),
-  { tags: ['user'], ttl: 60000 }
+// cached(key, fetchFn, options) — key is required, fetchFn takes no arguments
+const user = await cached(
+  cacheKey('user', id),
+  () => fetchUser(id),
+  { maxAge: 60, tags: ['users', `user-${id}`] }
 );
 
 // Revalidate when user is updated
-await revalidateTag('user');
+await revalidateTag('users');
 ```
 
 ## Data Pipeline
@@ -57,13 +59,19 @@ await revalidateTag('user');
 import { createPipeline, dataSource, cachedSource } from '@ereo/data';
 
 const pipeline = createPipeline({
-  user: dataSource(() => fetchUser(id)),
-  posts: cachedSource(() => fetchPosts(id), { ttl: 5000 }),
-  comments: dataSource((ctx) => fetchComments(ctx.posts)),
+  loaders: {
+    user: dataSource(() => fetchUser(id)),
+    posts: cachedSource(() => fetchPosts(id), { ttl: 300 }),
+    // comments depends on posts — declare via dependencies, not function args
+    comments: dataSource(() => fetchComments(id)),
+  },
+  dependencies: {
+    comments: ['posts'], // comments waits for posts to finish first
+  },
 });
 
-const data = await pipeline.execute();
-// { user, posts, comments } - automatically parallelized
+const result = await pipeline.execute(loaderArgs);
+// result.data = { user, posts, comments } — independent loaders run in parallel
 ```
 
 ## Documentation

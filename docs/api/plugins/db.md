@@ -560,7 +560,7 @@ interface DBClient {
 }
 ```
 
-## Migration to @ereo/drizzle
+## Migration to @ereo/db-drizzle
 
 This package is deprecated. Migrate to `@ereo/db-drizzle` for:
 
@@ -625,6 +625,8 @@ For complete migration documentation, see: https://ereo.dev/docs/database/migrat
 
 ## Related
 
+- [@ereo/db](/api/db) — New core database abstractions (recommended)
+- [@ereo/db-drizzle](/api/db/drizzle) — New Drizzle ORM adapter (recommended)
 - [Database Guide](/guides/database)
 - [Caching](/core-concepts/caching)
 - [Actions](/api/data/actions)

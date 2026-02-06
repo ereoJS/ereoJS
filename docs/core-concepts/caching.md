@@ -38,7 +38,8 @@ export const loader = createLoader(async ({ params }) => {
 | `staleWhileRevalidate` | number | Seconds to serve stale while revalidating |
 | `tags` | string[] | Tags for invalidation |
 | `private` | boolean | Prevent CDN caching (user-specific content) |
-| `revalidate` | number | Revalidate every N seconds (ISR-style) |
+
+> **Note:** For ISR-style periodic revalidation, use the `revalidate` option on the route's `PrerenderConfig` instead (see the [Rendering Modes](/docs/core-concepts/rendering) guide).
 
 ### Dynamic Cache Tags
 
@@ -65,7 +66,7 @@ export const loader = createLoader(async ({ params }) => {
   const post = await cached(
     cacheKey('post', params.id),
     () => db.posts.find(params.id),
-    { ttl: 3600, tags: ['posts', `post-${params.id}`] }
+    { maxAge: 3600, tags: ['posts', `post-${params.id}`] }
   )
 
   // Uncached - always fresh
@@ -80,7 +81,7 @@ export const loader = createLoader(async ({ params }) => {
 Invalidate cached content by tags:
 
 ```tsx
-import { revalidateTag, revalidateTags } from '@ereo/data'
+import { revalidateTag } from '@ereo/data'
 
 export const action = createAction(async ({ request }) => {
   const formData = await request.formData()
@@ -89,12 +90,14 @@ export const action = createAction(async ({ request }) => {
   // Invalidate all content tagged with 'posts'
   await revalidateTag('posts')
 
-  // Or invalidate multiple tags
-  await revalidateTags(['posts', 'homepage', `author-${post.authorId}`])
+  // Invalidate multiple tags at once — pass them as separate arguments
+  await revalidateTag('posts', 'homepage', `author-${post.authorId}`)
 
   return redirect(`/posts/${post.id}`)
 })
 ```
+
+> **Note:** `revalidateTag` accepts variadic arguments, so you can pass one or many tags in a single call: `revalidateTag('tag1', 'tag2', 'tag3')`.
 
 ### Common Tagging Patterns
 
@@ -145,14 +148,22 @@ import { createCache, createTaggedCache } from '@ereo/core'
 
 // Simple cache
 const cache = createCache({
-  maxSize: 1000,  // Maximum entries
-  ttl: 3600       // Default TTL
+  maxSize: 1000,      // Maximum entries
+  defaultTtl: 3600    // Default TTL in seconds
 })
 
-// Tagged cache
+// Tagged cache (supports tag-based invalidation)
 const taggedCache = createTaggedCache({
   maxSize: 1000
 })
+```
+
+You can also use `MemoryCache` directly from `@ereo/data`:
+
+```tsx
+import { MemoryCache } from '@ereo/data'
+
+const cache = new MemoryCache()
 ```
 
 ### Redis Cache
@@ -277,14 +288,14 @@ export const action = createAction(async ({ request }) => {
 // After updating a post
 export const action = createAction(async ({ request, params }) => {
   await db.posts.update(params.id, /* ... */)
-  await revalidateTags(['posts', `post-${params.id}`])
+  await revalidateTag('posts', `post-${params.id}`)
   return redirect(`/posts/${params.id}`)
 })
 
 // After deleting a post
 export const action = createAction(async ({ params }) => {
   const post = await db.posts.delete(params.id)
-  await revalidateTags(['posts', `post-${params.id}`, `author-${post.authorId}`])
+  await revalidateTag('posts', `post-${params.id}`, `author-${post.authorId}`)
   return redirect('/posts')
 })
 ```
@@ -346,18 +357,20 @@ This logs:
 
 ### Cache Stats
 
-Get cache statistics:
+Get cache statistics using the `MemoryCache` from `@ereo/data`:
 
 ```tsx
-import { createTaggedCache } from '@ereo/core'
+import { MemoryCache } from '@ereo/data'
 
-const cache = createTaggedCache()
+const cache = new MemoryCache()
 
 // Later...
 const stats = cache.getStats()
 console.log(stats)
 // { size: 156, tags: 23 }
 ```
+
+You can also use `createTaggedCache` from `@ereo/core`, which provides the same `getStats()` method.
 
 ## Best Practices
 

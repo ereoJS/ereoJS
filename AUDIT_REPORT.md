@@ -52,7 +52,7 @@ Comprehensive audit of all 27 packages in the EreoJS monorepo. Found and fixed *
 - **Security fix:** `middleware.ts` — path traversal vulnerability. Requests like `?src=../../../etc/passwd` could read arbitrary files. Added `resolve()`/`normalize()` + `startsWith()` guard.
 
 #### Other Level 1 packages audited (no fixes needed):
-- @ereo/router, @ereo/data, @ereo/client, @ereo/client-sdk, @ereo/db, @ereo/deploy-cloudflare, @ereo/deploy-vercel, @ereo/plugin-tailwind, @ereo/rsc
+- @ereo/router, @ereo/data, @ereo/client, @ereo/client-sdk, @ereo/db, @ereo/deploy-cloudflare, @ereo/deploy-vercel, @ereo/plugin-tailwind
 
 ### Batch 3 — Level 2 Packages
 

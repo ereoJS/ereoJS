@@ -86,7 +86,7 @@ export const loader = createLoader(async ({ params }) => {
     cacheKey('post', params.slug),
     () => db.posts.findBySlug(params.slug),
     {
-      ttl: 300,  // 5 minutes
+      maxAge: 300,  // 5 minutes
       tags: ['posts', `post-${params.slug}`]
     }
   )
@@ -157,17 +157,18 @@ await cached(key, fetcher, {
 ### Invalidating Tags
 
 ```tsx
-import { revalidateTag, revalidateTags } from '@ereo/data'
+import { revalidateTag } from '@ereo/data'
 
 // After creating a post
 export const action = createAction(async ({ request }) => {
   const post = await createPost(data)
 
-  await revalidateTags([
-    'posts',           // All posts lists
-    'homepage',        // Homepage with recent posts
+  // Pass multiple tags as separate arguments
+  await revalidateTag(
+    'posts',                       // All posts lists
+    'homepage',                    // Homepage with recent posts
     `category-${post.categoryId}`  // Category page
-  ])
+  )
 
   return redirect(`/posts/${post.slug}`)
 })
@@ -176,11 +177,11 @@ export const action = createAction(async ({ request }) => {
 export const action = createAction(async ({ request, params }) => {
   const post = await updatePost(params.id, data)
 
-  await revalidateTags([
+  await revalidateTag(
     'posts',
     `post-${params.id}`,
     `author-${post.authorId}`
-  ])
+  )
 
   return redirect(`/posts/${post.slug}`)
 })
@@ -190,12 +191,12 @@ export const action = createAction(async ({ params }) => {
   const post = await db.posts.find(params.id)
   await deletePost(params.id)
 
-  await revalidateTags([
+  await revalidateTag(
     'posts',
     `post-${params.id}`,
     `author-${post.authorId}`,
     `category-${post.categoryId}`
-  ])
+  )
 
   return redirect('/posts')
 })
@@ -255,19 +256,23 @@ async function getPost(slug: string) {
 Pre-populate cache for critical paths:
 
 ```tsx
+import { cached, MemoryCache } from '@ereo/data'
+
 async function warmCache() {
+  const cache = new MemoryCache()
+
   // Warm popular posts
   const popularPosts = await db.posts.findPopular(20)
   for (const post of popularPosts) {
-    await cache.set(`post:${post.slug}`, post, {
+    await cache.setValue(`post:${post.slug}`, post, {
       ttl: 3600,
       tags: ['posts', `post-${post.id}`]
     })
   }
 
-  // Warm homepage data
+  // Warm homepage data using cached() (uses maxAge in seconds)
   await cached('homepage-data', getHomepageData, {
-    ttl: 300,
+    maxAge: 300,
     tags: ['homepage']
   })
 }
@@ -306,12 +311,17 @@ export const config = {
 
 ```tsx
 export const loader = createLoader(async ({ context }) => {
-  // Set CDN-friendly headers
+  // Set cache headers — CDN will respect staleWhileRevalidate for longer caching
   context.cache.set({
     maxAge: 60,
-    sMaxAge: 3600,  // CDN caches longer
     staleWhileRevalidate: 86400
   })
+
+  // For custom CDN headers (e.g., s-maxage), set them manually:
+  context.responseHeaders.set(
+    'Cache-Control',
+    'public, max-age=60, s-maxage=3600, stale-while-revalidate=86400'
+  )
 
   return { data }
 })
@@ -329,16 +339,27 @@ context.responseHeaders.set('Vary', 'Cookie')
 
 ### Cache Key Strategies
 
+Use `generateCacheKey` or `cacheKey` from `@ereo/data` to create custom cache keys:
+
 ```tsx
-// Include query params in cache key
-export const config = {
-  cache: {
-    key: (request) => {
-      const url = new URL(request.url)
-      return `${url.pathname}?page=${url.searchParams.get('page')}`
-    }
-  }
-}
+import { cached, generateCacheKey, cacheKey } from '@ereo/data'
+
+export const loader = createLoader(async ({ request, params }) => {
+  // generateCacheKey creates a key from the request: "METHOD:pathname?search"
+  const key = generateCacheKey(request)
+
+  // Or build a custom key with cacheKey
+  const url = new URL(request.url)
+  const page = url.searchParams.get('page') || '1'
+  const customKey = cacheKey('posts', page)  // "posts:1"
+
+  const posts = await cached(customKey, () => db.posts.paginate(page), {
+    maxAge: 300,
+    tags: ['posts']
+  })
+
+  return { posts }
+})
 ```
 
 ## Debugging Cache
