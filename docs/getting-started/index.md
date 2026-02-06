@@ -33,12 +33,14 @@ This creates a new project with:
 ### Options
 
 ```bash
-# Use a specific template
-bunx create-ereo my-app --template blog
+# Use the minimal template (bare-bones starter)
+bunx create-ereo my-app --template minimal
 
 # Skip TypeScript
 bunx create-ereo my-app --no-typescript
 ```
+
+See [`create-ereo`](/api/create-ereo) for all available templates and options.
 
 ## Manual Installation
 

@@ -230,7 +230,7 @@ const errorMiddleware: MiddlewareHandler = async (request, context, next) => {
 ### Request Timing
 
 ```ts
-const timingMiddleware: MiddlewareHandler = async (request, next) => {
+const timingMiddleware: MiddlewareHandler = async (request, context, next) => {
   const start = performance.now()
   const response = await next()
   const duration = performance.now() - start
@@ -293,7 +293,7 @@ Create configurable middleware:
 function apiKey(options: { header?: string; keys: string[] }): MiddlewareHandler {
   const { header = 'X-API-Key', keys } = options
 
-  return async (request, next) => {
+  return async (request, context, next) => {
     const key = request.headers.get(header)
 
     if (!key || !keys.includes(key)) {

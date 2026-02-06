@@ -86,6 +86,7 @@ bunx create-ereo my-app --template minimal
 | Root Layout | ✅ | ✅ |
 | Index Page | ✅ | ✅ |
 | TypeScript Config | ✅ | ✅ |
+| Dockerfile | ✅ | ✅ |
 | Blog (dynamic routes) | ❌ | ✅ |
 | Contact Form (action) | ❌ | ✅ |
 | About Page | ❌ | ✅ |
@@ -93,7 +94,7 @@ bunx create-ereo my-app --template minimal
 | 404 Page (`_404.tsx`) | ❌ | ✅ |
 | Navigation Component | ❌ | ✅ |
 | Footer Component | ❌ | ✅ |
-| Counter Island | ❌ | ✅ |
+| Counter Island (`'use client'`) | ❌ | ✅ |
 | Tailwind CSS | ❌ | ✅ |
 | Dark Mode | ❌ | ✅ |
 | Path Aliases (`~/`) | ❌ | ✅ |
@@ -141,9 +142,9 @@ bunx create-ereo my-app --no-git
 my-app/
 ├── app/
 │   ├── components/
-│   │   ├── Counter.tsx       # Interactive island component
+│   │   ├── Counter.tsx       # Interactive island ('use client')
 │   │   ├── Footer.tsx        # Footer component
-│   │   ├── Navigation.tsx    # Navigation with mobile menu
+│   │   ├── Navigation.tsx    # Navigation with mobile menu ('use client')
 │   │   └── PostCard.tsx      # Blog post card component
 │   ├── lib/
 │   │   ├── data.ts           # Mock data and helpers
@@ -164,6 +165,8 @@ my-app/
 ├── ereo.config.ts            # EreoJS configuration
 ├── tailwind.config.js        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
+├── Dockerfile                # Multi-stage production Docker image
+├── .dockerignore             # Docker ignore patterns
 ├── package.json              # Dependencies and scripts
 ├── .env.example              # Environment variables template
 ├── .gitignore                # Git ignore patterns
@@ -181,6 +184,8 @@ my-app/
 ├── public/                   # Static assets
 ├── ereo.config.ts            # EreoJS configuration
 ├── tsconfig.json             # TypeScript configuration (if enabled)
+├── Dockerfile                # Multi-stage production Docker image
+├── .dockerignore             # Docker ignore patterns
 ├── package.json              # Dependencies and scripts
 └── .gitignore                # Git ignore patterns
 ```

@@ -32,9 +32,9 @@ const db = new Database(dbPath)
 Add security middleware. Create `src/middleware/security.ts`:
 
 ```ts
-import type { MiddlewareHandler } from '@ereo/router'
+import type { MiddlewareHandler } from '@ereo/core'
 
-export const securityMiddleware: MiddlewareHandler = async (request, next) => {
+export const securityMiddleware: MiddlewareHandler = async (request, context, next) => {
   const response = await next()
 
   // Add security headers
@@ -49,12 +49,32 @@ export const securityMiddleware: MiddlewareHandler = async (request, next) => {
 
 ### 3. Error Pages
 
-Create a root error page at `app/routes/_error.tsx`:
+Create a root error page at `app/routes/_error.tsx`. The simplest approach receives the error as a prop:
+
+```tsx
+// app/routes/_error.tsx
+export default function RootError({ error }: { error: Error }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Something went wrong
+        </h1>
+        <p className="text-gray-600 mb-8">
+          {error?.message || 'An unexpected error occurred.'}
+        </p>
+        <a href="/" className="btn">Go Home</a>
+      </div>
+    </div>
+  )
+}
+```
+
+For more advanced error handling (e.g., distinguishing 404s from 500s), you can use the `useRouteError` hook:
 
 ```tsx
 // app/routes/_error.tsx
 import { useRouteError, isRouteErrorResponse } from '@ereo/client'
-import { Link } from '@ereo/client'
 
 export default function RootError() {
   const error = useRouteError()
@@ -69,9 +89,7 @@ export default function RootError() {
           <p className="text-xl text-gray-600 mb-8">
             {error.status === 404 ? 'Page not found' : error.statusText}
           </p>
-          <Link href="/" className="btn">
-            Go Home
-          </Link>
+          <a href="/" className="btn">Go Home</a>
         </div>
       </div>
     )
@@ -86,9 +104,7 @@ export default function RootError() {
         <p className="text-gray-600 mb-8">
           We're sorry, an unexpected error occurred.
         </p>
-        <Link href="/" className="btn">
-          Go Home
-        </Link>
+        <a href="/" className="btn">Go Home</a>
       </div>
     </div>
   )
@@ -289,9 +305,9 @@ Add basic logging:
 
 ```ts
 // src/middleware/logger.ts
-import type { MiddlewareHandler } from '@ereo/router'
+import type { MiddlewareHandler } from '@ereo/core'
 
-export const loggerMiddleware: MiddlewareHandler = async (request, next) => {
+export const loggerMiddleware: MiddlewareHandler = async (request, context, next) => {
   const start = Date.now()
   const response = await next()
   const duration = Date.now() - start

@@ -41,45 +41,83 @@ Islands Architecture:
 JavaScript: ~25KB
 ```
 
-## Creating Islands
+## Two Ways to Create Islands
 
-Islands are React components that require client-side JavaScript:
+EreoJS supports two approaches for creating interactive islands. Pick the one that fits your needs.
+
+### Approach 1: `'use client'` Directive (Recommended for Most Cases)
+
+Add `'use client'` at the top of a component file. EreoJS automatically marks it for client-side hydration — no registration or special attributes needed.
 
 ```tsx
-// islands/Counter.tsx
-import { useState } from 'react'
+// app/components/Counter.tsx
+'use client';
 
-export default function Counter() {
-  const [count, setCount] = useState(0)
+import { useState } from 'react';
+
+export function Counter({ initialCount = 0 }) {
+  const [count, setCount] = useState(initialCount);
 
   return (
-    <button onClick={() => setCount(c => c + 1)}>
-      Count: {count}
-    </button>
-  )
+    <div>
+      <button onClick={() => setCount(c => c - 1)}>-</button>
+      <span>{count}</span>
+      <button onClick={() => setCount(c => c + 1)}>+</button>
+    </div>
+  );
 }
 ```
 
-Register the island in your entry point:
+Use it directly in your route:
 
 ```tsx
-// src/client.ts
-import { registerIslandComponent } from '@ereo/client'
-import Counter from './islands/Counter'
-import SearchBox from './islands/SearchBox'
+// app/routes/index.tsx
+import { Counter } from '~/components/Counter';
 
-registerIslandComponent('Counter', Counter)
+export default function Home() {
+  return (
+    <div>
+      <h1>Welcome</h1>
+      <p>This heading and paragraph are static HTML — no JavaScript.</p>
+
+      {/* Only this component ships JavaScript to the client */}
+      <Counter initialCount={0} />
+    </div>
+  );
+}
+```
+
+> **This is the approach used in the `create-ereo` starter templates.** It's the simplest way to add interactivity and works well for most applications.
+
+### Approach 2: `data-island` / `data-hydrate` Attributes (Advanced)
+
+For fine-grained control over **when** an island hydrates (immediately, on idle, when visible, etc.), use the explicit `data-island` and `data-hydrate` attributes. This approach requires registering your components.
+
+```tsx
+// app/components/SearchBox.tsx
+import { useState } from 'react'
+
+export default function SearchBox({ placeholder }) {
+  const [query, setQuery] = useState('')
+  return <input value={query} onChange={e => setQuery(e.target.value)} placeholder={placeholder} />
+}
+```
+
+Register the island in your client entry point:
+
+```tsx
+// app/entry.client.ts
+import { registerIslandComponent } from '@ereo/client'
+import SearchBox from './components/SearchBox'
+
 registerIslandComponent('SearchBox', SearchBox)
 ```
 
-## Using Islands in Routes
-
-Mark components as islands with `data-island` and `data-hydrate`:
+Then use it in a route with hydration attributes:
 
 ```tsx
-// routes/index.tsx
-import Counter from '../islands/Counter'
-import SearchBox from '../islands/SearchBox'
+// app/routes/index.tsx
+import SearchBox from '~/components/SearchBox'
 
 export default function Home() {
   return (
@@ -87,13 +125,9 @@ export default function Home() {
       {/* Static - no JavaScript */}
       <header>
         <h1>Welcome</h1>
-        <nav>
-          <a href="/about">About</a>
-          <a href="/contact">Contact</a>
-        </nav>
       </header>
 
-      {/* Island - hydrated on the client */}
+      {/* Island - hydrated only when the browser is idle */}
       <SearchBox
         data-island="SearchBox"
         data-hydrate="idle"
@@ -105,22 +139,20 @@ export default function Home() {
         <h2>Latest News</h2>
         <p>This is static HTML, no JavaScript needed.</p>
       </article>
-
-      {/* Another island */}
-      <Counter
-        data-island="Counter"
-        data-hydrate="visible"
-        initialCount={5}
-      />
-
-      {/* Static footer */}
-      <footer>
-        <p>&copy; 2024</p>
-      </footer>
     </div>
   )
 }
 ```
+
+### When to Use Which Approach
+
+| | `'use client'` | `data-island` / `data-hydrate` |
+|---|---|---|
+| **Setup** | Add directive to file | Register component + add attributes |
+| **Hydration timing** | Automatic (hydrates on load) | You choose: `load`, `idle`, `visible`, `media`, `never` |
+| **Best for** | Most interactive components | Performance-critical pages, below-fold content, conditional hydration |
+
+> **Tip:** Start with `'use client'`. If you need to defer hydration for performance (e.g., a comment section that should only hydrate when scrolled into view), switch that component to the `data-island` approach.
 
 ## Hydration Strategies
 

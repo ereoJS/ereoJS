@@ -618,6 +618,10 @@ export class BunServer {
   /**
    * Render page using React 18 streaming SSR.
    * Uses renderToReadableStream for Bun environments with native Web Streams API.
+   *
+   * Bytes flow progressively: shell head → React chunks as they render → tail.
+   * The browser can parse the head (CSS, meta) and start rendering immediately
+   * while React continues resolving Suspense boundaries on the server.
    */
   private async renderStreamingPage(
     element: ReactElement,
@@ -646,35 +650,42 @@ export class BunServer {
         },
       });
 
-      // Wait for the shell to be ready
-      await reactStream.allReady;
-
-      // Read the React stream and combine with head/tail
+      // Pipe progressively: head → React content → tail
+      // Do NOT await allReady — that defeats streaming by buffering everything.
       const reader = reactStream.getReader();
-      const chunks: Uint8Array[] = [headBytes];
+      let phase: 'head' | 'body' | 'done' = 'head';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
+      const stream = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          switch (phase) {
+            case 'head':
+              // Send shell head immediately so the browser can parse CSS/meta
+              controller.enqueue(headBytes);
+              phase = 'body';
+              break;
+            case 'body': {
+              const { done, value } = await reader.read();
+              if (done) {
+                // React finished rendering — send the closing HTML
+                controller.enqueue(tailBytes);
+                controller.close();
+                phase = 'done';
+              } else {
+                controller.enqueue(value);
+              }
+              break;
+            }
+          }
+        },
+        cancel() {
+          reader.cancel();
+        },
+      });
 
-      chunks.push(tailBytes);
-
-      // Calculate total length and combine chunks
-      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-      const fullHtml = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const chunk of chunks) {
-        fullHtml.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      return new Response(fullHtml, {
+      return new Response(stream, {
         status: 200,
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Content-Length': totalLength.toString(),
         },
       });
     } catch (error) {
@@ -720,6 +731,9 @@ export class BunServer {
   /**
    * Render page directly using streaming when layout provides HTML structure.
    * The layout component is expected to render the full HTML document.
+   *
+   * React content streams progressively. Hydration scripts are appended
+   * after the stream completes (browsers tolerate post-body scripts).
    */
   private async renderStreamingPageDirect(
     element: ReactElement,
@@ -740,20 +754,7 @@ export class BunServer {
         },
       });
 
-      // Wait for the shell to be ready
-      await reactStream.allReady;
-
-      // Read the React stream
-      const reader = reactStream.getReader();
-      const chunks: Uint8Array[] = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
-
-      // Inject loader data script before closing body tag
+      // Build the hydration scripts to inject after the stream
       const encoder = new TextEncoder();
       const loaderScript = loaderData
         ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
@@ -761,21 +762,34 @@ export class BunServer {
       const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
       const injectedScripts = encoder.encode(loaderScript + clientScript);
 
-      // Calculate total length
-      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0) + injectedScripts.length;
-      const fullHtml = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const chunk of chunks) {
-        fullHtml.set(chunk, offset);
-        offset += chunk.length;
-      }
-      fullHtml.set(injectedScripts, offset);
+      // Pipe progressively: React content → hydration scripts
+      // Do NOT await allReady — stream bytes to the client as React renders.
+      const reader = reactStream.getReader();
+      let done = false;
 
-      return new Response(fullHtml, {
+      const stream = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          if (done) return;
+
+          const result = await reader.read();
+          if (result.done) {
+            // React finished — append hydration scripts and close
+            controller.enqueue(injectedScripts);
+            controller.close();
+            done = true;
+          } else {
+            controller.enqueue(result.value);
+          }
+        },
+        cancel() {
+          reader.cancel();
+        },
+      });
+
+      return new Response(stream, {
         status: 200,
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Content-Length': totalLength.toString(),
         },
       });
     } catch (error) {

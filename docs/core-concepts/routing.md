@@ -222,7 +222,7 @@ export async function DELETE({ request }) {
 }
 ```
 
-You can also use `loader` (for GET) and `action` (for non-GET) as an alternative:
+You can also use `loader` (for GET) and `action` (for non-GET) as an alternative. This is more convenient when you don't need per-method control:
 
 ```ts
 // routes/api/posts.ts
@@ -240,7 +240,7 @@ export async function action({ request }: ActionArgs) {
 }
 ```
 
-> **Which to use?** Use HTTP method exports (`GET`, `POST`, etc.) for REST APIs where you need fine-grained control per method. Use `loader`/`action` for page routes with components. See [Data Loading](/core-concepts/data-loading) for all approaches.
+> **Which approach to use?** Use HTTP method exports (`GET`, `POST`, etc.) for REST APIs where you need fine-grained control per method. Use `loader`/`action` for page routes with components. Both approaches are valid — see [Data Loading](/core-concepts/data-loading) for all three approaches and when to pick each one.
 
 ## Route Priority
 
@@ -266,36 +266,67 @@ Export a `config` object to configure route behavior:
 
 ```tsx
 // routes/posts/[id].tsx
-export const config = {
-  // Rendering mode
-  render: 'ssr',  // 'ssr' | 'ssg' | 'csr' | 'streaming'
+import type { RouteConfig } from '@ereo/core'
 
-  // Caching
+export const config: RouteConfig = {
+  // Rendering mode
+  render: {
+    mode: 'ssr',  // 'ssg' | 'ssr' | 'csr' | 'json' | 'xml' | 'rsc'
+  },
+
+  // Caching (edge, browser, and data layers)
   cache: {
-    maxAge: 3600,
-    staleWhileRevalidate: 86400,
-    tags: ['posts']
+    edge: {
+      maxAge: 3600,
+      staleWhileRevalidate: 86400,
+    },
+    data: {
+      tags: ['posts'],
+    },
   },
 
   // Islands configuration
   islands: {
-    strategy: 'idle'  // 'load' | 'idle' | 'visible' | 'media'
+    defaultStrategy: 'idle',  // 'load' | 'idle' | 'visible' | 'media' | 'none'
   },
 
-  // Middleware
+  // Middleware chain (named or inline)
   middleware: ['auth', 'rateLimit'],
 
   // Progressive enhancement
   progressive: {
-    ssr: true,
-    hydrate: true
-  }
+    forms: { fallback: 'server' },
+    prefetch: { trigger: 'intent', data: true },
+  },
 }
 ```
 
 ## Error Handling
 
-Create `_error.tsx` files for route-level error boundaries:
+EreoJS provides two ways to handle errors in routes.
+
+### Option A: `_error.tsx` File (Recommended)
+
+Create a `_error.tsx` file in a route directory. It catches errors for that route segment and all nested routes. The error is passed as a prop:
+
+```tsx
+// routes/_error.tsx (global error boundary)
+export default function ErrorPage({ error }: { error: Error }) {
+  return (
+    <div>
+      <h1>Something went wrong</h1>
+      <p>{error?.message || 'An unexpected error occurred.'}</p>
+      <a href="/">Go Home</a>
+    </div>
+  )
+}
+```
+
+This is the pattern used in the `create-ereo` starter templates.
+
+### Option B: `useRouteError` Hook (Advanced)
+
+For more control — such as distinguishing HTTP error responses from runtime errors — use the `useRouteError` hook:
 
 ```tsx
 // routes/posts/_error.tsx
@@ -312,6 +343,28 @@ export default function PostsError() {
   }
 
   return <h1>Something went wrong</h1>
+}
+```
+
+### Option C: Inline `ErrorBoundary` Export
+
+You can also export an `ErrorBoundary` component directly from a route file. This catches errors for that specific route without creating a separate file:
+
+```tsx
+// routes/blog/[slug].tsx
+export async function loader({ params }) {
+  const post = getPostBySlug(params.slug)
+  if (!post) throw new Response('Not found', { status: 404 })
+  return { post }
+}
+
+export default function BlogPost({ loaderData }) {
+  return <article>{loaderData.post.title}</article>
+}
+
+// Inline error boundary — catches errors from this route's loader/component
+export function ErrorBoundary({ error }: { error: Error }) {
+  return <h1>Post Not Found</h1>
 }
 ```
 
@@ -338,15 +391,16 @@ Create `_middleware.ts` to run code before route handlers:
 
 ```ts
 // routes/dashboard/_middleware.ts
-import type { MiddlewareHandler } from '@ereo/router'
+import type { MiddlewareHandler } from '@ereo/core'
 
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   const user = await getUser(request)
 
   if (!user) {
     return Response.redirect('/login')
   }
 
+  context.set('user', user)
   return next()
 }
 ```
@@ -389,20 +443,26 @@ goBack()
 goForward()
 ```
 
-## Link Component
+## Navigation: `<a>` vs `<Link>`
 
-Use `Link` for client-side navigation with prefetching:
+You can use standard HTML `<a>` tags or the `<Link>` component from `@ereo/client`. Both work — choose based on whether you need client-side navigation features.
+
+**Standard `<a>` tags** work everywhere and trigger a full page navigation (server round-trip). The `create-ereo` starter templates use `<a>` tags for simplicity:
+
+```tsx
+<a href="/posts">Posts</a>
+<a href="/about">About</a>
+```
+
+**`<Link>` and `<NavLink>`** enable client-side navigation (no full page reload) and prefetching. Use these when you want faster transitions and preloading:
 
 ```tsx
 import { Link, NavLink } from '@ereo/client'
 
-// Basic link
-<Link href="/posts">Posts</Link>
-
-// With prefetching
+// Client-side navigation with prefetch on hover
 <Link href="/posts/123" prefetch="intent">Read More</Link>
 
-// NavLink for active states
+// NavLink highlights the active route
 <NavLink
   href="/posts"
   className={({ isActive }) => isActive ? 'active' : ''}
@@ -411,11 +471,13 @@ import { Link, NavLink } from '@ereo/client'
 </NavLink>
 ```
 
-Prefetch strategies:
+Prefetch strategies for `<Link>`:
 - `"none"` - No prefetching
 - `"intent"` - Prefetch on hover/focus
 - `"render"` - Prefetch when link renders
 - `"viewport"` - Prefetch when visible
+
+> **Tip:** Start with `<a>` tags. Switch to `<Link>` when you want faster in-app navigation without full page reloads.
 
 ## Type-Safe Routes
 

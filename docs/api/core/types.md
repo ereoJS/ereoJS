@@ -134,25 +134,43 @@ interface FrameworkConfig {
 
 ## Route Configuration Types
 
+### RenderMode
+
+Available rendering modes for routes.
+
+```ts
+type RenderMode = 'ssg' | 'ssr' | 'csr' | 'json' | 'xml' | 'rsc'
+```
+
 ### RenderConfig
 
 Route rendering configuration.
 
 ```ts
 interface RenderConfig {
-  mode: 'ssr' | 'ssg' | 'csr' | 'streaming'
+  /** Primary render mode */
+  mode: RenderMode
+  /** SSG/ISR configuration */
+  prerender?: PrerenderConfig
+  /** Streaming configuration for SSR */
+  streaming?: StreamingConfig
+  /** CSR configuration */
+  csr?: CSRConfig
 }
 ```
 
 ### IslandsConfig
 
-Islands architecture configuration.
+Per-route island hydration configuration.
 
 ```ts
 interface IslandsConfig {
-  strategy?: 'load' | 'idle' | 'visible' | 'media'
-  preload?: string[]
-  maxConcurrent?: number
+  /** Default hydration strategy for this route's islands */
+  defaultStrategy?: HydrationStrategy
+  /** Component-specific hydration overrides */
+  components?: IslandStrategy[]
+  /** Disable all hydration for this route */
+  disabled?: boolean
 }
 ```
 
@@ -267,20 +285,66 @@ interface RouteModuleWithConfig extends RouteModule {
 
 ### RouteModule
 
-Standard route module exports.
+Standard route module exports. These are the named exports a route file can provide.
 
 ```ts
 interface RouteModule {
+  /** The route's React component */
   default?: ComponentType<RouteComponentProps>
+  /** Server-side data loader (runs on GET requests) */
   loader?: LoaderFunction
+  /** Server-side mutation handler (runs on POST/PUT/DELETE/PATCH) */
   action?: ActionFunction
+  /** Client-side loader — runs in the browser before/instead of fetching from server */
+  clientLoader?: ClientLoaderFunction
+  /** Client-side action — runs in the browser before/instead of posting to server */
+  clientAction?: ClientActionFunction
+  /** Page metadata (title, description, og tags, etc.) */
   meta?: MetaFunction
+  /** Custom response headers */
   headers?: HeadersFunction
+  /** Per-route link descriptors for CSS/assets injected into <head> */
+  links?: LinksFunction
+  /** Arbitrary data attached to the route (accessible via useMatches) */
   handle?: RouteHandle
+  /** Inline middleware exported directly from the route module */
+  middleware?: MiddlewareHandler[]
+  /** Error boundary component */
   ErrorBoundary?: ComponentType<RouteErrorComponentProps>
+  /** Route-level configuration */
   config?: RouteConfig
+  /** Parameter validation schema */
   params?: ParamValidationSchema
+  /** Search parameter validation schema */
   searchParams?: SearchParamValidationSchema
+  /** Controls whether this route's loader should re-run after navigation/mutation */
+  shouldRevalidate?: ShouldRevalidateFunction
+
+  // --- HTTP Method Handlers (API Routes) ---
+  /** When defined, these take precedence over loader/action */
+  GET?: MethodHandlerFunction
+  POST?: MethodHandlerFunction
+  PUT?: MethodHandlerFunction
+  DELETE?: MethodHandlerFunction
+  PATCH?: MethodHandlerFunction
+  OPTIONS?: MethodHandlerFunction
+  HEAD?: MethodHandlerFunction
+
+  // --- Route Guards ---
+  /** Runs before the loader; throw a Response to redirect or an Error to short-circuit */
+  beforeLoad?: BeforeLoadFunction
+
+  // --- Static Generation ---
+  /** Return an array of param objects for static generation at build time */
+  generateStaticParams?: GenerateStaticParamsFunction
+
+  // --- Component Exports ---
+  /** Fallback component shown while clientLoader.hydrate is running */
+  HydrateFallback?: ComponentType
+  /** Component shown while the route is pending (navigation in progress) */
+  PendingComponent?: ComponentType
+  /** Component shown when a notFound() is thrown from the route */
+  NotFoundComponent?: ComponentType
 }
 ```
 
@@ -291,22 +355,28 @@ interface RouteModule {
 Arguments passed to loader functions.
 
 ```ts
-interface LoaderArgs<P = Record<string, string>> {
+interface LoaderArgs<P = RouteParams> {
+  /** The incoming Request object (Web Standards) */
   request: Request
+  /** URL parameters from dynamic segments */
   params: P
-  context: RequestContext
+  /** App context (cache control, key-value store, cookies, headers) */
+  context: AppContext
 }
 ```
 
 ### ActionArgs
 
-Arguments passed to action functions.
+Arguments passed to action functions. Has the same shape as `LoaderArgs`.
 
 ```ts
-interface ActionArgs<P = Record<string, string>> {
+interface ActionArgs<P = RouteParams> {
+  /** The incoming Request object (includes form data for mutations) */
   request: Request
+  /** URL parameters from dynamic segments */
   params: P
-  context: RequestContext
+  /** App context (cache control, key-value store, cookies, headers) */
+  context: AppContext
 }
 ```
 
@@ -315,7 +385,7 @@ interface ActionArgs<P = Record<string, string>> {
 Type for loader functions.
 
 ```ts
-type LoaderFunction<T = unknown, P = Record<string, string>> =
+type LoaderFunction<T = unknown, P = RouteParams> =
   (args: LoaderArgs<P>) => T | Promise<T>
 ```
 
@@ -324,33 +394,246 @@ type LoaderFunction<T = unknown, P = Record<string, string>> =
 Type for action functions.
 
 ```ts
-type ActionFunction<T = unknown, P = Record<string, string>> =
+type ActionFunction<T = unknown, P = RouteParams> =
   (args: ActionArgs<P>) => T | Promise<T>
 ```
 
 ### LoaderData
 
-Extracts loader data type from a loader function.
+Wrapper type that includes loader return data and optional headers.
 
 ```ts
-type LoaderData<T extends LoaderFunction> =
-  T extends LoaderFunction<infer D> ? D : never
+interface LoaderData<T = unknown> {
+  data: T
+  headers?: Headers
+}
+```
+
+## Method Handler Types (API Routes)
+
+### MethodHandlerFunction
+
+Handler for HTTP method exports (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`, `HEAD`). When defined on a route module, takes precedence over `loader`/`action`.
+
+```ts
+type MethodHandlerFunction<T = unknown, P = RouteParams> = (
+  args: LoaderArgs<P>
+) => T | Response | Promise<T | Response>
+```
+
+## Route Guard Types
+
+### BeforeLoadFunction
+
+Runs before the loader. Throw a `Response` (e.g., redirect) or an `Error` to short-circuit the request. Return `void` to allow the loader to proceed.
+
+```ts
+type BeforeLoadFunction<P = RouteParams> = (
+  args: LoaderArgs<P>
+) => void | Promise<void>
+```
+
+## Static Generation Types
+
+### GenerateStaticParamsFunction
+
+Return an array of param objects for static page generation at build time.
+
+```ts
+type GenerateStaticParamsFunction<P = RouteParams> = () => P[] | Promise<P[]>
+```
+
+## Revalidation Types
+
+### ShouldRevalidateArgs
+
+Arguments passed to the `shouldRevalidate` function exported from route files.
+
+```ts
+interface ShouldRevalidateArgs {
+  currentUrl: URL
+  nextUrl: URL
+  currentParams: RouteParams
+  nextParams: RouteParams
+  formMethod?: string
+  formAction?: string
+  formData?: FormData
+  actionResult?: unknown
+  /** Whether the framework would revalidate by default */
+  defaultShouldRevalidate: boolean
+}
+```
+
+### ShouldRevalidateFunction
+
+Controls whether a route's loader should re-run after navigation or mutation. Return `true` to revalidate, `false` to skip.
+
+```ts
+type ShouldRevalidateFunction = (args: ShouldRevalidateArgs) => boolean
+```
+
+## Client Loader / Client Action Types
+
+### ClientLoaderArgs
+
+Arguments passed to a `clientLoader` function. Runs in the browser.
+
+```ts
+interface ClientLoaderArgs<P = RouteParams> {
+  params: P
+  request: Request
+  /** Call the server loader to get server data */
+  serverLoader: <T = unknown>() => Promise<T>
+}
+```
+
+### ClientLoaderFunction
+
+Client-side loader that runs in the browser on client-side navigations. Use for client-side caching, optimistic data, or offline-first patterns.
+
+```ts
+type ClientLoaderFunction<T = unknown, P = RouteParams> = ((
+  args: ClientLoaderArgs<P>
+) => T | Promise<T>) & {
+  /** If true, also runs during initial hydration (after SSR). Default: false */
+  hydrate?: boolean
+}
+```
+
+### ClientActionArgs
+
+Arguments passed to a `clientAction` function. Runs in the browser.
+
+```ts
+interface ClientActionArgs<P = RouteParams> {
+  params: P
+  request: Request
+  /** Call the server action to submit data */
+  serverAction: <T = unknown>() => Promise<T>
+}
+```
+
+### ClientActionFunction
+
+Client-side action that runs in the browser on form submissions. Use for optimistic UI updates, client-side validation, or offline form queuing.
+
+```ts
+type ClientActionFunction<T = unknown, P = RouteParams> = (
+  args: ClientActionArgs<P>
+) => T | Promise<T>
+```
+
+## Links Types
+
+### LinkDescriptor
+
+A single link descriptor for injecting into `<head>`.
+
+```ts
+interface LinkDescriptor {
+  rel: string       // e.g., 'stylesheet', 'preload', 'prefetch', 'icon'
+  href: string
+  type?: string
+  as?: string       // For preload: 'script', 'style', 'image', 'font'
+  crossOrigin?: 'anonymous' | 'use-credentials' | ''
+  media?: string
+  integrity?: string
+  sizes?: string
+  [key: string]: string | undefined
+}
+```
+
+### LinksFunction
+
+Function exported from route files to declare per-route CSS and assets. Links are injected into `<head>` when the route is active.
+
+```ts
+type LinksFunction = () => LinkDescriptor[]
+```
+
+## Cookie Types
+
+### CookieSetOptions
+
+Options for setting cookies.
+
+```ts
+interface CookieSetOptions {
+  maxAge?: number
+  expires?: Date
+  path?: string        // Default: '/'
+  domain?: string
+  secure?: boolean     // Default: false, auto-set for HTTPS
+  httpOnly?: boolean   // Default: true
+  sameSite?: 'Strict' | 'Lax' | 'None'
+}
+```
+
+### CookieJar
+
+Interface for reading and writing cookies in the request context.
+
+```ts
+interface CookieJar {
+  get(name: string): string | undefined
+  getAll(): Record<string, string>
+  set(name: string, value: string, options?: CookieSetOptions): void
+  delete(name: string, options?: Pick<CookieSetOptions, 'path' | 'domain'>): void
+  has(name: string): boolean
+}
+```
+
+## Not Found Helper
+
+### notFound
+
+Throw from a loader or action to trigger a 404 response. The framework catches this and renders the nearest error boundary.
+
+```ts
+function notFound(data?: unknown): never
+```
+
+```ts
+// Example
+export async function loader({ params }: LoaderArgs) {
+  const user = await db.user.findUnique({ where: { id: params.id } })
+  if (!user) throw notFound({ message: 'User not found' })
+  return { user }
+}
+```
+
+### NotFoundError
+
+The error class thrown by `notFound()`.
+
+```ts
+class NotFoundError extends Error {
+  readonly status = 404
+  readonly data: unknown
+}
 ```
 
 ## Meta Types
 
 ### MetaDescriptor
 
-Describes a meta tag.
+Describes a meta tag. All properties are optional — include only the ones relevant to the tag you want to create.
 
 ```ts
-type MetaDescriptor =
-  | { title: string }
-  | { name: string; content: string }
-  | { property: string; content: string }
-  | { httpEquiv: string; content: string }
-  | { charset: string }
-  | { tagName: 'link'; rel: string; href: string; [key: string]: string }
+interface MetaDescriptor {
+  /** Page title (sets <title>) */
+  title?: string
+  /** Name attribute (e.g., 'description', 'viewport') */
+  name?: string
+  /** Property attribute (e.g., 'og:title', 'og:image') */
+  property?: string
+  /** Content value for name/property meta tags */
+  content?: string
+  /** Character set declaration */
+  charSet?: 'utf-8'
+  /** Additional attributes */
+  [key: string]: string | undefined
+}
 ```
 
 ### MetaArgs
@@ -358,10 +641,13 @@ type MetaDescriptor =
 Arguments passed to meta functions.
 
 ```ts
-interface MetaArgs<T = unknown> {
+interface MetaArgs<T = unknown, P = RouteParams> {
+  /** Loader data for this route */
   data: T
-  params: Record<string, string>
-  location: URL
+  /** Route parameters */
+  params: P
+  /** Current location info */
+  location: { pathname: string; search: string; hash: string }
 }
 ```
 
@@ -381,21 +667,26 @@ type MetaFunction<T = unknown> =
 Props passed to route components.
 
 ```ts
-interface RouteComponentProps<T = unknown, P = Record<string, string>> {
+interface RouteComponentProps<T = unknown> {
+  /** Data returned by the route's loader */
   loaderData: T
-  actionData?: unknown
-  params: P
-  searchParams: URLSearchParams
+  /** Route parameters */
+  params: RouteParams
+  /** Child route content (for layouts) */
+  children?: ReactElement
 }
 ```
 
 ### RouteErrorComponentProps
 
-Props passed to error boundary components.
+Props passed to route-level error components (the fallback UI shown when a loader, action, or render throws).
 
 ```ts
 interface RouteErrorComponentProps {
-  error: Error | Response
+  /** The error that was thrown */
+  error: Error
+  /** Route parameters */
+  params: RouteParams
 }
 ```
 
@@ -577,9 +868,14 @@ Request-scoped cache control interface.
 
 ```ts
 interface CacheControl {
+  /** Set cache options for this request */
   set(options: CacheOptions): void
+  /** Get current cache options */
   get(): CacheOptions | undefined
+  /** Get all accumulated cache tags */
   getTags(): string[]
+  /** Add additional cache tags dynamically */
+  addTags(tags: string[]): void
 }
 ```
 
@@ -673,12 +969,20 @@ Request context interface available in loaders, actions, and middleware.
 
 ```ts
 interface AppContext {
+  /** Request-specific cache control */
   cache: CacheControl
+  /** Get a value from the context store */
   get: <T>(key: string) => T | undefined
+  /** Set a value in the context store */
   set: <T>(key: string, value: T) => void
+  /** Response headers to be merged into the final response */
   responseHeaders: Headers
+  /** Current request URL info */
   url: URL
+  /** Environment variables (server-side) */
   env: Record<string, string | undefined>
+  /** Cookie jar for reading/writing cookies */
+  cookies?: CookieJar
 }
 ```
 
@@ -1036,10 +1340,10 @@ export const meta: MetaFunction<{ post: Post }> = ({ data }) => [
 
 // Route config
 export const config: RouteConfig = {
-  render: 'ssr',
+  render: { mode: 'ssr' },
   cache: {
-    maxAge: 3600,
-    tags: ['posts']
-  }
+    edge: { maxAge: 3600 },
+    data: { tags: ['posts'] },
+  },
 }
 ```

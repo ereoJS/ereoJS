@@ -125,15 +125,21 @@ Choose how each route renders:
 
 ### [Islands Architecture](/core-concepts/islands)
 
-Selective hydration for interactive components:
+Selective hydration for interactive components. Add `'use client'` to mark a component for client-side hydration:
 
 ```tsx
-// Static by default
-<header>Welcome</header>
+// app/components/Counter.tsx
+'use client';
 
-// Hydrates on the client
-<Counter data-island="Counter" data-hydrate="idle" />
+import { useState } from 'react';
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
+}
 ```
+
+Only island components ship JavaScript — the rest of the page is static HTML.
 
 ### [Caching](/core-concepts/caching)
 
@@ -159,7 +165,7 @@ Request/response processing pipeline:
 export const middleware = [
   'auth',        // Named middleware
   'rateLimit',
-  async (request, next) => {  // Inline function
+  async (request, context, next) => {  // Inline function
     console.log(request.url)
     return next()
   }
@@ -230,15 +236,32 @@ export default function Layout({ children }) {
 
 ### Island Components
 
-Interactive components that hydrate:
+Interactive components that hydrate on the client. Mark them with `'use client'`:
 
 ```tsx
-// islands/Counter.tsx
-'use client'
+// app/components/Counter.tsx
+'use client';
 
-export default function Counter() {
-  const [count, setCount] = useState(0)
-  return <button onClick={() => setCount(c + 1)}>{count}</button>
+import { useState } from 'react';
+
+export function Counter({ initialCount = 0 }) {
+  const [count, setCount] = useState(initialCount);
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
+}
+```
+
+Use them directly in routes:
+
+```tsx
+import { Counter } from '~/components/Counter';
+
+export default function Home() {
+  return (
+    <div>
+      <h1>Static HTML</h1>
+      <Counter initialCount={0} />  {/* Only this hydrates */}
+    </div>
+  );
 }
 ```
 

@@ -148,6 +148,9 @@ const cacheOptions = context.cache.get()
 // Get all cache tags (accumulated from multiple set() calls)
 const tags = context.cache.getTags()
 // ['posts', 'user:123']
+
+// Add additional tags dynamically (without resetting other cache options)
+context.cache.addTags(['category:tech'])
 ```
 
 ### responseHeaders
@@ -307,22 +310,54 @@ const loggingMiddleware = async (request, context, next) => {
 }
 ```
 
-## Type Safety
+### cookies
 
-Define typed context keys:
+Cookie jar for reading and writing cookies.
 
 ```ts
-// types/context.ts
-declare module '@ereo/core' {
-  interface ContextTypes {
-    user: User | null
-    session: Session
-    requestId: string
-  }
-}
+cookies: CookieJar
+```
 
-// Now context.get('user') returns User | null
-const user = context.get('user')
+```ts
+interface CookieJar {
+  get(name: string): string | undefined
+  getAll(): Record<string, string>
+  set(name: string, value: string, options?: CookieSetOptions): void
+  delete(name: string, options?: Pick<CookieSetOptions, 'path' | 'domain'>): void
+  has(name: string): boolean
+}
+```
+
+```ts
+// Read a cookie
+const sessionId = context.cookies.get('session')
+
+// Set a cookie
+context.cookies.set('theme', 'dark', {
+  maxAge: 60 * 60 * 24 * 365, // 1 year
+  path: '/',
+  sameSite: 'Lax',
+})
+
+// Delete a cookie
+context.cookies.delete('session')
+
+// Check if a cookie exists
+if (context.cookies.has('session')) {
+  // User has a session cookie
+}
+```
+
+## Type Safety
+
+Use TypeScript generics with `context.get<T>()` to type your context values:
+
+```ts
+// In middleware
+context.set('user', { id: '1', name: 'Alice' })
+
+// In loader — provide the type explicitly
+const user = context.get<{ id: string; name: string }>('user')
 ```
 
 ## Related

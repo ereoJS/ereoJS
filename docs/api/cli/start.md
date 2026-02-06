@@ -205,7 +205,7 @@ await start({
 Add timing middleware:
 
 ```ts
-app.middleware(async (request, next) => {
+app.middleware(async (request, context, next) => {
   const start = Date.now()
   const response = await next()
   const duration = Date.now() - start

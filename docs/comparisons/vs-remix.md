@@ -135,27 +135,35 @@ function InteractiveCounter() {
 ```
 
 **EreoJS (islands):**
+
+Mark interactive components with `'use client'` — only they get hydrated:
+
 ```tsx
-// Only marked components hydrate
-import Counter from '../islands/Counter'
+import { Counter } from '~/components/Counter';
 
 export default function Page() {
   return (
     <div>
       <StaticContent />
-      {/* Only this hydrates */}
-      <Counter data-island="Counter" data-hydrate="idle" />
+      {/* Only this ships JavaScript */}
+      <Counter />
       <MoreStaticContent />
     </div>
   )
 }
 ```
 
+For deferred hydration, use `data-island` attributes:
+
+```tsx
+<Counter data-island="Counter" data-hydrate="idle" />
+```
+
 Key differences:
 - Remix hydrates the entire page
-- EreoJS only hydrates marked islands
+- EreoJS only hydrates `'use client'` components (islands)
 - EreoJS ships less JavaScript
-- EreoJS requires explicit island marking
+- EreoJS offers hydration strategies (`idle`, `visible`, etc.) for fine-grained control
 
 ## Routing
 

@@ -99,25 +99,39 @@ import Counter from '../components/Counter.jsx'
 ```
 
 **EreoJS:**
+
+For simple cases, use `'use client'` (hydrates on load):
+
 ```tsx
-import Counter from '../islands/Counter'
+// app/components/Counter.tsx
+'use client';
+// ... component code
+```
+
+```tsx
+import { Counter } from '~/components/Counter';
 
 export default function Page() {
   return (
     <>
       <h1>Static content</h1>
-
-      <Counter data-island="Counter" data-hydrate="load" />
-      <Counter data-island="Counter" data-hydrate="idle" />
-      <Counter data-island="Counter" data-hydrate="visible" />
-      <Counter
-        data-island="Counter"
-        data-hydrate="media"
-        data-media="(max-width: 768px)"
-      />
+      <Counter />
     </>
   )
 }
+```
+
+For explicit hydration strategies (like Astro's `client:*`), use `data-island` attributes:
+
+```tsx
+<Counter data-island="Counter" data-hydrate="load" />
+<Counter data-island="Counter" data-hydrate="idle" />
+<Counter data-island="Counter" data-hydrate="visible" />
+<Counter
+  data-island="Counter"
+  data-hydrate="media"
+  data-media="(max-width: 768px)"
+/>
 ```
 
 Similar hydration strategies:
@@ -341,7 +355,7 @@ export function onRequest({ request }, next) {
 **EreoJS:**
 ```ts
 // routes/_middleware.ts
-export const middleware = async (request, next) => {
+export const middleware = async (request, context, next) => {
   console.log(request.url)
   return next()
 }
@@ -395,7 +409,7 @@ Both ship minimal JavaScript through islands.
 
 1. Convert `.astro` files to React components
 2. Move data fetching to loaders
-3. Convert `client:*` directives to `data-island` attributes
+3. Convert `client:*` directives to `'use client'` (simple) or `data-island` attributes (for hydration control)
 4. Add actions for form handling
 5. Update build configuration
 
@@ -403,7 +417,7 @@ Both ship minimal JavaScript through islands.
 
 1. Convert React components to `.astro` (for static) or keep React (for islands)
 2. Move loaders to frontmatter or API routes
-3. Convert `data-island` to `client:*` directives
+3. Convert `'use client'` / `data-island` to `client:*` directives
 4. Use API routes for form handling
 
 ## Summary

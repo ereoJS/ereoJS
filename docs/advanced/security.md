@@ -12,7 +12,7 @@ Always use HTTPS in production:
 
 ```ts
 // Redirect HTTP to HTTPS
-const httpsRedirect: MiddlewareHandler = async (request, next) => {
+const httpsRedirect: MiddlewareHandler = async (request, context, next) => {
   const url = new URL(request.url)
 
   if (url.protocol === 'http:' && process.env.NODE_ENV === 'production') {
@@ -29,7 +29,7 @@ const httpsRedirect: MiddlewareHandler = async (request, next) => {
 Apply security headers to all responses:
 
 ```ts
-const securityHeaders: MiddlewareHandler = async (request, next) => {
+const securityHeaders: MiddlewareHandler = async (request, context, next) => {
   const response = await next()
 
   const headers = new Headers(response.headers)
@@ -224,7 +224,7 @@ function createSessionCookie(sessionId: string): string {
 ```ts
 const rateLimits = new Map<string, { count: number; reset: number }>()
 
-const rateLimit: MiddlewareHandler = async (request, next) => {
+const rateLimit: MiddlewareHandler = async (request, context, next) => {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
   const now = Date.now()
 
@@ -319,7 +319,7 @@ export const action = createAction(async ({ request }) => {
 Don't expose internal errors to users:
 
 ```ts
-const errorMiddleware: MiddlewareHandler = async (request, next) => {
+const errorMiddleware: MiddlewareHandler = async (request, context, next) => {
   try {
     return await next()
   } catch (error) {

@@ -84,8 +84,10 @@ Creates a cache with tag-based invalidation support.
 ### Signature
 
 ```ts
-function createTaggedCache(options?: CacheOptions): TaggedCache
+function createTaggedCache(options?: Omit<CacheOptions, 'tagged'>): TaggedCache
 ```
+
+The `tagged` option is automatically set to `true` — you only need to provide `maxSize` and `defaultTtl`.
 
 ### TaggedCache Interface
 
@@ -99,11 +101,10 @@ interface TaggedCache extends CacheAdapter {
 
   // Get all keys associated with a tag
   getByTag(tag: string): Promise<string[]>
-
-  // Get cache statistics
-  getStats(): { size: number; tags: number }
 }
 ```
+
+> **Note:** The `MemoryCacheAdapter` class (the built-in implementation) also provides `getStats()` and `keys()` methods, but these are not part of the `TaggedCache` interface. If you need them, use `MemoryCacheAdapter` directly.
 
 ### Example
 

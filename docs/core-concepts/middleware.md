@@ -4,12 +4,12 @@ Middleware lets you run code before a request is handled by your route. Use it f
 
 ## Basic Middleware
 
-Middleware is a function that receives a request and a `next` function:
+Middleware is a function that receives a `request`, the app `context`, and a `next` function:
 
 ```tsx
-import type { MiddlewareHandler } from '@ereo/router'
+import type { MiddlewareHandler } from '@ereo/core'
 
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   console.log(`${request.method} ${request.url}`)
 
   // Call next() to continue to the route handler
@@ -19,6 +19,8 @@ export const middleware: MiddlewareHandler = async (request, next) => {
   return response
 }
 ```
+
+> **Signature:** The middleware signature is always `(request, context, next)`. The `context` parameter is the `AppContext` object — use it to share data between middleware and loaders (e.g., `context.set('user', user)`).
 
 ## Route-Level Middleware
 
@@ -38,15 +40,16 @@ routes/
 
 ```tsx
 // routes/dashboard/_middleware.ts
-import type { MiddlewareHandler } from '@ereo/router'
+import type { MiddlewareHandler } from '@ereo/core'
 
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   const user = await getUser(request)
 
   if (!user) {
     return Response.redirect('/login')
   }
 
+  context.set('user', user)
   return next()
 }
 ```
@@ -59,19 +62,20 @@ Register middleware globally and reference by name:
 // src/middleware/index.ts
 import { registerMiddleware } from '@ereo/router'
 
-registerMiddleware('auth', async (request, next) => {
+registerMiddleware('auth', async (request, context, next) => {
   const user = await getUser(request)
   if (!user) return Response.redirect('/login')
+  context.set('user', user)
   return next()
 })
 
-registerMiddleware('admin', async (request, next) => {
-  const user = await getUser(request)
+registerMiddleware('admin', async (request, context, next) => {
+  const user = context.get('user')
   if (!user?.isAdmin) return new Response('Forbidden', { status: 403 })
   return next()
 })
 
-registerMiddleware('logger', async (request, next) => {
+registerMiddleware('logger', async (request, context, next) => {
   const start = Date.now()
   const response = await next()
   console.log(`${request.method} ${request.url} - ${Date.now() - start}ms`)
@@ -99,13 +103,14 @@ Combine multiple middleware handlers:
 ```tsx
 import { composeMiddleware } from '@ereo/router'
 
-const withAuth = async (request, next) => {
+const withAuth = async (request, context, next) => {
   const user = await getUser(request)
   if (!user) return Response.redirect('/login')
+  context.set('user', user)
   return next()
 }
 
-const withLogging = async (request, next) => {
+const withLogging = async (request, context, next) => {
   console.log(`${request.method} ${request.url}`)
   return next()
 }
@@ -122,7 +127,7 @@ Apply middleware based on conditions:
 import { when, method, path } from '@ereo/router'
 
 // Only run for POST requests
-export const middleware = method('POST', async (request, next) => {
+export const middleware = method('POST', async (request, context, next) => {
   // Validate CSRF token
   const token = request.headers.get('X-CSRF-Token')
   if (!validateCsrf(token)) {
@@ -132,7 +137,7 @@ export const middleware = method('POST', async (request, next) => {
 })
 
 // Only run for specific paths
-export const apiMiddleware = path('/api/*', async (request, next) => {
+export const apiMiddleware = path('/api/*', async (request, context, next) => {
   // Add CORS headers
   const response = await next()
   response.headers.set('Access-Control-Allow-Origin', '*')
@@ -142,7 +147,7 @@ export const apiMiddleware = path('/api/*', async (request, next) => {
 // Conditional based on request
 export const conditionalMiddleware = when(
   (request) => request.headers.get('X-Api-Key') !== null,
-  async (request, next) => {
+  async (request, context, next) => {
     // API key authentication
     return next()
   }
@@ -225,7 +230,7 @@ Request
 
 ```tsx
 // Middleware 1
-const first: MiddlewareHandler = async (request, next) => {
+const first: MiddlewareHandler = async (request, context, next) => {
   console.log('1. Before')
   const response = await next()
   console.log('4. After')
@@ -233,7 +238,7 @@ const first: MiddlewareHandler = async (request, next) => {
 }
 
 // Middleware 2
-const second: MiddlewareHandler = async (request, next) => {
+const second: MiddlewareHandler = async (request, context, next) => {
   console.log('2. Before')
   const response = await next()
   console.log('3. After')
@@ -272,7 +277,7 @@ export const loader = createLoader(async ({ context }) => {
 Middleware can modify responses:
 
 ```tsx
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   const response = await next()
 
   // Add security headers
@@ -289,7 +294,7 @@ export const middleware: MiddlewareHandler = async (request, next) => {
 Return a response directly to skip remaining middleware and the route:
 
 ```tsx
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   // Maintenance mode
   if (process.env.MAINTENANCE_MODE === 'true') {
     return new Response('Site under maintenance', {
@@ -307,7 +312,7 @@ export const middleware: MiddlewareHandler = async (request, next) => {
 Handle errors in middleware:
 
 ```tsx
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   try {
     return await next()
   } catch (error) {
@@ -387,7 +392,7 @@ export const middleware: MiddlewareHandler = async (request, context, next) => {
 ### Request Validation
 
 ```tsx
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   if (request.method === 'POST') {
     const contentType = request.headers.get('Content-Type')
 
@@ -406,7 +411,7 @@ export const middleware: MiddlewareHandler = async (request, next) => {
 ### Caching
 
 ```tsx
-export const middleware: MiddlewareHandler = async (request, next) => {
+export const middleware: MiddlewareHandler = async (request, context, next) => {
   // Only cache GET requests
   if (request.method !== 'GET') {
     return next()

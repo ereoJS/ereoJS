@@ -303,7 +303,7 @@ export const config = {
 
 ```tsx
 // middleware/metrics.ts
-export const metricsMiddleware: MiddlewareHandler = async (request, next) => {
+export const metricsMiddleware: MiddlewareHandler = async (request, context, next) => {
   const start = performance.now()
   const response = await next()
   const duration = performance.now() - start

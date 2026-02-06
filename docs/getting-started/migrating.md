@@ -182,21 +182,26 @@ export default function Counter() {
 }
 ```
 
-**EreoJS:**
-```tsx
-// islands/Counter.tsx
-import { useState } from 'react'
+**EreoJS** supports `'use client'` (simplest) and `data-island` attributes (advanced control):
 
-export default function Counter() {
-  const [count, setCount] = useState(0)
-  return <button onClick={() => setCount(c => c + 1)}>{count}</button>
+```tsx
+// app/components/Counter.tsx
+'use client';
+
+import { useState } from 'react';
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
 }
 
-// In a route:
-<Counter data-island="Counter" data-hydrate="load" />
+// In a route — just import and use:
+import { Counter } from '~/components/Counter';
+
+<Counter />
 ```
 
-EreoJS uses explicit islands instead of the 'use client' directive.
+For fine-grained hydration control (e.g., hydrate on idle or when visible), use the `data-island` approach instead. See [Islands Architecture](/core-concepts/islands).
 
 ### Link Component
 
@@ -436,7 +441,7 @@ export function meta({ data }) {
 | Feature | Next.js | EreoJS |
 |---------|---------|------|
 | Runtime | Node.js | Bun |
-| Client Components | `'use client'` directive | Islands with `data-island` |
+| Client Components | `'use client'` directive | `'use client'` or `data-island` (for hydration control) |
 | Data Fetching | Server Components / getServerSideProps | Loaders |
 | Mutations | Server Actions / API routes | Actions |
 | Caching | ISR / fetch cache | Tag-based invalidation |

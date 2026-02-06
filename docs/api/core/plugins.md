@@ -28,16 +28,17 @@ function definePlugin(plugin: Plugin): Plugin
 
 ```ts
 interface Plugin {
-  // Plugin name (required)
+  // Plugin name (required, must be unique)
   name: string
 
-  // Plugin initialization
+  // Plugin initialization — called once when the plugin is registered
   setup?: (context: PluginContext) => void | Promise<void>
 
   // Vite-compatible hooks
   resolveId?: (id: string) => string | null
   load?: (id: string) => string | null | Promise<string | null>
-  transform?: (code: string, id: string) => string | Promise<string>
+  transform?: (code: string, id: string) => string | null | Promise<string | null>
+  // Return null from transform to indicate "no transformation" for this file
 
   // Build hooks
   buildStart?: () => void | Promise<void>
@@ -47,8 +48,10 @@ interface Plugin {
   configureServer?: (server: DevServer) => void | Promise<void>
 
   // Framework hooks
-  configResolved?: (config: FrameworkConfig) => void
+  extendConfig?: (config: FrameworkConfig) => FrameworkConfig
+  transformRoutes?: (routes: Route[]) => Route[]
   runtimeMiddleware?: MiddlewareHandler[]
+  virtualModules?: Record<string, string>
 }
 ```
 
@@ -67,7 +70,7 @@ const myPlugin = definePlugin({
       // Transform TSX files
       return code.replace(/console\.log/g, 'logger.log')
     }
-    return code
+    return null // Return null to skip transformation for this file
   },
 
   buildStart() {
@@ -235,13 +238,21 @@ export function devToolsPlugin() {
     name: 'dev-tools',
 
     configureServer(server) {
-      // Add custom dev server endpoints
-      server.middlewares.use('/__dev/routes', (req, res) => {
-        res.json(server.routes)
+      // Add middleware to the dev server
+      // server.middlewares is a MiddlewareHandler[] array
+      server.middlewares.push(async (request, context, next) => {
+        const url = new URL(request.url)
+        if (url.pathname === '/__dev/health') {
+          return Response.json({ status: 'ok' })
+        }
+        return next()
       })
 
-      server.middlewares.use('/__dev/config', (req, res) => {
-        res.json(server.config)
+      // Watch additional files for changes
+      server.watcher?.add('./config')
+      server.watcher?.on('change', (file) => {
+        console.log(`Config file changed: ${file}`)
+        server.ws.send({ type: 'full-reload' })
       })
     }
   })

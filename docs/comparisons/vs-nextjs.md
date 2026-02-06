@@ -9,7 +9,7 @@ This comparison helps developers understand the differences between EreoJS and N
 | Runtime | Bun | Node.js |
 | Bundler | Bun | Webpack/Turbopack |
 | Philosophy | Explicit, simple | Feature-rich, conventions |
-| Client Components | Islands (explicit) | `'use client'` directive |
+| Client Components | `'use client'` + islands (`data-hydrate`) | `'use client'` directive |
 | Data Fetching | Loaders/Actions | Server Components, API routes |
 | Caching | Tag-based, explicit | ISR, fetch cache, implicit |
 
@@ -183,23 +183,34 @@ export default function Counter() {
 ```
 
 **EreoJS (Islands):**
-```tsx
-// islands/Counter.tsx
-import { useState } from 'react'
 
-export default function Counter() {
-  const [count, setCount] = useState(0)
-  return <button onClick={() => setCount(c => c + 1)}>{count}</button>
+EreoJS also supports `'use client'` — the familiar pattern from Next.js:
+
+```tsx
+// app/components/Counter.tsx
+'use client';
+
+import { useState } from 'react';
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
 }
 
-// In a route:
+// In a route — just import and use:
+<Counter />
+```
+
+For advanced hydration control, EreoJS additionally offers `data-island` attributes:
+
+```tsx
 <Counter data-island="Counter" data-hydrate="idle" />
 ```
 
 Key differences:
-- Next.js: `'use client'` marks entire component tree as client
-- EreoJS: Islands are explicit, with hydration strategies
-- EreoJS ships less JavaScript by default
+- Both support `'use client'`, so the migration path is familiar
+- EreoJS adds `data-island` for hydration strategies (`idle`, `visible`, `media`, `never`)
+- EreoJS ships less JavaScript by default — only island components get hydrated
 
 ## Caching
 
@@ -314,7 +325,7 @@ export const config = {
 **EreoJS:**
 ```ts
 // routes/dashboard/_middleware.ts
-export const middleware = async (request, next) => {
+export const middleware = async (request, context, next) => {
   if (!request.headers.get('Cookie')?.includes('session')) {
     return Response.redirect('/login')
   }
