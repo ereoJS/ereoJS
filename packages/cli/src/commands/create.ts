@@ -248,7 +248,7 @@ import { Link } from '@ereo/client';`
     ? ' className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white"'
     : '';
   const stylesheet = tailwindStyles
-    ? '\n        <link rel="stylesheet" href="/app/globals.css" />'
+    ? '\n        <link rel="stylesheet" href="/__tailwind.css" />'
     : '';
 
   return `${imports}
