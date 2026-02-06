@@ -8,16 +8,20 @@ Deploy your EreoJS application natively with Bun.
 bun run build
 ```
 
-This creates an optimized build in `dist/`:
+This creates an optimized build in `.ereo/` (the default output directory):
 
 ```
-dist/
+.ereo/
 ├── server/
-│   └── index.js
+│   ├── index.js     # Server entry
+│   ├── routes/      # Route modules
+│   └── chunks/
 ├── client/
-│   └── ...
-└── static/
-    └── ...
+│   ├── index.js     # Client entry
+│   ├── islands/     # Island bundles
+│   └── chunks/
+├── assets/          # Static assets and CSS
+└── manifest.json    # Build manifest
 ```
 
 ## Start the Server
@@ -29,7 +33,7 @@ bun ereo start
 Or directly:
 
 ```bash
-bun dist/server/index.js
+bun .ereo/server/index.js
 ```
 
 ## Environment Variables
@@ -122,9 +126,9 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Static files
-    location /static/ {
-        alias /var/www/app/dist/static/;
+    # Static files (served by EreoJS at /_ereo with 1-year cache)
+    location /_ereo/ {
+        alias /var/www/app/.ereo/client/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }

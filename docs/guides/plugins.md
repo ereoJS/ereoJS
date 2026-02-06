@@ -9,14 +9,18 @@ This guide covers creating and using plugins in EreoJS.
 ```ts
 // ereo.config.ts
 import { defineConfig } from '@ereo/core'
-import { tailwindPlugin } from '@ereo/plugin-tailwind'
-import { authPlugin } from '@ereo/plugin-auth'
+import tailwind from '@ereo/plugin-tailwind'
+import { createAuthPlugin, github, google } from '@ereo/auth'
 
 export default defineConfig({
   plugins: [
-    tailwindPlugin(),
-    authPlugin({
-      providers: ['github', 'google']
+    tailwind(),
+    createAuthPlugin({
+      session: { secret: process.env.AUTH_SECRET! },
+      providers: [
+        github({ clientId: process.env.GITHUB_CLIENT_ID!, clientSecret: process.env.GITHUB_CLIENT_SECRET! }),
+        google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! }),
+      ],
     })
   ]
 })
@@ -28,16 +32,16 @@ Plugins execute in order. Place foundational plugins first:
 
 ```ts
 plugins: [
-  // Infrastructure
+  // Infrastructure plugins first
   loggingPlugin(),
   securityPlugin(),
 
-  // Features
-  authPlugin(),
+  // Feature plugins (e.g., auth, analytics)
+  createAuthPlugin({ /* ... */ }),
   analyticsPlugin(),
 
-  // Styling/build
-  tailwindPlugin()
+  // Styling and build plugins last
+  tailwind()
 ]
 ```
 

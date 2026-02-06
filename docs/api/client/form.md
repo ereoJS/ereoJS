@@ -11,6 +11,7 @@ import {
   useFormContext,
   useSubmit,
   useFetcher,
+  useFetchers,
   useActionData,      // Form-specific
   useNavigation,      // Form-specific
   serializeFormData,
@@ -35,7 +36,7 @@ import type {
 ## Types
 
 ```ts
-// Result from a form action submission
+// Result from a form action submission (client-side)
 interface ActionResult<T = unknown> {
   data?: T
   error?: Error
@@ -56,6 +57,8 @@ interface SubmitOptions {
   fetcherKey?: string
 }
 ```
+
+> **Note on `ActionResult`:** The `ActionResult` type in `@ereo/client` represents the client-side response from a form submission — it has `data`, `error`, `status`, and `ok` fields. This is different from the `ActionResult` type in `@ereo/data`, which represents a server-side action return value with `success`, `data`, and `errors` (a validation error map). The client-side version wraps the HTTP response; the server-side version is what your action handler returns.
 
 ## Form
 
@@ -191,7 +194,9 @@ export default function SearchForm() {
 ### Submit Form Reference
 
 ```tsx
-import { useSubmit, useRef } from '@ereo/client'
+import { useRef, useEffect } from 'react'
+import { useSubmit } from '@ereo/client'
+import { Form } from '@ereo/client'
 
 export default function AutoSaveForm() {
   const formRef = useRef<HTMLFormElement>(null)
@@ -327,6 +332,31 @@ function PostActions({ postId }) {
 }
 ```
 
+## useFetchers
+
+Returns all active fetcher states. Useful for showing global loading indicators or tracking multiple in-flight submissions.
+
+### Signature
+
+```ts
+function useFetchers(): FetcherState[]
+```
+
+### Example
+
+```tsx
+import { useFetchers } from '@ereo/client'
+
+function GlobalProgress() {
+  const fetchers = useFetchers()
+  const isAnySubmitting = fetchers.some(f => f.state === 'submitting')
+
+  if (!isAnySubmitting) return null
+
+  return <div className="progress-bar" />
+}
+```
+
 ## FormProvider / useFormContext
 
 Share form state across components.
@@ -420,6 +450,8 @@ const formData = parseFormData('name=John&email=john%40example.com')
 // FormData with name and email entries
 ```
 
+> **Note:** This is the client-side `parseFormData` from `@ereo/client`. It takes a URL-encoded string and returns a `FormData` object. The `@ereo/data` package has a different `parseFormData` function designed for server-side use — it accepts a `Request` object and auto-detects the content type (JSON, FormData, or text). Make sure you import from the correct package for your use case.
+
 ### formDataToObject
 
 Convert FormData to a plain object. Handles multiple values for the same key by creating arrays.
@@ -437,6 +469,8 @@ formData.append('tags', 'typescript')
 const obj = formDataToObject(formData)
 // { name: 'John', tags: ['react', 'typescript'] }
 ```
+
+> **Note:** This is the client-side `formDataToObject` from `@ereo/client`. It performs a simple flat conversion. The `@ereo/data` package has a more advanced `formDataToObject` that supports TypeScript generics, type coercion, and nested object parsing (e.g., `user.name` → `{ user: { name: ... } }`). Use the `@ereo/data` version on the server when you need nested structures or type coercion; use this client version for straightforward flat conversions.
 
 ### objectToFormData
 
@@ -493,6 +527,9 @@ function DeleteButton({ postId }) {
 ### Debounced Search
 
 ```tsx
+import { useState, useEffect } from 'react'
+import { useSubmit } from '@ereo/client'
+
 function SearchInput() {
   const submit = useSubmit()
   const [query, setQuery] = useState('')

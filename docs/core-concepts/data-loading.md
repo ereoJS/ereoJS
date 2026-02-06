@@ -627,6 +627,8 @@ export const clientLoader = createClientLoader(async () => {
 })
 ```
 
+> **Naming note:** The function is exported as `clientLoader` from `@ereo/data`. Since your route export must also be named `clientLoader`, importing it with an alias (e.g. `clientLoader as createClientLoader`) avoids the naming conflict.
+
 ## Data Revalidation
 
 Revalidate cached data after mutations:
@@ -709,9 +711,9 @@ const pipeline = createPipeline({
       { views: 0, likes: 0 }  // fallback
     ),
 
-    // This depends on 'post' — declared below in dependencies
-    comments: dataSource(async ({ params }) => {
-      return db.comments.findByPost(params.id)
+    // This depends on 'post' — it accesses the resolved post data via `data`
+    comments: dataSource(async ({ data }) => {
+      return db.comments.findByPost(data.post.id)
     }),
   },
   dependencies: {

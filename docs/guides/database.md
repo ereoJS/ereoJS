@@ -64,6 +64,9 @@ import { useDb, withTransaction } from '@ereo/db'
 import { posts } from '~/db/schema'
 import { eq } from 'drizzle-orm'
 
+// Using the options object form of createLoader — gives you caching, transforms, and error handling.
+// You can also use the shorthand: createLoader(async ({ context }) => { ... })
+// See Data Loading docs for all available approaches.
 export const loader = createLoader({
   load: async ({ context }) => {
     const db = useDb(context)
@@ -72,6 +75,8 @@ export const loader = createLoader({
   },
 })
 
+// Using the options object form of createAction — gives you automatic FormData parsing and validation.
+// You can also use the shorthand: createAction(async ({ request, context }) => { ... })
 export const action = createAction({
   handler: async ({ context, formData }) => {
     return withTransaction(context, async (tx) => {

@@ -16,6 +16,7 @@ import type {
   ValidationResult,
   ValidationSchema,
   CrossFieldValidationContext,
+  ErrorSource,
   FieldState,
   FieldInputProps,
   FieldRegistration,
@@ -113,10 +114,11 @@ interface ValidatorFunction<T = unknown> {
   _isRequired?: boolean;
   _crossField?: boolean;
   _debounce?: number;
+  _dependsOnField?: string;
 }
 ```
 
-A validator function returns a string error message or `undefined` for success. Metadata properties drive the validation engine's timing.
+A validator function returns a string error message or `undefined` for success. Metadata properties drive the validation engine's timing. The `_dependsOnField` property is set by `matches()` and used for automatic dependency detection.
 
 ### ValidationRule
 
@@ -220,6 +222,7 @@ interface FieldHandle<V = unknown> {
   touched: boolean;
   dirty: boolean;
   validating: boolean;
+  errorMap: Record<ErrorSource, string[]>;
   setValue: (value: V) => void;
   setError: (errors: string[]) => void;
   clearErrors: () => void;
@@ -228,7 +231,7 @@ interface FieldHandle<V = unknown> {
 }
 ```
 
-Returned by `useField()`.
+Returned by `useField()`. The `errorMap` groups errors by source (`sync`, `async`, `schema`, `server`, `manual`).
 
 ### FieldOptions
 
@@ -239,6 +242,7 @@ interface FieldOptions<V = unknown> {
   defaultValue?: V;
   transform?: (value: unknown) => V;
   parse?: (event: any) => V;
+  dependsOn?: string | string[];
 }
 ```
 
@@ -311,6 +315,8 @@ interface FormConfig<T extends Record<string, any> = Record<string, any>> {
   validateOn?: ValidateOn;
   validateOnMount?: boolean;
   resetOnSubmit?: boolean;
+  focusOnError?: boolean;
+  dependencies?: Record<string, string | string[]>;
 }
 ```
 
@@ -337,6 +343,14 @@ interface FormState<T = unknown> {
 type WatchCallback<V = unknown> = (value: V, path: string) => void
 ```
 
+### ErrorSource
+
+```ts
+type ErrorSource = 'sync' | 'async' | 'schema' | 'server' | 'manual'
+```
+
+Tags the origin of validation errors. Used by `setErrorsWithSource`, `clearErrorsBySource`, and `getErrorMap`.
+
 ### FormStoreInterface
 
 ```ts
@@ -355,6 +369,9 @@ interface FormStoreInterface<T extends Record<string, any>> {
   clearErrors(path?: string): void;
   getFormErrors(): Signal<string[]>;
   setFormErrors(errors: string[]): void;
+  setErrorsWithSource(path: string, errors: string[], source: ErrorSource): void;
+  clearErrorsBySource(path: string, source: ErrorSource): void;
+  getErrorMap(path: string): Signal<Record<ErrorSource, string[]>>;
 
   getTouched(path: string): boolean;
   setTouched(path: string, touched?: boolean): void;
@@ -373,6 +390,8 @@ interface FormStoreInterface<T extends Record<string, any>> {
   handleSubmit(e?: Event): Promise<void>;
   submitWith(handler: SubmitHandler<T>, submitId?: string): Promise<void>;
   validate(): Promise<boolean>;
+  trigger(path?: string): Promise<boolean>;
+  resetField(path: string): void;
   reset(): void;
   resetTo(values: T): void;
   setBaseline(values: T): void;

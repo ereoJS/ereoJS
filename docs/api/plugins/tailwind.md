@@ -103,6 +103,8 @@ interface TailwindPluginOptions {
   content?: string[]
   /** Path to tailwind.config.js (auto-detected by default) */
   config?: string
+  /** Path to CSS entry file (auto-detected by default) */
+  css?: string
   /** Enable dark mode */
   darkMode?: 'class' | 'media' | false
   /** Use EreoJS preset */
@@ -116,6 +118,7 @@ interface TailwindPluginOptions {
 const defaults = {
   content: ['./app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
   config: 'tailwind.config.js',
+  css: '',  // Auto-detects from: app/styles.css, app/globals.css, app/global.css, src/styles.css, etc.
   darkMode: 'class',
   usePreset: true
 }
@@ -150,10 +153,16 @@ tailwind({
   usePreset: false
 })
 
+// Custom CSS entry file
+tailwind({
+  css: './app/styles/main.css'
+})
+
 // Full custom configuration
 tailwind({
   content: ['./app/**/*.{js,ts,jsx,tsx}'],
   config: './tailwind.config.js',
+  css: './app/styles/global.css',
   darkMode: 'class',
   usePreset: true
 })
@@ -443,13 +452,13 @@ This is equivalent to creating a CSS file with:
 
 ### /__tailwind.css
 
-In development mode, the plugin serves Tailwind CSS via the `/__tailwind.css` endpoint:
+In development mode, the plugin serves compiled Tailwind CSS via the `/__tailwind.css` endpoint:
 
 ```html
 <link rel="stylesheet" href="/__tailwind.css" />
 ```
 
-This endpoint serves the Tailwind CDN import for rapid development.
+This endpoint compiles your Tailwind CSS locally through PostCSS and serves the result. No CDN is used — all processing happens on your machine, so your custom theme, plugins, and `@apply` directives work correctly.
 
 ## Dark Mode
 

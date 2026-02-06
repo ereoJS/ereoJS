@@ -15,18 +15,28 @@ import {
   // Loader Testing
   testLoader,
   createLoaderTester,
+  testLoadersParallel,
+  testLoaderMatrix,
+  testLoaderError,
   type LoaderTestOptions,
   type LoaderTestResult,
 
   // Action Testing
   testAction,
   createActionTester,
+  testActionMatrix,
+  testActionError,
+  testActionWithFile,
   type ActionTestOptions,
   type ActionTestResult,
 
   // Middleware Testing
   testMiddleware,
   createMiddlewareTester,
+  testMiddlewareChain,
+  testMiddlewareMatrix,
+  testMiddlewareError,
+  testMiddlewareContext,
   type MiddlewareTestOptions,
   type MiddlewareTestResult,
 
@@ -35,13 +45,19 @@ import {
   createFormRequest,
   createMockFormData,
   createMockHeaders,
+  createMockFile,
   parseJsonResponse,
   parseTextResponse,
+  extractCookies,
   type MockRequestOptions,
 
   // Component Testing
   renderRoute,
   createRouteRenderer,
+  renderComponent,
+  renderRouteMatrix,
+  testRouteRenders,
+  getRouteMeta,
   type RenderRouteOptions,
   type RenderResult,
 
@@ -51,16 +67,23 @@ import {
   assertStatus,
   assertHeaders,
   assertCookies,
+  assertThrows,
+  assertSchema,
   type AssertionOptions,
 
   // Test Server
   createTestServer,
+  createMockServer,
   type TestServer,
   type TestServerOptions,
 
   // Snapshot Testing
   snapshotLoader,
   snapshotAction,
+  createSnapshotMatrix,
+  commonReplacers,
+  applyReplacements,
+  deterministicSnapshot,
   type SnapshotOptions,
 } from '@ereo/testing'
 ```
@@ -78,16 +101,14 @@ The testing package is organized into several categories:
 | Category | Functions | Purpose |
 |----------|-----------|---------|
 | Context | `createTestContext`, `createContextFactory` | Create mock contexts for testing |
-| Loader Testing | `testLoader`, `createLoaderTester` | Test route loaders in isolation |
-| Action Testing | `testAction`, `createActionTester` | Test form actions and mutations |
-| Middleware Testing | `testMiddleware`, `createMiddlewareTester` | Test middleware functions |
-| Request/Response | `createMockRequest`, `createFormRequest`, `createMockFormData`, `createMockHeaders`, `parseJsonResponse`, `parseTextResponse` | Create mock requests and parse responses |
-| Component Testing | `renderRoute`, `createRouteRenderer` | Render routes with loader data |
-| Assertions | `assertRedirect`, `assertJson`, `assertStatus`, `assertHeaders`, `assertCookies` | Common assertions for responses |
-| Test Server | `createTestServer` | Integration testing with real HTTP |
-| Snapshots | `snapshotLoader`, `snapshotAction` | Snapshot testing for data |
-
-> **Note:** Some sections below document planned features that are not yet implemented. Functions listed in the import section above are the currently available exports. Sections marked with "🚧 Planned" describe future functionality.
+| Loader Testing | `testLoader`, `createLoaderTester`, `testLoadersParallel`, `testLoaderMatrix`, `testLoaderError` | Test route loaders in isolation |
+| Action Testing | `testAction`, `createActionTester`, `testActionMatrix`, `testActionError`, `testActionWithFile` | Test form actions and mutations |
+| Middleware Testing | `testMiddleware`, `createMiddlewareTester`, `testMiddlewareChain`, `testMiddlewareMatrix`, `testMiddlewareError`, `testMiddlewareContext` | Test middleware functions |
+| Request/Response | `createMockRequest`, `createFormRequest`, `createMockFormData`, `createMockHeaders`, `createMockFile`, `parseJsonResponse`, `parseTextResponse`, `extractCookies` | Create mock requests and parse responses |
+| Component Testing | `renderRoute`, `createRouteRenderer`, `renderComponent`, `renderRouteMatrix`, `testRouteRenders`, `getRouteMeta` | Render routes with loader data |
+| Assertions | `assertRedirect`, `assertJson`, `assertStatus`, `assertHeaders`, `assertCookies`, `assertThrows`, `assertSchema` | Common assertions for responses |
+| Test Server | `createTestServer`, `createMockServer` | Integration testing with real HTTP |
+| Snapshots | `snapshotLoader`, `snapshotAction`, `createSnapshotMatrix`, `commonReplacers`, `applyReplacements`, `deterministicSnapshot` | Snapshot testing for data |
 
 ---
 
@@ -95,7 +116,7 @@ The testing package is organized into several categories:
 
 ### createTestContext
 
-Creates a mock context for testing loaders, actions, and middleware.
+Creates a mock context for testing loaders, actions, and middleware. The test context mimics the `AppContext` your route handlers receive in production, so your loaders and actions can call `context.get()`, `context.set()`, and other methods as normal.
 
 #### Signature
 
@@ -157,7 +178,7 @@ expect(operations).toHaveLength(1)
 
 ### createContextFactory
 
-Creates a reusable context factory for repeated test setup.
+Creates a reusable context factory for repeated test setup. This is useful when many tests share the same base configuration (e.g., an authenticated user or specific environment variables) but need small overrides per test.
 
 #### Signature
 
@@ -192,7 +213,7 @@ test('loader test 2', async () => {
 
 ### testLoader
 
-Tests a loader function directly with configurable options.
+Tests a loader function directly with configurable options. This is the simplest way to test a loader — pass the loader function and any route params, request options, or context overrides you need.
 
 #### Signature
 
@@ -254,7 +275,7 @@ test('loads blog post', async () => {
 
 ### createLoaderTester
 
-Creates a reusable loader tester with preset options.
+Creates a reusable loader tester with preset options. Base options are merged with per-test overrides, so you can set up shared configuration once (like an authenticated user context) and then only specify what changes per test.
 
 #### Signature
 
@@ -283,11 +304,9 @@ test('loads different post', async () => {
 })
 ```
 
-### testLoadersParallel 🚧 Planned
+### testLoadersParallel
 
-> **Not yet implemented.** This API is planned for a future release.
-
-Tests multiple loaders in parallel for combined loader scenarios.
+Tests multiple loaders in parallel. Useful for testing combined loader scenarios where several loaders run at the same time (e.g., a page that loads user data and post data simultaneously).
 
 #### Signature
 
@@ -314,11 +333,9 @@ expect(results[0].data.user).toBeDefined()
 expect(results[1].data.posts).toHaveLength(3)
 ```
 
-### testLoaderMatrix 🚧 Planned
+### testLoaderMatrix
 
-> **Not yet implemented.** This API is planned for a future release.
-
-Tests a loader with multiple parameter combinations.
+Tests a single loader with multiple parameter combinations. Returns one result for each parameter set, making it easy to verify behavior across a range of inputs in one test.
 
 #### Signature
 
@@ -349,11 +366,9 @@ expect(results[1].data).toBeDefined()
 expect(results[2].data).toBeNull()
 ```
 
-### testLoaderError 🚧 Planned
+### testLoaderError
 
-> **Not yet implemented.** This API is planned for a future release.
-
-Tests loader error handling.
+Tests loader error handling by catching any thrown errors instead of letting them propagate. Returns either the caught error or `null` if the loader completed without throwing.
 
 #### Signature
 
@@ -387,7 +402,7 @@ test('handles missing post', async () => {
 
 ### testAction
 
-Tests an action function directly.
+Tests an action function directly. The request method defaults to `POST` (since actions handle form submissions). If the action returns a `Response` object, `testAction` automatically parses the JSON body and detects redirects.
 
 #### Signature
 
@@ -475,7 +490,7 @@ test('redirects after creation', async () => {
 
 ### createActionTester
 
-Creates a reusable action tester with preset options.
+Creates a reusable action tester with preset options. Works the same way as `createLoaderTester` — base options are merged with per-test overrides.
 
 #### Signature
 
@@ -510,11 +525,9 @@ test('requires content', async () => {
 })
 ```
 
-### testActionMatrix 🚧 Planned
+### testActionMatrix
 
-> **Not yet implemented.** This API is planned for a future release.
-
-Tests an action with multiple form submissions.
+Tests an action with multiple form submissions. Each entry in the `submissions` array is tested independently, and results are returned in the same order. This is useful for verifying that an action handles a variety of valid and invalid inputs correctly.
 
 #### Signature
 
@@ -549,11 +562,9 @@ expect(results[1].data.success).toBe(true)
 expect(results[2].data.error).toBeDefined()
 ```
 
-### testActionError 🚧 Planned
+### testActionError
 
-> **Not yet implemented.**
-
-Tests action error handling.
+Tests action error handling by catching thrown errors. Works the same way as `testLoaderError` — returns the caught error or `null` if the action completed without throwing.
 
 #### Signature
 
@@ -580,11 +591,9 @@ test('handles validation error', async () => {
 })
 ```
 
-### testActionWithFile 🚧 Planned
+### testActionWithFile
 
-> **Not yet implemented.**
-
-Tests an action with file upload.
+Tests an action with file upload. Creates a `File` object from the provided content (string or Blob) and submits it as form data. You can also include additional form fields via `extraFields`.
 
 #### Signature
 
@@ -632,7 +641,7 @@ test('uploads file', async () => {
 
 ### testMiddleware
 
-Tests a middleware function directly.
+Tests a middleware function directly. Automatically tracks whether and how many times `next()` was called, so you can verify that your middleware correctly passes through or short-circuits the request.
 
 #### Signature
 
@@ -748,11 +757,9 @@ test('rejects invalid tokens', async () => {
 })
 ```
 
-### testMiddlewareChain 🚧 Planned
+### testMiddlewareChain
 
-> **Not yet implemented.**
-
-Tests a chain of middleware functions.
+Tests a chain of middleware functions in order. Each middleware's `next()` calls the next middleware in the chain. The result includes per-middleware tracking of whether `next()` was called and how long each middleware took.
 
 #### Signature
 
@@ -789,11 +796,9 @@ expect(result.middlewareResults[1].nextCalled).toBe(true)
 expect(result.middlewareResults[2].nextCalled).toBe(true)
 ```
 
-### testMiddlewareMatrix 🚧 Planned
+### testMiddlewareMatrix
 
-> **Not yet implemented.**
-
-Tests middleware with multiple request scenarios.
+Tests a single middleware with multiple request scenarios. Returns one result per request, making it easy to verify the middleware handles different inputs correctly in a single test.
 
 #### Signature
 
@@ -823,11 +828,9 @@ expect(results[1].response.status).toBe(200)
 expect(results[2].response.status).toBe(401)
 ```
 
-### testMiddlewareError 🚧 Planned
+### testMiddlewareError
 
-> **Not yet implemented.**
-
-Tests middleware error handling.
+Tests middleware error handling. Useful for verifying that error-handling middleware correctly catches errors thrown by downstream handlers. Pass a custom `next` function that throws an error to simulate downstream failures.
 
 #### Signature
 
@@ -859,11 +862,9 @@ test('handles errors gracefully', async () => {
 })
 ```
 
-### testMiddlewareContext 🚧 Planned
+### testMiddlewareContext
 
-> **Not yet implemented.**
-
-Tests that middleware modifies context correctly.
+Tests that a middleware correctly modifies the request context. After running the middleware, the test compares the context values against your expected values using deep equality. Returns a `contextMatches` boolean and a detailed diff of any mismatches.
 
 #### Signature
 
@@ -902,7 +903,7 @@ test('sets user in context', async () => {
 
 ### createMockRequest
 
-Creates a mock Request object for testing.
+Creates a mock `Request` object for testing. Supports two call signatures: `createMockRequest(options)` or `createMockRequest(url, options)`. Automatically builds the full URL, sets headers, handles cookies, and serializes JSON or FormData bodies.
 
 #### Signature
 
@@ -976,7 +977,7 @@ const request = createMockRequest({
 
 ### createFormRequest
 
-Creates a POST request with form data (convenience function).
+Creates a POST request with URL-encoded form data. This is a convenience function — use it when you need a simple form submission without setting method, headers, or content type manually.
 
 #### Signature
 
@@ -998,7 +999,7 @@ const request = createFormRequest('/api/login', {
 
 ### createMockFormData
 
-Creates mock FormData for testing.
+Creates a `FormData` object from a plain object. Useful when you need raw `FormData` for direct use in tests.
 
 #### Signature
 
@@ -1019,7 +1020,7 @@ const formData = createMockFormData({
 
 ### createMockHeaders
 
-Creates mock Headers for testing.
+Creates a `Headers` object from a plain object.
 
 #### Signature
 
@@ -1036,11 +1037,9 @@ const headers = createMockHeaders({
 })
 ```
 
-### createMockFile 🚧 Planned
+### createMockFile
 
-> **Not yet implemented.**
-
-Creates a mock File for testing file uploads.
+Creates a `File` object for testing file uploads. Accepts either a string or Blob as the file content.
 
 #### Signature
 
@@ -1061,7 +1060,7 @@ const imageFile = createMockFile('image.png', imageBlob, 'image/png')
 
 ### parseJsonResponse
 
-Parses JSON from a Response.
+Parses JSON from a `Response` object. Throws an error with a preview of the body if parsing fails.
 
 #### Signature
 
@@ -1078,7 +1077,7 @@ const data = await parseJsonResponse<MyData>(result.response)
 
 ### parseTextResponse
 
-Parses text from a Response.
+Parses text from a `Response` object.
 
 #### Signature
 
@@ -1086,11 +1085,9 @@ Parses text from a Response.
 function parseTextResponse(response: Response): Promise<string>
 ```
 
-### extractCookies 🚧 Planned
+### extractCookies
 
-> **Not yet implemented.**
-
-Extracts cookies from a Response.
+Extracts cookies from a `Response` by reading its `Set-Cookie` headers. Returns a plain object mapping cookie names to their values.
 
 #### Signature
 
@@ -1111,7 +1108,9 @@ expect(cookies.session).toBeDefined()
 
 ### renderRoute
 
-Renders a route component with its loader data.
+Renders a route module's component with its loader data. If you provide `loaderData` in options, the loader is skipped and the provided data is used directly. Otherwise, the loader runs automatically.
+
+Returns a React element that you can pass to your testing library's `render()` function.
 
 #### Signature
 
@@ -1193,7 +1192,7 @@ test('renders with mock data', async () => {
 
 ### createRouteRenderer
 
-Creates a reusable route renderer.
+Creates a reusable route renderer with preset options.
 
 #### Signature
 
@@ -1217,11 +1216,9 @@ test('renders for authenticated user', async () => {
 })
 ```
 
-### renderComponent 🚧 Planned
+### renderComponent
 
-> **Not yet implemented.**
-
-Renders a standalone component with props.
+Renders a standalone React component with props. Returns a React element without running any loader. This is useful for testing island components or shared UI components outside of a route context.
 
 #### Signature
 
@@ -1238,11 +1235,9 @@ function renderComponent<P extends object>(
 const element = renderComponent(Counter, { count: 5 })
 ```
 
-### renderRouteMatrix 🚧 Planned
+### renderRouteMatrix
 
-> **Not yet implemented.**
-
-Renders a route with multiple param sets.
+Renders a route with multiple parameter sets. Returns one render result per parameter set, making it useful for visual regression or snapshot testing across different route inputs.
 
 #### Signature
 
@@ -1272,11 +1267,9 @@ renders.forEach((result, index) => {
 })
 ```
 
-### testRouteRenders 🚧 Planned
+### testRouteRenders
 
-> **Not yet implemented.**
-
-Tests that a route renders without throwing.
+Tests that a route renders without throwing an error. Returns `{ renders: true }` on success or `{ renders: false, error }` if rendering fails. Useful as a smoke test to catch runtime errors in route components.
 
 #### Signature
 
@@ -1304,11 +1297,9 @@ test('renders without errors', async () => {
 })
 ```
 
-### getRouteMeta 🚧 Planned
+### getRouteMeta
 
-> **Not yet implemented.**
-
-Gets the meta tags for a route.
+Gets the meta tags for a route by running its `meta()` export. If the route has a loader, the loader runs first (unless you provide `loaderData` in options) so that the meta function receives the correct data.
 
 #### Signature
 
@@ -1333,9 +1324,11 @@ expect(meta.find(m => m.title)).toEqual({ title: 'My Post' })
 
 ## Assertions
 
+The assertion functions throw descriptive errors on failure. They work with any test runner (Bun, Jest, Vitest, etc.) and can be used alongside your runner's built-in `expect()`.
+
 ### assertRedirect
 
-Asserts that a response is a redirect.
+Asserts that a response is a redirect (3xx status). Optionally checks the `Location` header and specific status code.
 
 #### Signature
 
@@ -1359,7 +1352,7 @@ assertRedirect(result.response, '/dashboard', { status: 301 })
 
 ### assertJson
 
-Asserts that a response has the expected JSON body.
+Asserts that a response or data object contains the expected properties. Uses deep partial matching — only the keys you specify are checked, so extra keys in the data are ignored.
 
 #### Signature
 
@@ -1380,7 +1373,7 @@ await assertJson(result.data, { id: 1, name: 'Test' })
 
 ### assertStatus
 
-Asserts that a response has the expected status code.
+Asserts that a response has the expected status code. You can pass a single status or an array of acceptable statuses.
 
 #### Signature
 
@@ -1404,7 +1397,7 @@ assertStatus(result.response, [200, 201])
 
 ### assertHeaders
 
-Asserts that a response has the expected headers.
+Asserts that a response has the expected headers. Values can be exact strings or `RegExp` patterns.
 
 #### Signature
 
@@ -1428,7 +1421,7 @@ assertHeaders(result.response, {
 
 ### assertCookies
 
-Asserts that a response sets the expected cookies.
+Asserts that a response sets the expected cookies. You can check for existence, value (string or RegExp), and cookie attributes like `httpOnly`, `secure`, `sameSite`, `path`, and `maxAge`.
 
 #### Signature
 
@@ -1462,11 +1455,9 @@ assertCookies(result.response, {
 })
 ```
 
-### assertThrows 🚧 Planned
+### assertThrows
 
-> **Not yet implemented.**
-
-Asserts that a function throws an error.
+Asserts that an async function throws an error. Optionally checks the error message (string or RegExp), error name, and HTTP status code.
 
 #### Signature
 
@@ -1491,11 +1482,9 @@ await assertThrows(
 )
 ```
 
-### assertSchema 🚧 Planned
+### assertSchema
 
-> **Not yet implemented.**
-
-Asserts that a value matches a basic type schema.
+Asserts that an object's properties match a basic type schema. Each key maps to a type string: `'string'`, `'number'`, `'boolean'`, `'object'`, `'array'`, `'null'`, or `'undefined'`.
 
 #### Signature
 
@@ -1524,7 +1513,9 @@ assertSchema(result.data, {
 
 ### createTestServer
 
-Creates a test server for integration testing.
+Creates a full EreoJS application server for integration testing. The server starts on a random available port (or a port you specify), loads all route modules from your routes directory, and provides convenient HTTP method helpers.
+
+Always call `server.stop()` in your `afterAll` block to clean up.
 
 #### Signature
 
@@ -1619,11 +1610,9 @@ describe('API routes', () => {
 })
 ```
 
-### createMockServer 🚧 Planned
+### createMockServer
 
-> **Not yet implemented.**
-
-Creates a simple mock server for external API testing.
+Creates a simple mock server for testing external API integrations. Define routes as key-value pairs where the key is `"METHOD /path"` and the value is either static data or a handler function. Responses are automatically serialized as JSON.
 
 #### Signature
 
@@ -1660,7 +1649,7 @@ await mockApi.stop()
 
 ### snapshotLoader
 
-Creates a snapshot of loader data.
+Creates a snapshot of loader data. Runs the loader with the provided options and applies snapshot transformations (exclude fields, replace dynamic values, etc.) before returning the data for snapshot comparison.
 
 #### Signature
 
@@ -1707,7 +1696,7 @@ test('loader snapshot', async () => {
 
 ### snapshotAction
 
-Creates a snapshot of action result.
+Creates a snapshot of an action's result. Works the same as `snapshotLoader` but for action functions.
 
 #### Signature
 
@@ -1733,11 +1722,9 @@ test('action snapshot', async () => {
 })
 ```
 
-### createSnapshotMatrix 🚧 Planned
+### createSnapshotMatrix
 
-> **Not yet implemented.**
-
-Creates snapshots for multiple test scenarios.
+Creates snapshots for multiple test scenarios at once. Each scenario has a name and a set of loader test options. Returns an object keyed by scenario name, which you can snapshot as a whole.
 
 #### Signature
 
@@ -1765,11 +1752,9 @@ const snapshots = await createSnapshotMatrix(loader, {
 expect(snapshots).toMatchSnapshot()
 ```
 
-### commonReplacers 🚧 Planned
+### commonReplacers
 
-> **Not yet implemented.**
-
-Common regex patterns for dynamic values.
+Pre-defined regex patterns for replacing dynamic values in snapshots. Use these with `applyReplacements` to make snapshots stable across runs.
 
 ```ts
 const commonReplacers = {
@@ -1784,11 +1769,9 @@ const commonReplacers = {
 }
 ```
 
-### applyReplacements 🚧 Planned
+### applyReplacements
 
-> **Not yet implemented.**
-
-Applies string replacements for snapshot stability.
+Applies string replacements to data for snapshot stability. Serializes the data to JSON, performs the replacements, and deserializes it back.
 
 #### Signature
 
@@ -1808,11 +1791,9 @@ const stableData = applyReplacements(data, {
 })
 ```
 
-### deterministicSnapshot 🚧 Planned
+### deterministicSnapshot
 
-> **Not yet implemented.**
-
-Creates a deterministic snapshot by sorting object keys.
+Creates a deterministic JSON snapshot by sorting all object keys alphabetically. This ensures the snapshot is the same regardless of the order properties were assigned.
 
 #### Signature
 
@@ -1870,7 +1851,7 @@ test('handles various inputs', async () => {
 
   expect(results[0].data).toBeDefined()
   expect(results[1].data).toBeNull()
-  // results[2] might throw - use testLoaderError for that case
+  // results[2] might throw — use testLoaderError for that case
 })
 ```
 
@@ -1955,6 +1936,7 @@ test('loader snapshot', async () => {
 
 ## Related
 
+- [Testing Guide](/guides/testing) — Practical testing strategies
 - [Loaders](/api/data/loaders)
 - [Actions](/api/data/actions)
 - [Middleware](/api/router/middleware)

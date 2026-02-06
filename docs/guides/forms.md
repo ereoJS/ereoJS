@@ -385,10 +385,13 @@ The built-in components (`Field`, `TextareaField`, `SelectField`) handle ARIA at
 For focus management and screen reader announcements:
 
 ```ts
-import { focusFirstError, announce, announceErrors } from '@ereo/forms'
+import { focusFirstError, focusField, announce, announceErrors } from '@ereo/forms'
 
-// Focus first field with errors
+// Focus first field with errors (pass the form store)
 focusFirstError(form)
+
+// Focus a specific field by its name attribute
+focusField('email')
 
 // Announce to screen readers
 announce('Form saved successfully')

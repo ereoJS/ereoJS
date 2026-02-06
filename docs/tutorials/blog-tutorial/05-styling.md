@@ -17,7 +17,7 @@ Update `tailwind.config.js`:
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    './src/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {},
@@ -295,7 +295,7 @@ export default function PostPage({ loaderData }) {
   const { post, comments } = loaderData
   const actionData = useActionData()
   const navigation = useNavigation()
-  const isSubmitting = navigation.state === 'submitting'
+  const isSubmitting = navigation.status === 'submitting'
 
   return (
     <article className="max-w-3xl mx-auto">
@@ -329,12 +329,7 @@ export default function PostPage({ loaderData }) {
 
       {/* Like Button */}
       <div className="mb-12">
-        <LikeButton
-          data-island="LikeButton"
-          data-hydrate="idle"
-          postId={post.id}
-          initialLikes={post.likes || 0}
-        />
+        <LikeButton postId={post.id} initialLikes={post.likes || 0} />
       </div>
 
       {/* Comments Section */}

@@ -124,7 +124,7 @@ Build your application:
 bun run build
 ```
 
-This creates an optimized production build in the `dist` directory.
+This creates an optimized production build in the `.ereo` directory (configurable via `ereo.config.ts`).
 
 ## Running in Production
 

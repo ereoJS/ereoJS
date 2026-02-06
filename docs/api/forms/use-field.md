@@ -32,8 +32,10 @@ function useField<T extends Record<string, any>, V = unknown>(
 interface FieldOptions<V> {
   validate?: ValidatorFunction<V> | ValidatorFunction<V>[];
   validateOn?: 'change' | 'blur' | 'submit';
+  defaultValue?: V;
   parse?: (event: any) => V;
   transform?: (value: V) => V;
+  dependsOn?: string | string[];
 }
 ```
 
@@ -41,8 +43,10 @@ interface FieldOptions<V> {
 |------|------|-------------|
 | `validate` | `ValidatorFunction<V> \| ValidatorFunction<V>[]` | Field-level validators. Pass an array or use `compose()` for multiple validators. These run in addition to any form-level validators. |
 | `validateOn` | `'change' \| 'blur' \| 'submit'` | Override validation timing for this field. By default, timing is derived from the validator types (see [Validation](/api/forms/validation)). |
+| `defaultValue` | `V` | Override the default value for this field. Takes precedence over the form's `defaultValues` for this path. Useful when a field is added dynamically after form creation. |
 | `parse` | `(event: any) => V` | Custom value extraction from events. Replaces the default `e.target.value` / `e.target.checked` logic. Useful for custom components that pass values directly instead of DOM events. |
 | `transform` | `(value: V) => V` | Transform the value after parsing but before storing. Runs on every change. Useful for coercing types or normalizing input (e.g. trimming whitespace, converting to number). |
+| `dependsOn` | `string \| string[]` | Re-validate this field when the specified field(s) change. Useful for cross-field validation (e.g. "end date must be after start date"). The `matches()` validator auto-detects its dependency, so `dependsOn` is not needed when using `matches()`. |
 
 ## Returns
 
@@ -64,6 +68,7 @@ interface FieldHandle<V> {
   touched: boolean;
   dirty: boolean;
   validating: boolean;
+  errorMap: Record<ErrorSource, string[]>;
   setValue: (v: V) => void;
   setError: (errs: string[]) => void;
   clearErrors: () => void;
@@ -76,10 +81,11 @@ interface FieldHandle<V> {
 |------|------|-------------|
 | `inputProps` | `object` | Props object to spread onto `<input>` or any custom component. Includes `name`, `value`, `onChange`, `onBlur`, `ref`, and conditional ARIA attributes (`aria-invalid`, `aria-describedby`) when errors are present. |
 | `value` | `V` | Current field value |
-| `errors` | `string[]` | Current validation errors for this field |
+| `errors` | `string[]` | Current validation errors for this field (all sources combined) |
 | `touched` | `boolean` | Whether the field has been blurred at least once |
 | `dirty` | `boolean` | Whether the current value differs from the baseline (initial) value |
 | `validating` | `boolean` | Whether async validation is currently in progress |
+| `errorMap` | `Record<ErrorSource, string[]>` | Errors grouped by source: `{ sync: [], async: [], schema: [], server: [], manual: [] }`. Use this to display server errors differently from client-side errors (see [Error Sources](/guides/forms#error-sources)). |
 | `setValue` | `(v: V) => void` | Programmatically set the field value |
 | `setError` | `(errs: string[]) => void` | Manually set validation errors |
 | `clearErrors` | `() => void` | Clear all errors for this field |
@@ -243,6 +249,53 @@ const age = useField(form, 'age', {
 const username = useField(form, 'username', {
   transform: (v) => v.trim(),
 })
+```
+
+### With dependsOn (Cross-Field Re-validation)
+
+Use `dependsOn` to automatically re-validate this field when another field changes. This is useful for cross-field validation like date ranges.
+
+```tsx
+import { useField, custom } from '@ereo/forms'
+
+const endDate = useField(form, 'endDate', {
+  validate: custom((value, context) => {
+    const start = context?.getValue('startDate')
+    if (start && value && value < start) return 'End date must be after start date'
+  }),
+  dependsOn: 'startDate',
+})
+```
+
+The `matches()` validator auto-detects its dependency, so `dependsOn` is not needed when using `matches()`:
+
+```tsx
+const confirm = useField(form, 'confirmPassword', {
+  validate: compose(required(), matches('password', 'Passwords do not match')),
+  // No dependsOn needed — matches() registers the dependency automatically
+})
+```
+
+### Using errorMap
+
+The `errorMap` property groups errors by their source, so you can display server errors differently from client-side validation errors:
+
+```tsx
+function EmailField({ form }) {
+  const field = useField(form, 'email')
+
+  return (
+    <div>
+      <input {...field.inputProps} />
+      {field.errorMap.server.length > 0 && (
+        <span className="server-error">{field.errorMap.server[0]}</span>
+      )}
+      {field.errorMap.sync.length > 0 && (
+        <span className="validation-error">{field.errorMap.sync[0]}</span>
+      )}
+    </div>
+  )
+}
 ```
 
 ## Re-render Behavior

@@ -85,34 +85,31 @@ store.set('count', 5) // Logs: "Count changed: 5"
 
 ### In React Components
 
+Use the built-in `useStoreKey` hook to subscribe to a single store key, or `useStore` to subscribe to the entire store. Both use `useSyncExternalStore` under the hood and are compatible with React Compiler.
+
 ```tsx
-import { createStore } from '@ereo/state'
-import { useState, useEffect } from 'react'
+import { createStore, useStoreKey, useStore } from '@ereo/state'
 
 const store = createStore({
   theme: 'light' as 'light' | 'dark',
   sidebarOpen: true
 })
 
-function useStoreValue<K extends keyof typeof store>(key: K) {
-  const signal = store.get(key)
-  const [value, setValue] = useState(signal.get())
-
-  useEffect(() => {
-    return signal.subscribe(setValue)
-  }, [signal])
-
-  return value
-}
-
+// Subscribe to a single key — only re-renders when 'theme' changes
 function ThemeToggle() {
-  const theme = useStoreValue('theme')
+  const theme = useStoreKey(store, 'theme')
 
   return (
     <button onClick={() => store.set('theme', theme === 'light' ? 'dark' : 'light')}>
       Theme: {theme}
     </button>
   )
+}
+
+// Subscribe to the entire store — re-renders when any key changes
+function StoreDebug() {
+  const state = useStore(store)
+  return <pre>{JSON.stringify(state, null, 2)}</pre>
 }
 ```
 

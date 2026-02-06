@@ -15,6 +15,12 @@ export { createDevToolsPlugin } from './plugin';
 export type {
   DevToolsConfig,
   DataPipelineVisualization,
+  LoaderTiming,
   IslandVisualization,
   CacheVisualization,
+  CacheEntry,
+  RouteVisualization,
+  HMREvent,
 } from './types';
+
+export type { DevToolsPanelData } from './DevToolsPanel';

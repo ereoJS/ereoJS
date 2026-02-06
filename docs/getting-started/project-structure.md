@@ -66,6 +66,7 @@ Each `.tsx` file becomes a route:
 | `_layout.tsx` | Layout wrapper for sibling and nested routes |
 | `_error.tsx` | Error boundary for the route segment |
 | `_loading.tsx` | Loading UI for the route segment |
+| `_404.tsx` | Custom 404 / not-found page |
 | `_middleware.ts` | Middleware for the route segment |
 
 ### Dynamic Routes
@@ -139,13 +140,13 @@ API routes can be defined in two ways:
 import type { LoaderArgs, ActionArgs } from '@ereo/core'
 
 export async function loader({ request }: LoaderArgs) {
-  const users = await db.users.findMany()
+  const users = await db.select().from(usersTable)
   return users // Serialized to JSON
 }
 
 export async function action({ request }: ActionArgs) {
   const body = await request.json()
-  const user = await db.users.create(body)
+  const [user] = await db.insert(usersTable).values(body).returning()
   return user
 }
 ```
@@ -155,13 +156,13 @@ export async function action({ request }: ActionArgs) {
 ```ts
 // app/routes/api/users.ts
 export async function GET({ request }) {
-  const users = await db.users.findMany()
+  const users = await db.select().from(usersTable)
   return Response.json({ users })
 }
 
 export async function POST({ request }) {
   const body = await request.json()
-  const post = await db.posts.create(body)
+  const [post] = await db.insert(postsTable).values(body).returning()
   return Response.json(post, { status: 201 })
 }
 ```
@@ -249,7 +250,7 @@ export default defineConfig({
   },
   build: {
     target: 'bun',
-    outDir: 'dist',
+    outDir: '.ereo',  // default
     minify: true
   },
   plugins: [
@@ -302,16 +303,20 @@ public/
 
 ## Build Output
 
-After `bun run build`:
+After `bun run build`, the output is placed in the `.ereo` directory (the default, configurable via `build.outDir` in `ereo.config.ts`):
 
 ```
-dist/
+.ereo/
 ├── server/          # Server bundle
-│   └── index.js
+│   ├── index.js     # Server entry
+│   ├── routes/      # Route modules
+│   └── chunks/      # Shared chunks
 ├── client/          # Client bundles
-│   ├── index.js
-│   └── chunks/
-└── static/          # Static assets
+│   ├── index.js     # Client entry
+│   ├── islands/     # Island bundles
+│   └── chunks/      # Client chunks
+├── assets/          # Static assets and CSS
+└── manifest.json    # Build manifest
 ```
 
 ## Best Practices

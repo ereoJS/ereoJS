@@ -84,18 +84,15 @@ count.set(3) // No log
 
 ### In React Components
 
+The `@ereo/state` package exports a `useSignal` hook that integrates signals with React using `useSyncExternalStore`. This is the recommended way to use signals in React components:
+
 ```tsx
-import { signal } from '@ereo/state'
-import { useState, useEffect } from 'react'
+import { signal, useSignal } from '@ereo/state'
 
 const count = signal(0)
 
 function Counter() {
-  const [value, setValue] = useState(count.get())
-
-  useEffect(() => {
-    return count.subscribe(setValue)
-  }, [])
+  const value = useSignal(count)
 
   return (
     <button onClick={() => count.update(c => c + 1)}>
@@ -105,26 +102,25 @@ function Counter() {
 }
 ```
 
-### useSignal Hook (Custom)
+`useSignal` uses React's `useSyncExternalStore` under the hood, which means it is compatible with React Compiler, concurrent features, and SSR. You do not need to write your own hook — just import `useSignal` from `@ereo/state`.
 
-```ts
-import { useState, useEffect } from 'react'
-import type { Signal } from '@ereo/state'
+For stores, use `useStoreKey` (for a single key) or `useStore` (for the full snapshot):
 
-function useSignal<T>(signal: Signal<T>): T {
-  const [value, setValue] = useState(signal.get())
+```tsx
+import { createStore, useStoreKey, useStore } from '@ereo/state'
 
-  useEffect(() => {
-    return signal.subscribe(setValue)
-  }, [signal])
+const store = createStore({ count: 0, name: 'Alice' })
 
-  return value
+// Only re-renders when 'count' changes
+function Counter() {
+  const count = useStoreKey(store, 'count')
+  return <button onClick={() => store.set('count', count + 1)}>{count}</button>
 }
 
-// Usage
-function Counter() {
-  const value = useSignal(count)
-  return <span>{value}</span>
+// Re-renders when any key changes
+function Dashboard() {
+  const state = useStore(store)
+  return <div>{state.count} - {state.name}</div>
 }
 ```
 
@@ -263,6 +259,7 @@ const name = signal({ first: 'John', last: 'Doe' })
 
 // Single notification
 name.update(n => ({ ...n, first: 'Jane', last: 'Smith' }))
+```
 
 ## Signal.map
 
@@ -435,6 +432,7 @@ export default function List({ items }) {
 
 // islands/Detail.tsx
 import { selectedId } from '../lib/shared'
+import { useSignal } from '@ereo/state'
 
 export default function Detail() {
   const id = useSignal(selectedId)

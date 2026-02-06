@@ -73,7 +73,7 @@ export default function EditPost({ loaderData }) {
   const { post } = loaderData
   const actionData = useActionData()
   const navigation = useNavigation()
-  const isSubmitting = navigation.state === 'submitting'
+  const isSubmitting = navigation.status === 'submitting'
 
   // Check which action is being performed
   const isDeleting =
@@ -247,7 +247,7 @@ Create an API route for likes at `app/routes/api/posts/[id]/like.ts`:
 // app/routes/api/posts/[id]/like.ts
 import { db } from '../../../../lib/db'
 
-export async function POST(request: Request, { params }) {
+export async function POST({ request, params }) {
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(params.id)
 
   if (!post) {
@@ -262,10 +262,12 @@ export async function POST(request: Request, { params }) {
 }
 ```
 
-Now create a LikeButton island at `src/islands/LikeButton.tsx`:
+Now create a LikeButton component at `app/components/LikeButton.tsx`:
 
 ```tsx
-// src/islands/LikeButton.tsx
+// app/components/LikeButton.tsx
+'use client';
+
 import { useFetcher } from '@ereo/client'
 
 interface LikeButtonProps {
@@ -297,31 +299,14 @@ export default function LikeButton({ postId, initialLikes }: LikeButtonProps) {
 }
 ```
 
-Register the island in your client entry:
-
-```ts
-// src/client.ts
-import { registerIslandComponent, initClient } from '@ereo/client'
-import LikeButton from './islands/LikeButton'
-
-registerIslandComponent('LikeButton', LikeButton)
-
-initClient()
-```
-
 Use it in the post page:
 
 ```tsx
 // In app/routes/posts/[slug].tsx
-import LikeButton from '../../islands/LikeButton'
+import LikeButton from '~/components/LikeButton'
 
 // In the component, after the title
-<LikeButton
-  data-island="LikeButton"
-  data-hydrate="idle"
-  postId={post.id}
-  initialLikes={post.likes || 0}
-/>
+<LikeButton postId={post.id} initialLikes={post.likes || 0} />
 ```
 
 Add styles:
@@ -376,7 +361,7 @@ This makes the app feel instant even with slow networks.
 2. Used the `intent` pattern for handling multiple forms
 3. Added confirmation for destructive actions
 4. Implemented optimistic UI with `useFetcher`
-5. Created an interactive island component
+5. Created an interactive client component
 
 ## Next Step
 

@@ -118,9 +118,9 @@ export const cartTotal = computed(
 export const loader = createLoader(async ({ params }) => {
   // Parallel - faster
   const [post, comments, author] = await Promise.all([
-    db.posts.find(params.id),
-    db.comments.findByPost(params.id),
-    db.users.find(params.authorId)
+    getPost(params.id),
+    getCommentsByPost(params.id),
+    getUser(params.authorId)
   ])
 
   return { post, comments, author }
@@ -132,20 +132,20 @@ export const loader = createLoader(async ({ params }) => {
 ```tsx
 // Bad - waterfall
 export const loader = createLoader(async ({ params }) => {
-  const post = await db.posts.find(params.id)
-  const author = await db.users.find(post.authorId)  // Waits for post
-  const comments = await db.comments.findByPost(post.id)  // Waits for author
+  const post = await getPost(params.id)
+  const author = await getUser(post.authorId)      // Waits for post
+  const comments = await getCommentsByPost(post.id) // Waits for author
 
   return { post, author, comments }
 })
 
 // Good - parallel where possible
 export const loader = createLoader(async ({ params }) => {
-  const post = await db.posts.find(params.id)
+  const post = await getPost(params.id)
 
   const [author, comments] = await Promise.all([
-    db.users.find(post.authorId),
-    db.comments.findByPost(post.id)
+    getUser(post.authorId),
+    getCommentsByPost(post.id)
   ])
 
   return { post, author, comments }
@@ -158,11 +158,11 @@ export const loader = createLoader(async ({ params }) => {
 export const config = { render: 'streaming' }
 
 export const loader = createLoader(async ({ params }) => {
-  const post = await db.posts.find(params.id)
+  const post = await getPost(params.id)
 
   return {
     post,
-    comments: defer(db.comments.findByPost(post.id)),
+    comments: defer(getCommentsByPost(post.id)),
     recommendations: defer(getRecommendations(post.id))
   }
 })
@@ -182,40 +182,42 @@ CREATE INDEX idx_posts_created ON posts(created_at DESC);
 ### Efficient Queries
 
 ```tsx
+import { eq } from 'drizzle-orm'
+
 // Bad - N+1 problem
-const posts = await db.posts.findMany()
-for (const post of posts) {
-  post.author = await db.users.find(post.authorId)
+const allPosts = await db.select().from(posts)
+for (const post of allPosts) {
+  post.author = await db.select().from(users).where(eq(users.id, post.authorId))
 }
 
 // Good - single query with join
-const posts = await db.query(`
-  SELECT posts.*, users.name as author_name
-  FROM posts
-  JOIN users ON posts.author_id = users.id
-  ORDER BY posts.created_at DESC
-`)
+const postsWithAuthors = await db
+  .select()
+  .from(posts)
+  .innerJoin(users, eq(posts.authorId, users.id))
+  .orderBy(desc(posts.createdAt))
 ```
 
 ### Pagination
 
 ```tsx
+import { desc, count } from 'drizzle-orm'
+
 export const loader = createLoader(async ({ request }) => {
   const url = new URL(request.url)
   const page = parseInt(url.searchParams.get('page') || '1')
   const limit = 20
 
-  const [posts, total] = await Promise.all([
-    db.posts.findMany({
-      take: limit,
-      skip: (page - 1) * limit,
-      orderBy: { createdAt: 'desc' }
-    }),
-    db.posts.count()
+  const [allPosts, [{ total }]] = await Promise.all([
+    db.select().from(posts)
+      .orderBy(desc(posts.createdAt))
+      .limit(limit)
+      .offset((page - 1) * limit),
+    db.select({ total: count() }).from(posts)
   ])
 
   return {
-    posts,
+    posts: allPosts,
     pagination: {
       page,
       totalPages: Math.ceil(total / limit),

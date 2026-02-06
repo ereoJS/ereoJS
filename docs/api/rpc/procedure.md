@@ -519,18 +519,18 @@ const initialCtx = {
   request: mockRequest,
 }
 
-// Test auth middleware
-const authMiddleware = procedure.use(async ({ ctx, next }) => {
+// Define the middleware function directly (not via procedure.use())
+const authMiddlewareFn = async ({ ctx, next }) => {
   const token = ctx.request.headers.get('Authorization')
   if (!token) {
     return { ok: false, error: { code: 'UNAUTHORIZED', message: 'No token' } }
   }
   return next({ ...ctx, user: { id: '123', name: 'Test User' } })
-})
+}
 
 // Execute and verify
 const result = await executeMiddleware(
-  [{ fn: authMiddleware }],
+  [{ fn: authMiddlewareFn }],
   initialCtx
 )
 

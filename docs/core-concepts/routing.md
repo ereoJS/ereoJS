@@ -405,13 +405,79 @@ export const middleware: MiddlewareHandler = async (request, context, next) => {
 }
 ```
 
+## Custom 404 Page
+
+Create a `_404.tsx` file to display a custom page when no route matches:
+
+```tsx
+// routes/_404.tsx
+export default function NotFound() {
+  return (
+    <div>
+      <h1>404 - Page Not Found</h1>
+      <p>The page you're looking for doesn't exist.</p>
+      <a href="/">Go Home</a>
+    </div>
+  )
+}
+```
+
+Place `_404.tsx` at the root of `routes/` for a global 404 page. It works alongside `_error.tsx` — the 404 page handles unmatched routes, while the error boundary handles runtime errors.
+
+## Revalidation Control
+
+Export a `shouldRevalidate` function to control when a route's loader re-runs after navigation. Without it, loaders re-run on every navigation:
+
+```tsx
+// routes/dashboard/stats.tsx
+import type { ShouldRevalidateArgs } from '@ereo/core'
+
+export function shouldRevalidate({ currentUrl, nextUrl }: ShouldRevalidateArgs) {
+  // Only re-run the loader when search params change
+  return currentUrl.search !== nextUrl.search
+}
+```
+
+The function receives:
+
+```ts
+interface ShouldRevalidateArgs {
+  currentUrl: URL              // URL navigating away from
+  nextUrl: URL                 // URL navigating to
+  currentParams: RouteParams   // Current route params
+  nextParams: RouteParams      // Next route params
+  formMethod?: string          // Form method if triggered by an action
+  formAction?: string          // Form action URL
+  formData?: FormData          // Form data
+  actionResult?: unknown       // Action result
+  defaultShouldRevalidate: boolean  // Framework default (usually true)
+}
+```
+
+Return `true` to re-run the loader, `false` to skip. Common patterns:
+
+```ts
+// Skip revalidation for non-mutating navigations
+export function shouldRevalidate({ formMethod, defaultShouldRevalidate }) {
+  if (!formMethod) return false
+  return defaultShouldRevalidate
+}
+
+// Only revalidate when params change
+export function shouldRevalidate({ currentParams, nextParams }) {
+  return currentParams.id !== nextParams.id
+}
+```
+
 ## Route Metadata
 
-Export a `meta` function for page metadata:
+Export a `meta` function for page metadata. It receives the loader data, route params, and current location:
 
 ```tsx
 // routes/posts/[id].tsx
-export function meta({ data }) {
+import type { MetaArgs } from '@ereo/core'
+
+export function meta({ data, params, location }: MetaArgs<{ post: Post }, { id: string }>) {
   return [
     { title: data.post.title },
     { name: 'description', content: data.post.excerpt },
@@ -433,9 +499,9 @@ await navigate('/posts/123')
 
 // With options
 await navigate('/posts', {
-  replace: true,     // Replace history entry
-  scroll: false,     // Don't scroll to top
-  state: { from: 'search' }  // Pass state
+  replace: true,           // Replace history entry instead of pushing
+  state: { from: 'search' },  // Pass state to the target route
+  viewTransition: true,    // Animate the transition (View Transitions API)
 })
 
 // History navigation
@@ -481,13 +547,7 @@ Prefetch strategies for `<Link>`:
 
 ## Type-Safe Routes
 
-EreoJS can generate types for your routes:
-
-```bash
-bun ereo generate-types
-```
-
-This creates types for route parameters and loader data:
+EreoJS provides built-in type utilities for route parameters and loader data. These types are available from `@ereo/core`:
 
 ```tsx
 import type { RouteParamsFor, LoaderDataFor } from '@ereo/core'
@@ -495,6 +555,19 @@ import type { RouteParamsFor, LoaderDataFor } from '@ereo/core'
 type PostParams = RouteParamsFor<'/posts/[id]'>
 // { id: string }
 
-type PostData = LoaderDataFor<typeof import('./routes/posts/[id]')>
-// { post: Post }
+type PostData = LoaderDataFor<'/posts/[id]'>
+// Inferred from the route's loader return type (requires generated types)
 ```
+
+For automatic type generation during build, use the types plugin in your `ereo.config.ts`:
+
+```ts
+import { defineConfig } from '@ereo/core'
+import { createTypesPlugin } from '@ereo/bundler'
+
+export default defineConfig({
+  plugins: [createTypesPlugin()],
+})
+```
+
+The types plugin scans your routes directory and generates TypeScript declarations for route parameters, loader data, and action data. Types are regenerated automatically during development and on each build.

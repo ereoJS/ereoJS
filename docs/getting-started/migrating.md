@@ -88,13 +88,13 @@ export default function Post({ loaderData }) {
 ```ts
 // app/api/users/route.ts
 export async function GET() {
-  const users = await db.users.findMany()
+  const users = await db.select().from(usersTable)
   return Response.json(users)
 }
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const user = await db.users.create(body)
+  const [user] = await db.insert(usersTable).values(body).returning()
   return Response.json(user, { status: 201 })
 }
 ```
@@ -103,18 +103,18 @@ export async function POST(request: Request) {
 ```ts
 // routes/api/users.ts
 export async function GET() {
-  const users = await db.users.findMany()
+  const users = await db.select().from(usersTable)
   return Response.json(users)
 }
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const user = await db.users.create(body)
+  const [user] = await db.insert(usersTable).values(body).returning()
   return Response.json(user, { status: 201 })
 }
 ```
 
-API routes work the same way in EreoJS.
+API routes work the same way in EreoJS. See the [Database Guide](/guides/database) for setting up `@ereo/db` with Drizzle ORM.
 
 ### Layouts
 
@@ -373,7 +373,8 @@ import { useNavigation } from '@ereo/client'
 
 function SubmitButton() {
   const navigation = useNavigation()
-  const isSubmitting = navigation.state === 'submitting'
+  // Note: EreoJS uses `status` instead of Remix's `state`
+  const isSubmitting = navigation.status === 'submitting'
   return <button disabled={isSubmitting}>Submit</button>
 }
 ```

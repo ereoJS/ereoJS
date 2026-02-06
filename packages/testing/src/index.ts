@@ -17,6 +17,9 @@ export {
 export {
   testLoader,
   createLoaderTester,
+  testLoadersParallel,
+  testLoaderMatrix,
+  testLoaderError,
   type LoaderTestOptions,
   type LoaderTestResult,
 } from './loader';
@@ -25,6 +28,9 @@ export {
 export {
   testAction,
   createActionTester,
+  testActionMatrix,
+  testActionError,
+  testActionWithFile,
   type ActionTestOptions,
   type ActionTestResult,
 } from './action';
@@ -33,6 +39,10 @@ export {
 export {
   testMiddleware,
   createMiddlewareTester,
+  testMiddlewareChain,
+  testMiddlewareMatrix,
+  testMiddlewareError,
+  testMiddlewareContext,
   type MiddlewareTestOptions,
   type MiddlewareTestResult,
 } from './middleware';
@@ -43,8 +53,10 @@ export {
   createFormRequest,
   createMockFormData,
   createMockHeaders,
+  createMockFile,
   parseJsonResponse,
   parseTextResponse,
+  extractCookies,
   type MockRequestOptions,
 } from './request';
 
@@ -52,6 +64,10 @@ export {
 export {
   renderRoute,
   createRouteRenderer,
+  renderComponent,
+  renderRouteMatrix,
+  testRouteRenders,
+  getRouteMeta,
   type RenderRouteOptions,
   type RenderResult,
 } from './render';
@@ -63,12 +79,15 @@ export {
   assertStatus,
   assertHeaders,
   assertCookies,
+  assertThrows,
+  assertSchema,
   type AssertionOptions,
 } from './assertions';
 
 // Test Server
 export {
   createTestServer,
+  createMockServer,
   type TestServer,
   type TestServerOptions,
 } from './server';
@@ -77,5 +96,9 @@ export {
 export {
   snapshotLoader,
   snapshotAction,
+  createSnapshotMatrix,
+  commonReplacers,
+  applyReplacements,
+  deterministicSnapshot,
   type SnapshotOptions,
 } from './snapshot';

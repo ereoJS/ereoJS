@@ -62,7 +62,7 @@ const runtime = createBunRuntime({
     hostname: 'localhost'
   },
   config: {
-    mode: 'development'
+    routesDir: 'app/routes'
   }
 })
 ```
@@ -109,7 +109,7 @@ The main runtime class that manages the application lifecycle.
 
 ```ts
 import { createBunRuntime } from '@ereo/runtime-bun'
-import { tailwindPlugin } from '@ereo/plugin-tailwind'
+import tailwind from '@ereo/plugin-tailwind'
 
 const runtime = createBunRuntime({
   server: { port: 3000 }
@@ -117,7 +117,7 @@ const runtime = createBunRuntime({
 
 // Register plugins (chainable)
 runtime
-  .use(tailwindPlugin())
+  .use(tailwind())
   .use(anotherPlugin())
 
 // Start the server
@@ -370,8 +370,7 @@ import { createBunRuntime } from '@ereo/runtime-bun'
 
 const runtime = createBunRuntime({
   config: {
-    mode: 'production',
-    root: './app',
+    routesDir: 'app/routes',
     plugins: []
   }
 })
@@ -381,8 +380,8 @@ const runtime = createBunRuntime({
 
 ```ts
 import { createBunRuntime } from '@ereo/runtime-bun'
-import { tailwindPlugin } from '@ereo/plugin-tailwind'
-import { authPlugin } from '@ereo/plugin-auth'
+import tailwind from '@ereo/plugin-tailwind'
+import { createAuthPlugin } from '@ereo/auth'
 import { createDevInspector } from '@ereo/dev-inspector'
 
 const isDev = Bun.env.NODE_ENV !== 'production'
@@ -393,14 +392,15 @@ const runtime = createBunRuntime({
     hostname: '0.0.0.0',
   },
   config: {
-    mode: isDev ? 'development' : 'production',
+    routesDir: 'app/routes',
   }
 })
 
 // Register plugins
-runtime.use(tailwindPlugin())
-runtime.use(authPlugin({
-  providers: ['github', 'google']
+runtime.use(tailwind())
+runtime.use(createAuthPlugin({
+  session: { secret: Bun.env.AUTH_SECRET! },
+  providers: [/* your providers */],
 }))
 
 // Add dev inspector in development

@@ -285,6 +285,7 @@ const state = signal({ a: 1, b: 2 })
 
 // Single notification for multiple value changes
 state.update(s => ({ ...s, a: 100, b: 200 }))
+```
 
 ### Store Class
 
@@ -302,6 +303,7 @@ new Store<T extends Record<string, unknown>>(initialState: T)
 |--------|-----------|-------------|
 | `get(key)` | `<K extends keyof T>(key: K) => Signal<T[K]>` | Get signal for key |
 | `set(key, value)` | `<K extends keyof T>(key: K, value: T[K]) => void` | Set value for key |
+| `entries()` | `() => IterableIterator<[string, Signal<unknown>]>` | Iterate over all signal entries |
 | `getSnapshot()` | `() => T` | Get snapshot of all values |
 
 #### Example
@@ -569,23 +571,19 @@ const settings = createPersistedStore('settings', {
 
 ## Integration with Components
 
-### React Hook Integration
+### React Hooks
+
+The `@ereo/state` package includes three React hooks built on `useSyncExternalStore`. These are the recommended way to use signals and stores in React components — you do not need to write custom hooks.
+
+#### useSignal
+
+Subscribes a component to a signal. The component re-renders only when the signal's value changes.
 
 ```tsx
-import { useState, useEffect } from 'react'
-import type { Signal } from '@ereo/state'
+import { signal, useSignal } from '@ereo/state'
 
-function useSignal<T>(signal: Signal<T>): T {
-  const [value, setValue] = useState(signal.get())
+const count = signal(0)
 
-  useEffect(() => {
-    return signal.subscribe(setValue)
-  }, [signal])
-
-  return value
-}
-
-// Usage
 function Counter() {
   const value = useSignal(count)
 
@@ -597,48 +595,58 @@ function Counter() {
 }
 ```
 
-### Two-Way Binding Hook
+#### useStoreKey
+
+Subscribes to a single key in a store. Only re-renders when that specific key changes — more efficient than subscribing to the entire store.
 
 ```tsx
-function useSignalState<T>(
-  signal: Signal<T>
-): [T, (value: T) => void] {
-  const value = useSignal(signal)
-  return [value, signal.set.bind(signal)]
-}
+import { createStore, useStoreKey } from '@ereo/state'
 
-// Usage
-function NameInput() {
-  const [name, setName] = useSignalState(nameSignal)
+const appStore = createStore({ theme: 'light' as 'light' | 'dark', count: 0 })
 
-  return (
-    <input
-      value={name}
-      onChange={e => setName(e.target.value)}
-    />
-  )
-}
-```
-
-### Store Hook
-
-```tsx
-function useStoreValue<T extends Record<string, unknown>, K extends keyof T>(
-  store: Store<T>,
-  key: K
-): T[K] {
-  const signal = store.get(key)
-  return useSignal(signal)
-}
-
-// Usage
 function ThemeToggle() {
-  const theme = useStoreValue(appStore, 'theme')
+  const theme = useStoreKey(appStore, 'theme')
 
   return (
     <button onClick={() => appStore.set('theme', theme === 'light' ? 'dark' : 'light')}>
       Theme: {theme}
     </button>
+  )
+}
+```
+
+#### useStore
+
+Subscribes to the entire store snapshot. Re-renders when any key changes. Use `useStoreKey` instead when you only need one or two keys.
+
+```tsx
+import { createStore, useStore } from '@ereo/state'
+
+const appStore = createStore({ count: 0, name: 'Alice' })
+
+function Dashboard() {
+  const state = useStore(appStore)
+  return <div>{state.count} - {state.name}</div>
+}
+```
+
+### Two-Way Binding Pattern
+
+For form inputs, you can combine `useSignal` with the signal's `set` method:
+
+```tsx
+import { signal, useSignal } from '@ereo/state'
+
+const nameSignal = signal('')
+
+function NameInput() {
+  const name = useSignal(nameSignal)
+
+  return (
+    <input
+      value={name}
+      onChange={e => nameSignal.set(e.target.value)}
+    />
   )
 }
 ```
@@ -673,7 +681,7 @@ export default function List({ items }) {
 
 // islands/Detail.tsx
 import { selectedId } from '../lib/shared'
-import { useSignal } from '../hooks/useSignal'
+import { useSignal } from '@ereo/state'
 
 export default function Detail() {
   const id = useSignal(selectedId)

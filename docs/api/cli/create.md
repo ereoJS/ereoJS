@@ -288,8 +288,8 @@ export default function ContactPage({ loaderData }) {
       <input name="name" required />
       <input name="email" type="email" required />
       <textarea name="message" required />
-      <button disabled={navigation.state === 'submitting'}>
-        {navigation.state === 'submitting' ? 'Sending...' : 'Send'}
+      <button disabled={navigation.status === 'submitting'}>
+        {navigation.status === 'submitting' ? 'Sending...' : 'Send'}
       </button>
     </Form>
   );

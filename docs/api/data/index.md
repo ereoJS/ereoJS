@@ -335,6 +335,8 @@ function clientLoader<T, P = RouteParams>(
 ```
 
 ```ts
+import { createLoader, clientLoader as createClientLoader } from '@ereo/data'
+
 // Server loader
 export const loader = createLoader({
   load: async ({ params }) => {
@@ -343,7 +345,8 @@ export const loader = createLoader({
 })
 
 // Client loader - runs after hydration
-export const clientLoader = clientLoader(async (params) => {
+// Note: use an import alias to avoid the naming conflict with the route export
+export const clientLoader = createClientLoader(async (params) => {
   const response = await fetch(`/api/posts/${params.id}/stats`)
   return { stats: await response.json() }
 })
@@ -774,7 +777,8 @@ Create an API endpoint for external revalidation:
 // routes/api/revalidate.ts
 import { createRevalidationHandler } from '@ereo/data'
 
-export const action = createRevalidationHandler(process.env.REVALIDATE_SECRET)
+// Use POST export for API routes (see Routing > API Routes)
+export const POST = createRevalidationHandler(process.env.REVALIDATE_SECRET)
 ```
 
 Call from external services:

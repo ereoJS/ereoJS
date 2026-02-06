@@ -475,5 +475,7 @@ This package depends on:
 
 ## Related
 
-- [Cloudflare Deployment](/api/deploy/cloudflare)
-- [EreoJS Core](/api/core)
+- [Deploying to Vercel Guide](/deployment/vercel) — Step-by-step deployment walkthrough
+- [Data Loading](/core-concepts/data-loading) — Loaders, actions, and all definition approaches
+- [Cloudflare Deployment](/api/deploy/cloudflare) — Alternative deployment adapter
+- [Build CLI](/api/cli/build) — Build command reference

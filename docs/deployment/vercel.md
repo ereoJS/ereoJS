@@ -31,6 +31,12 @@ vercel
 
 ### Using the Vercel Adapter (Recommended)
 
+Install the adapter:
+
+```bash
+bun add @ereo/deploy-vercel
+```
+
 Generate configuration using `@ereo/deploy-vercel`:
 
 ```ts
@@ -98,20 +104,34 @@ If you prefer manual setup, create `vercel.json`:
 
 ## Build Configuration
 
-Update `ereo.config.ts` for Vercel using the adapter:
+Update `ereo.config.ts` for Vercel using the adapter. The `vercel()` function sets the build target to `'node'` (default) or `'edge'`:
 
 ```ts
 import { defineConfig } from '@ereo/core'
 import { vercel } from '@ereo/deploy-vercel'
 
 export default defineConfig({
-  ...vercel({ edge: false }),  // Node.js runtime
+  ...vercel({ edge: false }),  // Node.js runtime (default)
   // or
   // ...vercel({ edge: true }),  // Edge runtime
 })
 ```
 
-Or configure manually:
+#### Configuration Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `edge` | `boolean` | Use Edge runtime instead of Node.js (default: `false`) |
+| `regions` | `string[]` | Deployment regions (e.g., `['iad1', 'sfo1']`) |
+| `timeout` | `number` | Function timeout in seconds (reserved for future use) |
+| `memory` | `number` | Memory allocation in MB (reserved for future use) |
+| `env` | `Record<string, string>` | Environment variables (reserved for future use) |
+
+> **Note:** Currently, `vercel()` uses the `edge` option to set the build target. The `regions` option is used by `generateVercelJson()`. The `timeout`, `memory`, and `env` options are accepted for forward compatibility and will be used in future releases. To configure function timeouts and memory now, set them directly in `vercel.json` (see [Troubleshooting](#function-timeouts)).
+
+#### Manual Configuration (Alternative)
+
+If you prefer not to use the adapter, set the build target directly:
 
 ```ts
 import { defineConfig } from '@ereo/core'
@@ -192,12 +212,44 @@ vercel env add DATABASE_URL production
 }
 ```
 
-## Serverless Functions
+## Data Loading on Vercel
 
-For API routes, create serverless functions:
+EreoJS loaders and actions work the same way on Vercel as on any other platform. Define them in your route files using any of the three approaches:
+
+```tsx
+// routes/posts/index.tsx
+import { createLoader, createAction, redirect } from '@ereo/data'
+
+export const loader = createLoader(async ({ params }) => {
+  const posts = await db.posts.findMany()
+  return { posts }
+})
+
+export const action = createAction(async ({ request }) => {
+  const formData = await request.formData()
+  await db.posts.create({ title: formData.get('title') as string })
+  return redirect('/posts')
+})
+
+export default function Posts({ loaderData }) {
+  return (
+    <ul>
+      {loaderData.posts.map(post => (
+        <li key={post.id}>{post.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+> For a full guide on loaders, actions, and the three different approaches to defining them, see [Data Loading](/core-concepts/data-loading).
+
+## Vercel Serverless Functions
+
+EreoJS already handles API routes via [HTTP method exports](/core-concepts/data-loading#api-routes-http-method-exports) in your route files. You only need Vercel-native serverless functions if you want to run code outside the EreoJS router:
 
 ```ts
-// api/posts.ts (Vercel function)
+// api/posts.ts (Vercel-native function)
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 export default async function handler(
@@ -213,9 +265,11 @@ export default async function handler(
 }
 ```
 
+> **Tip:** For most API routes, prefer using EreoJS route files with `GET`/`POST`/`PUT`/`DELETE` exports. Use Vercel-native functions only when you need Vercel-specific features outside the EreoJS request pipeline.
+
 ## Edge Functions
 
-For faster response times:
+For faster response times at the edge:
 
 ```ts
 // api/hello.ts
@@ -363,3 +417,9 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
 ```
+
+## Related
+
+- [Data Loading](/core-concepts/data-loading) — Loaders, actions, and all three definition approaches
+- [Deploying to Cloudflare](/deployment/cloudflare) — Alternative deployment platform
+- [CLI deploy command](/api/cli/deploy) — Deploy from the command line

@@ -35,12 +35,12 @@ import { useLoaderData, Link } from '@ereo/client';
 
 export default function Home() {
   const { posts } = useLoaderData<typeof loader>();
-  
+
   return (
     <div>
       <h1>Posts</h1>
       {posts.map(post => (
-        <Link key={post.id} to={`/posts/${post.id}`}>
+        <Link key={post.id} href={`/posts/${post.id}`}>
           {post.title}
         </Link>
       ))}
@@ -79,8 +79,16 @@ Islands are interactive components that hydrate independently on the client.
 
 ### Creating Islands
 
+There are two ways to create interactive (hydrated) components in EreoJS:
+
+**Approach A: `'use client'` directive (recommended for most cases)**
+
+Add `'use client'` at the top of the file. The component is used like any normal React component — no special attributes needed at the call site:
+
 ```tsx
-// app/islands/Counter.tsx
+// app/components/Counter.tsx
+'use client';
+
 import { useState } from 'react';
 
 export default function Counter({ initial = 0 }) {
@@ -93,23 +101,41 @@ export default function Counter({ initial = 0 }) {
 }
 ```
 
-### Using Islands
-
 ```tsx
 // app/routes/index.tsx
-import Counter from '../islands/Counter';
+import Counter from '~/components/Counter';
 
 export default function Page() {
   return (
     <div>
       <h1>Static Content</h1>
-      <Counter client:load initial={5} />
+      <Counter initial={5} />
     </div>
   );
 }
 ```
 
-### Hydration Directives
+**Approach B: Hydration directives (fine-grained control)**
+
+For advanced hydration control — such as deferring hydration until the component is visible or the browser is idle — use `data-island` and `data-hydrate` attributes, or the shorthand `client:*` directives:
+
+```tsx
+// app/routes/index.tsx
+import Counter from '~/components/Counter';
+
+export default function Page() {
+  return (
+    <div>
+      <h1>Static Content</h1>
+      {/* Hydrate immediately */}
+      <Counter client:load initial={5} />
+
+      {/* Or equivalently, using data attributes: */}
+      <Counter data-island="Counter" data-hydrate="load" initial={5} />
+    </div>
+  );
+}
+```
 
 | Directive | Description |
 |-----------|-------------|
@@ -117,6 +143,8 @@ export default function Page() {
 | `client:idle` | Hydrate when browser is idle |
 | `client:visible` | Hydrate when scrolled into view |
 | `client:media="(max-width: 768px)"` | Hydrate when media query matches |
+
+> **Which approach to use?** Start with `'use client'` — it's simpler and works for most cases. Use hydration directives when you need to defer hydration for performance (e.g., below-the-fold components).
 
 See [Islands](/api/client/islands) for detailed documentation.
 
@@ -130,19 +158,21 @@ See [Islands](/api/client/islands) for detailed documentation.
 import { Link, NavLink } from '@ereo/client';
 
 // Basic link
-<Link to="/about">About</Link>
+<Link href="/about">About</Link>
 
 // With prefetch
-<Link to="/dashboard" prefetch="intent">Dashboard</Link>
+<Link href="/dashboard" prefetch="intent">Dashboard</Link>
 
 // Active state styling
 <NavLink
-  to="/profile"
+  href="/profile"
   className={({ isActive }) => isActive ? 'active' : ''}
 >
   Profile
 </NavLink>
 ```
+
+> **Note:** `Link` and `NavLink` accept both `href` and `to` as the URL prop. This documentation uses `href` (standard HTML convention), but `to` works identically as an alias.
 
 ### Programmatic Navigation
 
@@ -225,7 +255,7 @@ import { useNavigation } from '@ereo/client';
 
 export default function Page() {
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === 'submitting';
+  const isSubmitting = navigation.status === 'submitting';
   
   return (
     <button disabled={isSubmitting}>
@@ -296,23 +326,26 @@ See [Form](/api/client/form) for complete documentation.
 
 ### RouteErrorBoundary
 
-Handle errors at the route level.
+Handle errors at the route level. Export an `ErrorBoundary` component from your route file:
 
 ```tsx
 // app/routes/dashboard.tsx
-import { RouteErrorBoundary } from '@ereo/client';
+import { useRouteError, isRouteErrorResponse } from '@ereo/client';
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  
-  if (error.status === 404) {
-    return <NotFound />;
+
+  if (isRouteErrorResponse(error)) {
+    if (error.status === 404) {
+      return <h1>Page not found</h1>;
+    }
+    return <h1>Error {error.status}: {error.statusText}</h1>;
   }
-  
+
   return (
     <div>
       <h1>Error</h1>
-      <p>{error.message}</p>
+      <p>{error instanceof Error ? error.message : 'Unknown error'}</p>
     </div>
   );
 }
@@ -383,15 +416,16 @@ See [Typed Link](/api/client/typed-link) and [Typed Navigation](/api/client/type
 ## Complete Example
 
 ```tsx
-// app/routes/posts.$id.tsx
-import { 
-  useLoaderData, 
+// app/routes/posts/[id].tsx
+import {
+  useLoaderData,
   useActionData,
   useNavigation,
+  useRouteError,
   Form,
   Link,
-  json
 } from '@ereo/client';
+import { json } from '@ereo/data';
 import type { LoaderArgs, ActionArgs } from '@ereo/core';
 
 // Server-side loader
@@ -405,12 +439,12 @@ export async function loader({ params }: LoaderArgs) {
 export async function action({ request, params }: ActionArgs) {
   const formData = await request.formData();
   const comment = formData.get('comment');
-  
+
   await db.comments.create({
     postId: params.id,
     content: comment
   });
-  
+
   return json({ success: true });
 }
 
@@ -419,23 +453,23 @@ export default function PostPage() {
   const { post } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === 'submitting';
-  
+  const isSubmitting = navigation.status === 'submitting';
+
   return (
     <article>
       <h1>{post.title}</h1>
       <p>{post.content}</p>
-      
+
       <Form method="post">
         <textarea name="comment" required />
         <button disabled={isSubmitting}>
           {isSubmitting ? 'Posting...' : 'Post Comment'}
         </button>
       </Form>
-      
+
       {actionData?.success && <p>Comment posted!</p>}
-      
-      <Link to="/posts">← Back to posts</Link>
+
+      <Link href="/posts">← Back to posts</Link>
     </article>
   );
 }
@@ -443,12 +477,12 @@ export default function PostPage() {
 // Error handling
 export function ErrorBoundary() {
   const error = useRouteError();
-  
+
   return (
     <div>
       <h1>Error loading post</h1>
-      <p>{error.message}</p>
-      <Link to="/posts">View all posts</Link>
+      <p>{error instanceof Error ? error.message : 'Unknown error'}</p>
+      <Link href="/posts">View all posts</Link>
     </div>
   );
 }

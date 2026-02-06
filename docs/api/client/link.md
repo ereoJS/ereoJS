@@ -16,8 +16,9 @@ A component for client-side navigation that renders an anchor tag for accessibil
 
 ```ts
 interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
-  // URL to navigate to
-  to: string
+  // URL to navigate to (use either `to` or `href` — they are interchangeable)
+  to?: string
+  href?: string
 
   // Prefetch strategy (default: 'intent')
   prefetch?: 'none' | 'intent' | 'render' | 'viewport'
@@ -38,6 +39,8 @@ interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 
   children?: React.ReactNode
 }
 ```
+
+> **`to` vs `href`:** Both props are fully supported and interchangeable. `href` follows standard HTML convention, while `to` follows the React Router convention. If both are provided, `to` takes precedence. Use whichever you prefer — this documentation uses `to` in API examples and `href` in tutorials and guides.
 
 ### Basic Usage
 

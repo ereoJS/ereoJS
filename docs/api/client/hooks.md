@@ -7,24 +7,35 @@ React hooks for accessing route data and navigation state.
 ```ts
 import {
   useLoaderData,
+  useRouteLoaderData,
   useActionData,
   useNavigation,
-  useError
+  useError,
+  useRouteError,
+  isRouteErrorResponse,
+  useParams,
+  useSearchParams,
+  useLocation,
 } from '@ereo/client'
 
 // Types
 import type {
   NavigationStatus,
   NavigationStateHook,
+  LocationState,
   LoaderDataContextValue,
   ActionDataContextValue,
   NavigationContextValue,
   ErrorContextValue,
+  ParamsContextValue,
+  LocationContextValue,
   LoaderDataProviderProps,
   ActionDataProviderProps,
   NavigationProviderProps,
   ErrorProviderProps,
-  EreoProviderProps
+  ParamsProviderProps,
+  LocationProviderProps,
+  EreoProviderProps,
 } from '@ereo/client'
 ```
 
@@ -37,10 +48,19 @@ type NavigationStatus = 'idle' | 'loading' | 'submitting'
 // Navigation state returned by useNavigation
 interface NavigationStateHook {
   status: NavigationStatus
-  location?: string          // The location being navigated to
+  location?: string          // The URL being navigated to
   formData?: FormData        // Form data being submitted
   formMethod?: string        // Form method being used
   formAction?: string        // Form action URL
+}
+
+// Location object returned by useLocation
+interface LocationState {
+  pathname: string           // e.g., '/users/123'
+  search: string             // e.g., '?page=1&sort=name'
+  hash: string               // e.g., '#section-2'
+  state: unknown             // History state object
+  key: string                // Unique key for this location entry
 }
 ```
 
@@ -96,6 +116,33 @@ export default function Posts() {
   const { posts, count } = useLoaderData<Awaited<ReturnType<typeof loader>>>()
 
   return <div>...</div>
+}
+```
+
+## useRouteLoaderData
+
+Accesses loader data from a specific route by its ID. Useful for reading data from a parent layout or sibling route without prop drilling.
+
+### Signature
+
+```ts
+function useRouteLoaderData<T = unknown>(routeId: string): T | undefined
+```
+
+Returns `undefined` if no matching route is found.
+
+### Example
+
+```tsx
+import { useRouteLoaderData } from '@ereo/client'
+
+// Access root layout's loader data from any nested route
+function UserAvatar() {
+  const rootData = useRouteLoaderData<{ user: User }>('root-layout')
+
+  if (!rootData?.user) return null
+
+  return <img src={rootData.user.avatar} alt={rootData.user.name} />
 }
 ```
 
@@ -198,11 +245,11 @@ Tracks the current navigation state.
 ### Signature
 
 ```ts
-function useNavigation(): NavigationState
+function useNavigation(): NavigationStateHook
 
-interface NavigationState {
-  state: 'idle' | 'loading' | 'submitting'
-  location?: Location
+interface NavigationStateHook {
+  status: 'idle' | 'loading' | 'submitting'
+  location?: string           // The URL being navigated to
   formData?: FormData
   formMethod?: string
   formAction?: string
@@ -225,7 +272,7 @@ export default function Page() {
 
   return (
     <div>
-      {navigation.state === 'loading' && (
+      {navigation.status === 'loading' && (
         <div className="loading-bar" />
       )}
 
@@ -243,7 +290,7 @@ import { Form } from '@ereo/client'
 
 export default function NewPost() {
   const navigation = useNavigation()
-  const isSubmitting = navigation.state === 'submitting'
+  const isSubmitting = navigation.status === 'submitting'
 
   return (
     <Form method="post">
@@ -267,7 +314,7 @@ import { useNavigation } from '@ereo/client'
 export function LoadingIndicator() {
   const navigation = useNavigation()
 
-  if (navigation.state === 'idle') {
+  if (navigation.status === 'idle') {
     return null
   }
 
@@ -288,7 +335,7 @@ export default function TodoItem({ todo }) {
 
   // Check if this item is being toggled
   const isToggling =
-    navigation.state === 'submitting' &&
+    navigation.status === 'submitting' &&
     navigation.formData?.get('todoId') === todo.id &&
     navigation.formData?.get('intent') === 'toggle'
 
@@ -335,6 +382,212 @@ export function ErrorBoundary() {
 }
 ```
 
+## useRouteError
+
+Accesses the error thrown in a route's error boundary. Unlike `useError` (which returns `Error | undefined`), `useRouteError` returns `unknown` — this allows you to distinguish HTTP error responses from runtime errors using `isRouteErrorResponse`.
+
+### Signature
+
+```ts
+function useRouteError(): unknown
+```
+
+### Example
+
+```tsx
+import { useRouteError, isRouteErrorResponse } from '@ereo/client'
+
+export default function PostsError() {
+  const error = useRouteError()
+
+  if (isRouteErrorResponse(error)) {
+    // HTTP error response (e.g., thrown from a loader)
+    if (error.status === 404) {
+      return <h1>Post not found</h1>
+    }
+    return <h1>Error {error.status}: {error.statusText}</h1>
+  }
+
+  // Runtime error
+  return <h1>Something went wrong</h1>
+}
+```
+
+> **`useError` vs `useRouteError`:** Use `useError` when you just need the error message. Use `useRouteError` when you need to check if the error is an HTTP error response (e.g., 404, 403) and render different UI based on the status code.
+
+## isRouteErrorResponse
+
+Type guard that checks if an error is an HTTP error response (has `status`, `statusText`, and `data` properties). Use with `useRouteError` to distinguish HTTP errors from runtime errors.
+
+### Signature
+
+```ts
+function isRouteErrorResponse(error: unknown): error is RouteErrorResponse
+
+interface RouteErrorResponse {
+  status: number
+  statusText: string
+  data?: unknown
+}
+```
+
+### Example
+
+```tsx
+import { useRouteError, isRouteErrorResponse } from '@ereo/client'
+
+export default function ErrorPage() {
+  const error = useRouteError()
+
+  if (isRouteErrorResponse(error)) {
+    switch (error.status) {
+      case 404:
+        return <h1>Page not found</h1>
+      case 401:
+        return <h1>Unauthorized — please log in</h1>
+      case 403:
+        return <h1>You don't have permission to view this page</h1>
+      default:
+        return <h1>Error {error.status}</h1>
+    }
+  }
+
+  return (
+    <div>
+      <h1>Something went wrong</h1>
+      <p>{error instanceof Error ? error.message : 'Unknown error'}</p>
+    </div>
+  )
+}
+```
+
+## useParams
+
+Accesses the URL parameters from dynamic route segments.
+
+### Signature
+
+```ts
+function useParams<T extends Record<string, string> = Record<string, string>>(): T
+```
+
+### Example
+
+```tsx
+import { useParams } from '@ereo/client'
+
+// In a route file at routes/users/[id].tsx
+function UserProfile() {
+  const { id } = useParams<{ id: string }>()
+
+  return <div>User ID: {id}</div>
+}
+```
+
+## useSearchParams
+
+Accesses and modifies the current URL search parameters. Returns a tuple of `[URLSearchParams, setSearchParams]`, similar to `useState`.
+
+### Signature
+
+```ts
+function useSearchParams(): [
+  URLSearchParams,
+  (
+    nextParams:
+      | URLSearchParams
+      | Record<string, string>
+      | ((prev: URLSearchParams) => URLSearchParams | Record<string, string>),
+    options?: { replace?: boolean }
+  ) => void
+]
+```
+
+### Example
+
+```tsx
+import { useSearchParams } from '@ereo/client'
+
+function ProductList() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = searchParams.get('page') || '1'
+  const sort = searchParams.get('sort') || 'name'
+
+  return (
+    <div>
+      <select
+        value={sort}
+        onChange={(e) => setSearchParams({ page, sort: e.target.value })}
+      >
+        <option value="name">Name</option>
+        <option value="price">Price</option>
+      </select>
+
+      <button onClick={() => setSearchParams({ page: String(Number(page) + 1), sort })}>
+        Next Page
+      </button>
+
+      {/* Use replace to avoid adding to history */}
+      <button onClick={() => setSearchParams({ page: '1', sort }, { replace: true })}>
+        Reset
+      </button>
+    </div>
+  )
+}
+```
+
+### Functional Updates
+
+```tsx
+// Update based on previous params
+setSearchParams((prev) => {
+  const next = new URLSearchParams(prev)
+  next.set('page', '2')
+  return next
+})
+```
+
+## useLocation
+
+Accesses the current location object.
+
+### Signature
+
+```ts
+function useLocation(): LocationState
+
+interface LocationState {
+  pathname: string    // e.g., '/users/123'
+  search: string      // e.g., '?page=1'
+  hash: string        // e.g., '#section-2'
+  state: unknown      // History state object
+  key: string         // Unique key for this location entry
+}
+```
+
+### Example
+
+```tsx
+import { useLocation } from '@ereo/client'
+
+function Breadcrumbs() {
+  const location = useLocation()
+  const segments = location.pathname.split('/').filter(Boolean)
+
+  return (
+    <nav>
+      <a href="/">Home</a>
+      {segments.map((seg, i) => (
+        <span key={i}>
+          {' / '}
+          <a href={'/' + segments.slice(0, i + 1).join('/')}>{seg}</a>
+        </span>
+      ))}
+    </nav>
+  )
+}
+```
+
 ## Context Providers
 
 EreoJS exports context providers for testing, custom setups, and direct context access.
@@ -348,6 +601,8 @@ import {
   ActionDataProvider,
   NavigationProvider,
   ErrorProvider,
+  ParamsProvider,
+  LocationProvider,
   EreoProvider,
 
   // Contexts (for useContext)
@@ -355,6 +610,8 @@ import {
   ActionDataContext,
   NavigationContext,
   ErrorContext,
+  ParamsContext,
+  LocationContext,
 
   // Internal context accessors
   useLoaderDataContext,
@@ -387,12 +644,25 @@ interface ErrorProviderProps {
   initialError?: Error
 }
 
+interface ParamsProviderProps {
+  children: ReactNode
+  initialParams?: Record<string, string>
+}
+
+interface LocationProviderProps {
+  children: ReactNode
+  initialLocation?: LocationState
+}
+
 interface EreoProviderProps {
   children: ReactNode
-  loaderData?: unknown       // Initial loader data (typically from SSR)
-  actionData?: unknown       // Initial action data
-  navigationState?: NavigationStateHook
-  error?: Error              // Initial error (if rendering error boundary)
+  loaderData?: unknown                   // Initial loader data (typically from SSR)
+  actionData?: unknown                   // Initial action data
+  navigationState?: NavigationStateHook  // Initial navigation state
+  error?: Error                          // Initial error (if rendering error boundary)
+  params?: Record<string, string>        // Initial route params (from route matching)
+  location?: LocationState               // Initial location (from request URL or window.location)
+  matches?: RouteMatchData[]             // Initial matched routes (from route matching)
 }
 ```
 
@@ -476,12 +746,12 @@ function useIsSubmitting(action?: string) {
 
   if (action) {
     return (
-      navigation.state === 'submitting' &&
+      navigation.status === 'submitting' &&
       navigation.formAction === action
     )
   }
 
-  return navigation.state === 'submitting'
+  return navigation.status === 'submitting'
 }
 ```
 
@@ -490,7 +760,7 @@ function useIsSubmitting(action?: string) {
 ```ts
 function useIsLoading() {
   const navigation = useNavigation()
-  return navigation.state === 'loading'
+  return navigation.status === 'loading'
 }
 ```
 
@@ -502,7 +772,7 @@ function useFormStatus() {
   const actionData = useActionData()
 
   return {
-    isSubmitting: navigation.state === 'submitting',
+    isSubmitting: navigation.status === 'submitting',
     isSuccess: actionData?.success === true,
     isError: actionData?.error !== undefined,
     error: actionData?.error

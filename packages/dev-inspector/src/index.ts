@@ -31,7 +31,12 @@ export {
 
 export type {
   DevToolsConfig,
+  DevToolsPanelData,
   DataPipelineVisualization,
+  LoaderTiming,
   IslandVisualization,
   CacheVisualization,
+  CacheEntry,
+  RouteVisualization,
+  HMREvent,
 } from './devtools';

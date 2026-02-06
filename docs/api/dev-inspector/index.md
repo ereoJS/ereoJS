@@ -33,13 +33,18 @@ import type {
   InspectorConfig,
   RouteInfo,
   DevToolsConfig,
+  DevToolsPanelData,
   DataPipelineVisualization,
+  LoaderTiming,
   IslandVisualization,
   CacheVisualization,
-  HMREvent,
-  LoaderTiming,
   CacheEntry,
+  RouteVisualization,
+  HMREvent,
 } from '@ereo/dev-inspector'
+
+// WaterfallInfo is defined in @ereo/data (used by DataPipelineVisualization)
+import type { WaterfallInfo } from '@ereo/data'
 ```
 
 ## Overview
@@ -533,6 +538,24 @@ interface LoaderTiming {
   waitingFor: string[]
   /** Data size in bytes (if available) */
   size?: number
+}
+```
+
+### WaterfallInfo
+
+This type is imported from `@ereo/data` and used by `DataPipelineVisualization` to describe detected waterfall patterns in your data loading.
+
+```ts
+// From @ereo/data
+interface WaterfallInfo {
+  /** The loader that waited */
+  loader: string
+  /** The loaders it waited for */
+  waitedFor: string[]
+  /** Whether the wait was necessary (e.g., the loader depends on data from the waited-for loaders) */
+  necessary: boolean
+  /** Suggestion for optimization (when the wait is unnecessary) */
+  suggestion?: string
 }
 ```
 

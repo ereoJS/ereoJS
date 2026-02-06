@@ -68,6 +68,7 @@ function SignupForm() {
 | [`useForm`](/api/forms/use-form) | Create a form instance with default values, validators, and submit handler |
 | [`useField`](/api/forms/use-field) | Bind a single field -- returns value, errors, touched, and `inputProps` |
 | [`useFieldArray`](/api/forms/use-field-array) | Manage dynamic arrays (append, remove, swap, move, insert) |
+| [`useWatch`](/api/forms/use-watch) | Observe field values reactively without registering the field |
 | [`useFormStatus`](/api/forms/use-form-status) | Subscribe to form-level status (submitting, dirty, valid) |
 
 ### Core
@@ -114,7 +115,7 @@ function SignupForm() {
 | [`fileSize` / `fileType`](/api/forms/validation) | File input validators |
 | [`compose`](/api/forms/validation) | Compose multiple validators into one |
 | [`when`](/api/forms/validation) | Conditional validator |
-| [`v`](/api/forms/validation) | Shorthand validator builder chain |
+| [`v`](/api/forms/validation) | Shorthand namespace re-exporting all validators (e.g. `v.required()`, `v.email()`) |
 
 ### Schema Adapters
 
@@ -122,6 +123,8 @@ function SignupForm() {
 |--------|-------------|
 | [`zodAdapter`](/api/forms/schema-adapters) | Adapt a Zod schema for form-level validation |
 | [`valibotAdapter`](/api/forms/schema-adapters) | Adapt a Valibot schema for form-level validation |
+| [`isStandardSchema`](/api/forms/schema-adapters) | Type guard for Standard Schema V1 (`~standard` property) |
+| [`standardSchemaAdapter`](/api/forms/schema-adapters) | Explicit adapter for Standard Schema V1-compliant validators |
 | [`createSchemaValidator`](/api/forms/schema-adapters) | Generic schema adapter factory |
 | [`ereoSchema`](/api/forms/schema-adapters) | Native schema DSL (sync `safeParse`) |
 | [`isEreoSchema`](/api/forms/schema-adapters) | Type guard for `ereoSchema` instances |

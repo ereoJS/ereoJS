@@ -30,7 +30,7 @@ export default defineConfig({
 ### 2. Use Components
 
 ```tsx
-import { Image, Picture } from '@ereo/plugin-images/components'
+import { Image, Picture } from '@ereo/plugin-images'
 import heroImg from './hero.jpg'
 
 function Hero() {
@@ -51,8 +51,14 @@ The `Image` component is a drop-in replacement for the HTML `<img>` element with
 
 ### Import
 
+You can import `Image` and `Picture` from either the main package or the `/components` sub-path — both are equivalent:
+
 ```ts
-import { Image } from '@ereo/plugin-images'
+// Recommended — shorter
+import { Image, Picture } from '@ereo/plugin-images'
+
+// Alternative — explicit sub-path (useful if you only need components)
+import { Image, Picture } from '@ereo/plugin-images/components'
 ```
 
 ### Basic Usage
@@ -1746,5 +1752,5 @@ console.log('Color:', result.colors?.dominant || 'failed')
 ## Related
 
 - [Tailwind CSS Plugin](/api/plugins/tailwind)
-- [Performance Guide](/guides/performance)
-- [Static Assets](/guides/static-assets)
+- [Styling Guide](/guides/styling)
+- [Plugins](/api/core/plugins)

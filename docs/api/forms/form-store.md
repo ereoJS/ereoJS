@@ -74,6 +74,9 @@ The proxy reads from and writes to the underlying signals, so changes are reacti
 | `clearErrors` | `(path?: string) => void` | Clear errors for a field, or all if no path |
 | `getFormErrors` | `() => Signal<string[]>` | Get form-level error signal |
 | `setFormErrors` | `(errors: string[]) => void` | Set form-level errors |
+| `setErrorsWithSource` | `(path: string, errors: string[], source: ErrorSource) => void` | Set errors with source tracking. `ErrorSource` is `'sync' \| 'async' \| 'schema' \| 'server' \| 'manual'` |
+| `clearErrorsBySource` | `(path: string, source: ErrorSource) => void` | Clear only errors from a specific source (e.g. clear server errors while keeping client-side errors) |
+| `getErrorMap` | `(path: string) => Signal<Record<ErrorSource, string[]>>` | Get errors grouped by source for a field. Returns a signal with `{ sync, async, schema, server, manual }` arrays |
 
 ## Touched / Dirty
 
@@ -111,6 +114,7 @@ These are `Signal` instances from `@ereo/state`. Use `useSignal()` to subscribe 
 | `handleSubmit` | `(e?: Event) => Promise<void>` | Validate and call `config.onSubmit` |
 | `submitWith` | `(handler: SubmitHandler<T>, submitId?: string) => Promise<void>` | Validate and call a custom handler |
 | `validate` | `() => Promise<boolean>` | Run all validation without submitting |
+| `trigger` | `(path?: string) => Promise<boolean>` | Manually trigger validation. Pass a path to validate a single field, or omit to validate all fields. Does not submit the form. |
 
 `handleSubmit` and `submitWith`:
 - Abort any in-flight submit
@@ -127,6 +131,7 @@ These are `Signal` instances from `@ereo/state`. Use `useSignal()` to subscribe 
 |--------|-----------|-------------|
 | `reset` | `() => void` | Reset to original `defaultValues` |
 | `resetTo` | `(values: T) => void` | Reset to arbitrary values, clears all tracking state |
+| `resetField` | `(path: string) => void` | Reset a single field to its default value, clear its errors, and unmark touched/dirty |
 | `setBaseline` | `(values: T) => void` | Update baseline without changing current values (recalculates dirty) |
 | `getChanges` | `() => DeepPartial<T>` | Get only the dirty field paths and their values |
 

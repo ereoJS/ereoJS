@@ -46,7 +46,11 @@ Programmatically navigate to a URL.
 ```ts
 function navigate(
   to: string,
-  options?: { replace?: boolean; state?: unknown }
+  options?: {
+    replace?: boolean
+    state?: unknown
+    viewTransition?: boolean | ViewTransitionOptions
+  }
 ): Promise<void>
 ```
 
@@ -66,8 +70,8 @@ await navigate('/posts', {
   state: { from: 'search', query: 'react' }
 })
 
-// Prevent scroll to top
-await navigate('/posts#section', { scroll: false })
+// With view transition animation
+await navigate('/posts', { viewTransition: true })
 ```
 
 ### In Event Handlers
@@ -245,7 +249,7 @@ The global client router instance for advanced use cases.
 ```ts
 interface ClientRouter {
   // Navigate to a new URL
-  navigate(to: string, options?: { replace?: boolean; state?: unknown }): Promise<void>
+  navigate(to: string, options?: { replace?: boolean; state?: unknown; viewTransition?: boolean | ViewTransitionOptions }): Promise<void>
 
   // Go back in history
   back(): void

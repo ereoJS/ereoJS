@@ -1,11 +1,11 @@
 # Authentication
 
-This guide covers authentication patterns in EreoJS using the `@ereo/plugin-auth` package.
+This guide covers authentication patterns in EreoJS using the `@ereo/auth` package.
 
 ## Installation
 
 ```bash
-bun add @ereo/plugin-auth
+bun add @ereo/auth
 ```
 
 ## Basic Setup
@@ -15,7 +15,7 @@ bun add @ereo/plugin-auth
 ```ts
 // ereo.config.ts
 import { defineConfig } from '@ereo/core'
-import { createAuthPlugin, credentials } from '@ereo/plugin-auth'
+import { createAuthPlugin, credentials } from '@ereo/auth'
 
 export default defineConfig({
   plugins: [
@@ -86,7 +86,7 @@ cookie: {
 // routes/login.tsx
 import { createLoader, createAction, redirect } from '@ereo/data'
 import { Form, useActionData } from '@ereo/client'
-import { useAuth, getSession } from '@ereo/plugin-auth'
+import { useAuth, getSession } from '@ereo/auth'
 
 export const loader = createLoader(async ({ context }) => {
   const session = getSession(context)
@@ -150,7 +150,7 @@ export default function Login() {
 ```tsx
 // routes/logout.tsx
 import { createAction, redirect } from '@ereo/data'
-import { useAuth } from '@ereo/plugin-auth'
+import { useAuth } from '@ereo/auth'
 
 export const action = createAction(async ({ context }) => {
   const auth = useAuth(context)
@@ -175,7 +175,7 @@ export const action = createAction(async ({ context }) => {
 
 ```tsx
 // routes/dashboard/_layout.tsx
-import { requireAuth } from '@ereo/plugin-auth'
+import { requireAuth } from '@ereo/auth'
 
 export const config = {
   ...requireAuth({ redirect: '/login' }),
@@ -196,7 +196,7 @@ export default function DashboardLayout({ children }) {
 ```tsx
 // routes/dashboard/index.tsx
 import { createLoader } from '@ereo/data'
-import { useAuth, getUser } from '@ereo/plugin-auth'
+import { useAuth, getUser } from '@ereo/auth'
 
 export const loader = createLoader(async ({ context }) => {
   const auth = useAuth(context)
@@ -227,7 +227,7 @@ export default function Dashboard({ loaderData }) {
 
 ```tsx
 // routes/admin/_layout.tsx
-import { requireRoles } from '@ereo/plugin-auth'
+import { requireRoles } from '@ereo/auth'
 
 export const config = {
   ...requireRoles(['admin'], { redirect: '/forbidden' }),
@@ -279,7 +279,7 @@ fetch('/api/data', {
 
 ```ts
 // routes/api/protected.ts
-import { useAuth } from '@ereo/plugin-auth'
+import { useAuth } from '@ereo/auth'
 
 export async function loader({ context }) {
   const auth = useAuth(context)
@@ -387,7 +387,7 @@ createAuthPlugin({
 ## Custom Credentials Provider
 
 ```ts
-import { credentials } from '@ereo/plugin-auth'
+import { credentials } from '@ereo/auth'
 
 const emailPasswordProvider = credentials({
   id: 'email-password',  // Custom provider ID
@@ -429,7 +429,7 @@ const emailPasswordProvider = credentials({
 ## Mock Provider for Testing
 
 ```ts
-import { mock } from '@ereo/plugin-auth'
+import { mock } from '@ereo/auth'
 
 // For development/testing
 const mockProvider = mock({
@@ -446,7 +446,7 @@ const mockProvider = mock({
 ## Helper Functions
 
 ```ts
-import { useAuth, getSession, getUser, withAuth } from '@ereo/plugin-auth'
+import { useAuth, getSession, getUser, withAuth } from '@ereo/auth'
 
 // Get auth context (throws if not configured)
 const auth = useAuth(context)

@@ -68,7 +68,7 @@ export const action = createAction(async ({ request }) => {
 export default function NewPost() {
   const actionData = useActionData()
   const navigation = useNavigation()
-  const isSubmitting = navigation.state === 'submitting'
+  const isSubmitting = navigation.status === 'submitting'
 
   return (
     <div>
@@ -263,7 +263,7 @@ export default function PostPage({ loaderData }) {
   const { post, comments } = loaderData
   const actionData = useActionData()
   const navigation = useNavigation()
-  const isSubmitting = navigation.state === 'submitting'
+  const isSubmitting = navigation.status === 'submitting'
 
   return (
     <article>

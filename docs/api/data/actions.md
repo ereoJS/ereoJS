@@ -19,7 +19,9 @@ import {
   validateRequired,
   combineValidators,
   redirect,
+  throwRedirect,
   json,
+  data,
   error,
   type ActionOptions,
   type TypedActionOptions,
@@ -254,10 +256,12 @@ Creates an action that only accepts JSON payloads. Useful for strict API endpoin
 ### Signature
 
 ```ts
-function jsonAction<TBody, TResult, P>(
-  options: TypedActionOptions<TBody, TResult, P> & { strict?: boolean }
+function jsonAction<TBody, TResult = TBody, P = RouteParams>(
+  options: Omit<TypedActionOptions<TBody, TResult, P>, 'transform'> & { strict?: boolean }
 ): ActionFunction<ActionResult<TResult>, P>
 ```
+
+> **Note:** `jsonAction` does not support the `transform` option (unlike `typedAction`). If you need a custom transform step, use `typedAction` instead.
 
 ### Example
 
@@ -278,7 +282,7 @@ export const action = jsonAction<{ ids: number[] }>({
 Creates a redirect response.
 
 ```ts
-function redirect(url: string, status?: number): Response
+function redirect(url: string, statusOrInit?: number | ResponseInit): Response
 ```
 
 ```ts
@@ -287,17 +291,45 @@ return redirect('/posts', 301)      // 301 permanent redirect
 return redirect('/posts', 303)      // 303 redirect (after POST)
 ```
 
+### throwRedirect
+
+Throws a redirect response, immediately stopping execution. Useful inside loaders where you want to bail out early:
+
+```ts
+function throwRedirect(url: string, statusOrInit?: number | ResponseInit): never
+```
+
+```ts
+// This throws — execution stops immediately
+throwRedirect('/login')
+
+// Code after throwRedirect is never reached
+```
+
 ### json
 
 Creates a JSON response.
 
 ```ts
-function json(data: any, init?: ResponseInit): Response
+function json<T>(data: T, init?: ResponseInit): Response
 ```
 
 ```ts
 return json({ success: true })
 return json({ error: 'Not found' }, { status: 404 })
+```
+
+### data
+
+Creates an XSS-safe JSON response. Escapes `<`, `>`, `&`, and `'` characters to prevent script injection when embedding data in HTML:
+
+```ts
+function data<T>(value: T, init?: ResponseInit): Response
+```
+
+```ts
+// Use this when embedding data in HTML/script tags
+return data({ post })
 ```
 
 ### error

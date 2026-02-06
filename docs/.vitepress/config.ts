@@ -208,6 +208,7 @@ export default defineConfig({
             { text: 'useForm', link: '/api/forms/use-form' },
             { text: 'useField', link: '/api/forms/use-field' },
             { text: 'useFieldArray', link: '/api/forms/use-field-array' },
+            { text: 'useWatch', link: '/api/forms/use-watch' },
             { text: 'useFormStatus', link: '/api/forms/use-form-status' },
             { text: 'FormStore', link: '/api/forms/form-store' },
             { text: 'Validation', link: '/api/forms/validation' },
@@ -309,8 +310,7 @@ export default defineConfig({
           items: [
             { text: 'Tailwind', link: '/api/plugins/tailwind' },
             { text: 'Images', link: '/api/plugins/images' },
-            { text: 'Auth', link: '/api/plugins/auth' },
-            { text: 'Database (deprecated)', link: '/api/plugins/db' }
+            { text: 'Auth', link: '/api/plugins/auth' }
           ]
         }
       ]
