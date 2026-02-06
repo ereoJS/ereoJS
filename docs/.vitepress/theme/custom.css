@@ -1,6 +1,6 @@
 /**
  * Ereo Documentation Theme
- * A modern, clean design with great typography and visual hierarchy
+ * A modern, developer-focused design optimized for readability
  */
 
 /* ============================================
@@ -13,85 +13,89 @@
    Root Variables - Light Theme
    ============================================ */
 :root {
-  /* Brand Colors - Vibrant purple/indigo */
-  --vp-c-brand-1: #6366f1;
-  --vp-c-brand-2: #818cf8;
-  --vp-c-brand-3: #4f46e5;
-  --vp-c-brand-soft: rgba(99, 102, 241, 0.12);
+  /* Brand Colors - Refined indigo with warmth */
+  --vp-c-brand-1: #5b5ff6;
+  --vp-c-brand-2: #7c7fff;
+  --vp-c-brand-3: #4a4de5;
+  --vp-c-brand-soft: rgba(91, 95, 246, 0.10);
 
   /* Typography */
   --vp-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   --vp-font-family-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-  /* Backgrounds */
+  /* Backgrounds - Warm whites */
   --vp-c-bg: #ffffff;
-  --vp-c-bg-soft: #f8fafc;
-  --vp-c-bg-mute: #f1f5f9;
-  --vp-c-bg-alt: #f8fafc;
+  --vp-c-bg-soft: #f9fafb;
+  --vp-c-bg-mute: #f3f4f6;
+  --vp-c-bg-alt: #f9fafb;
 
   /* Borders */
-  --vp-c-border: #e2e8f0;
-  --vp-c-divider: #e2e8f0;
-  --vp-c-gutter: #e2e8f0;
+  --vp-c-border: #e5e7eb;
+  --vp-c-divider: #e5e7eb;
+  --vp-c-gutter: #e5e7eb;
 
-  /* Text */
-  --vp-c-text-1: #1e293b;
-  --vp-c-text-2: #475569;
-  --vp-c-text-3: #64748b;
+  /* Text - Warmer grays */
+  --vp-c-text-1: #111827;
+  --vp-c-text-2: #4b5563;
+  --vp-c-text-3: #6b7280;
 
   /* Sidebar */
   --vp-sidebar-bg-color: #ffffff;
 
   /* Shadows */
   --vp-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --vp-shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --vp-shadow-3: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --vp-shadow-4: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+  --vp-shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --vp-shadow-3: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --vp-shadow-4: 0 20px 25px -5px rgba(0, 0, 0, 0.07), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
 
-  /* Code */
-  --vp-code-block-bg: #1e293b;
-  --vp-code-line-highlight-color: rgba(99, 102, 241, 0.12);
-  --vp-code-copy-code-bg: rgba(255, 255, 255, 0.05);
-  --vp-code-copy-code-hover-bg: rgba(255, 255, 255, 0.1);
+  /* Code - Light mode: soft gray background */
+  --vp-code-block-bg: #1a1b26;
+  --vp-code-line-highlight-color: rgba(91, 95, 246, 0.08);
+  --vp-code-copy-code-bg: rgba(0, 0, 0, 0.03);
+  --vp-code-copy-code-hover-bg: rgba(0, 0, 0, 0.05);
+
+  /* Custom vars */
+  --ereo-code-accent: var(--vp-c-brand-1);
+  --ereo-content-max-width: 760px;
 }
 
 /* ============================================
-   Dark Theme
+   Dark Theme - Warm neutral darks
    ============================================ */
 .dark {
-  /* Brand Colors */
-  --vp-c-brand-1: #818cf8;
-  --vp-c-brand-2: #a5b4fc;
-  --vp-c-brand-3: #6366f1;
-  --vp-c-brand-soft: rgba(129, 140, 248, 0.16);
+  /* Brand Colors - Brighter in dark mode for contrast */
+  --vp-c-brand-1: #8b8eff;
+  --vp-c-brand-2: #a5a7ff;
+  --vp-c-brand-3: #7174ff;
+  --vp-c-brand-soft: rgba(139, 142, 255, 0.12);
 
-  /* Backgrounds */
-  --vp-c-bg: #0f172a;
-  --vp-c-bg-soft: #1e293b;
-  --vp-c-bg-mute: #334155;
-  --vp-c-bg-alt: #1e293b;
+  /* Backgrounds - Warm neutral (not blue-tinted) */
+  --vp-c-bg: #111113;
+  --vp-c-bg-soft: #1a1a1e;
+  --vp-c-bg-mute: #242428;
+  --vp-c-bg-alt: #1a1a1e;
 
   /* Borders */
-  --vp-c-border: #334155;
-  --vp-c-divider: #334155;
-  --vp-c-gutter: #334155;
+  --vp-c-border: #2e2e33;
+  --vp-c-divider: #2e2e33;
+  --vp-c-gutter: #2e2e33;
 
-  /* Text */
-  --vp-c-text-1: #f1f5f9;
-  --vp-c-text-2: #cbd5e1;
-  --vp-c-text-3: #94a3b8;
+  /* Text - High contrast, slightly warm */
+  --vp-c-text-1: #ececef;
+  --vp-c-text-2: #a1a1a8;
+  --vp-c-text-3: #71717a;
 
   /* Sidebar */
-  --vp-sidebar-bg-color: #0f172a;
+  --vp-sidebar-bg-color: #111113;
 
   /* Shadows */
-  --vp-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --vp-shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --vp-shadow-3: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-  --vp-shadow-4: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  --vp-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --vp-shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --vp-shadow-3: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --vp-shadow-4: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
 
-  /* Code */
-  --vp-code-block-bg: #0f172a;
+  /* Code - Distinct from page background */
+  --vp-code-block-bg: #1a1b26;
 }
 
 /* ============================================
@@ -133,22 +137,22 @@ body {
    Hero Section
    ============================================ */
 .VPHero {
-  padding-top: 64px !important;
-  padding-bottom: 64px !important;
+  padding-top: 72px !important;
+  padding-bottom: 72px !important;
 }
 
 .VPHero .name {
   font-size: 56px !important;
   font-weight: 800 !important;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #5b5ff6 0%, #8b5cf6 50%, #a855f7 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .dark .VPHero .name {
-  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+  background: linear-gradient(135deg, #8b8eff 0%, #a78bfa 50%, #c4b5fd 100%);
   background-clip: text;
   -webkit-background-clip: text;
 }
@@ -156,27 +160,28 @@ body {
 .VPHero .text {
   font-size: 20px !important;
   font-weight: 500 !important;
-  color: var(--vp-c-text-2);
+  color: var(--vp-c-text-1);
   max-width: 560px;
+  letter-spacing: -0.01em;
 }
 
 .VPHero .tagline {
-  font-size: 18px !important;
-  line-height: 1.6;
-  color: var(--vp-c-text-3);
+  font-size: 17px !important;
+  line-height: 1.7;
+  color: var(--vp-c-text-2);
   max-width: 520px;
 }
 
 .VPHero .actions .VPButton {
   font-weight: 600;
-  padding: 12px 24px;
+  padding: 12px 28px;
   border-radius: 10px;
   transition: all 0.2s ease;
 }
 
 .VPHero .actions .VPButton.brand:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--vp-shadow-3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(91, 95, 246, 0.3);
 }
 
 .VPHero .image-container {
@@ -193,14 +198,14 @@ body {
 .VPFeature {
   background: var(--vp-c-bg-soft);
   border: 1px solid var(--vp-c-border);
-  border-radius: 16px;
-  padding: 28px !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+  padding: 24px !important;
+  transition: all 0.2s ease;
 }
 
 .VPFeature:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--vp-shadow-3);
+  transform: translateY(-2px);
+  box-shadow: var(--vp-shadow-2);
   border-color: var(--vp-c-brand-soft);
 }
 
@@ -209,7 +214,7 @@ body {
 }
 
 .VPFeature .title {
-  font-size: 17px !important;
+  font-size: 16px !important;
   font-weight: 600 !important;
   color: var(--vp-c-text-1);
 }
@@ -229,23 +234,24 @@ body {
    Navigation
    ============================================ */
 .VPNav {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(16px) saturate(180%);
   border-bottom: 1px solid var(--vp-c-border);
 }
 
 .dark .VPNav {
-  background: rgba(15, 23, 42, 0.85) !important;
+  background: rgba(17, 17, 19, 0.8) !important;
 }
 
 .VPNavBar .title {
   font-weight: 700 !important;
-  font-size: 18px !important;
+  font-size: 17px !important;
 }
 
 .VPNavBarMenuLink {
   font-weight: 500;
   font-size: 14px;
+  transition: color 0.15s ease;
 }
 
 .VPNavBarMenuLink:hover {
@@ -266,23 +272,26 @@ body {
 }
 
 .VPSidebarItem {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
+/* Group titles - refined, not screaming */
 .VPSidebarItem.level-0 > .item > .text {
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 12.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--vp-c-text-3);
-  padding: 8px 12px;
+  letter-spacing: 0.06em;
+  color: var(--vp-c-text-1);
+  padding: 10px 12px 6px;
+  opacity: 0.5;
 }
 
+/* Sidebar links */
 .VPSidebarItem.level-1 > .item {
-  padding: 6px 12px;
-  border-radius: 8px;
-  margin: 2px 0;
-  transition: all 0.15s ease;
+  padding: 5px 12px;
+  border-radius: 6px;
+  margin: 1px 0;
+  transition: all 0.12s ease;
 }
 
 .VPSidebarItem.level-1 > .item:hover {
@@ -292,10 +301,16 @@ body {
 .VPSidebarItem.level-1.is-active > .item {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-1);
+  font-weight: 500;
 }
 
 .VPSidebarItem .text {
-  font-size: 14px;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.VPSidebarItem.level-1.is-active .text {
   font-weight: 500;
 }
 
@@ -303,7 +318,7 @@ body {
   transition: transform 0.2s ease;
 }
 
-/* Sidebar group titles */
+/* Sidebar group spacing */
 .VPSidebarItem.level-0 {
   margin-top: 20px;
 }
@@ -313,7 +328,7 @@ body {
 }
 
 /* ============================================
-   Content Area
+   Content Area — Typography
    ============================================ */
 .VPDoc {
   padding: 48px 32px !important;
@@ -322,40 +337,50 @@ body {
 .vp-doc h1 {
   font-size: 2.25rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   margin-bottom: 16px;
-  line-height: 1.2;
+  line-height: 1.15;
+  color: var(--vp-c-text-1);
 }
 
 .vp-doc h2 {
   font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   margin-top: 48px;
   margin-bottom: 16px;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--vp-c-border);
 }
 
 .vp-doc h3 {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   margin-top: 32px;
   margin-bottom: 12px;
 }
 
 .vp-doc h4 {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   margin-top: 24px;
   margin-bottom: 8px;
 }
 
+/* Body text — optimized for long reading */
 .vp-doc p {
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: 15.5px;
+  line-height: 1.8;
   color: var(--vp-c-text-2);
   margin: 16px 0;
+}
+
+/* Make first paragraph after headings slightly more prominent */
+.vp-doc h1 + p,
+.vp-doc h2 + p {
+  font-size: 16px;
+  color: var(--vp-c-text-2);
 }
 
 .vp-doc a {
@@ -368,6 +393,8 @@ body {
 .vp-doc a:hover {
   color: var(--vp-c-brand-3);
   text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
 }
 
 .vp-doc strong {
@@ -376,37 +403,56 @@ body {
 }
 
 /* ============================================
-   Code Blocks
+   Code Blocks — Developer-focused
    ============================================ */
 .vp-doc div[class*='language-'] {
-  border-radius: 12px;
+  border-radius: 10px;
   margin: 20px 0;
-  box-shadow: var(--vp-shadow-2);
-  border: 1px solid var(--vp-c-border);
   overflow: hidden;
+  border: 1px solid var(--vp-c-border);
+  position: relative;
+}
+
+/* Subtle brand accent bar on top */
+.vp-doc div[class*='language-']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--vp-c-brand-1), var(--vp-c-brand-2));
+  opacity: 0.5;
+  z-index: 1;
 }
 
 .dark .vp-doc div[class*='language-'] {
-  border-color: #334155;
-  box-shadow: var(--vp-shadow-3);
+  border-color: #2a2a2e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Language label */
 .vp-doc div[class*='language-'] > span.lang {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8;
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  top: 12px;
-  right: 12px;
+  color: #6b7280;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  top: 10px;
+  right: 10px;
 }
 
+.dark .vp-doc div[class*='language-'] > span.lang {
+  color: #6b7280;
+}
+
+/* Code text */
 .vp-doc [class*='language-'] code {
   font-family: var(--vp-font-family-mono);
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.7;
 }
 
@@ -415,51 +461,51 @@ body {
   background: var(--vp-code-block-bg);
 }
 
-/* Inline code */
+/* Inline code — clean, no border */
 .vp-doc :not(pre) > code {
   font-family: var(--vp-font-family-mono);
-  font-size: 0.9em;
+  font-size: 0.88em;
   font-weight: 500;
-  padding: 3px 7px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
   background: var(--vp-c-bg-mute);
   color: var(--vp-c-brand-1);
-  border: 1px solid var(--vp-c-border);
 }
 
 .dark .vp-doc :not(pre) > code {
   background: var(--vp-c-bg-soft);
+  color: var(--vp-c-brand-2);
 }
 
 /* ============================================
-   Tables
+   Tables — Clean & Scannable
    ============================================ */
 .vp-doc table {
   width: 100%;
   margin: 24px 0;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--vp-c-border);
-  box-shadow: var(--vp-shadow-1);
 }
 
 .vp-doc table th {
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   background: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
-  padding: 12px 16px;
+  color: var(--vp-c-text-3);
+  padding: 10px 16px;
   text-align: left;
-  border-bottom: 2px solid var(--vp-c-border);
+  border-bottom: 1px solid var(--vp-c-border);
 }
 
 .vp-doc table td {
-  padding: 12px 16px;
+  padding: 10px 16px;
   font-size: 14px;
   border-bottom: 1px solid var(--vp-c-border);
   color: var(--vp-c-text-2);
+  line-height: 1.6;
 }
 
 .vp-doc table tr:last-child td {
@@ -468,6 +514,11 @@ body {
 
 .vp-doc table tr:hover td {
   background: var(--vp-c-bg-soft);
+}
+
+/* Code inside table cells */
+.vp-doc table code {
+  font-size: 12.5px;
 }
 
 /* ============================================
@@ -480,61 +531,69 @@ body {
 }
 
 .vp-doc li {
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: 15.5px;
+  line-height: 1.8;
   color: var(--vp-c-text-2);
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .vp-doc li::marker {
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-text-3);
+}
+
+/* Nested lists tighter */
+.vp-doc li > ul,
+.vp-doc li > ol {
+  margin: 4px 0;
 }
 
 /* ============================================
-   Blockquotes / Tips / Warnings
+   Blockquotes / Custom Blocks
    ============================================ */
 .vp-doc blockquote {
-  margin: 24px 0;
-  padding: 16px 20px;
-  border-radius: 12px;
+  margin: 20px 0;
+  padding: 14px 20px;
+  border-radius: 8px;
   background: var(--vp-c-bg-soft);
-  border-left: 4px solid var(--vp-c-brand-1);
+  border-left: 3px solid var(--vp-c-brand-1);
   color: var(--vp-c-text-2);
 }
 
 .vp-doc blockquote p {
   margin: 0;
+  font-size: 14.5px;
 }
 
 .vp-doc .custom-block {
-  border-radius: 12px;
-  margin: 24px 0;
-  padding: 20px 24px;
+  border-radius: 8px;
+  margin: 20px 0;
+  padding: 16px 20px;
+  border: 1px solid transparent;
 }
 
 .vp-doc .custom-block.info {
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: rgba(91, 95, 246, 0.06);
+  border-color: rgba(91, 95, 246, 0.15);
 }
 
 .vp-doc .custom-block.tip {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.15);
 }
 
 .vp-doc .custom-block.warning {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.15);
 }
 
 .vp-doc .custom-block.danger {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
 }
 
 .vp-doc .custom-block-title {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   margin-bottom: 8px;
 }
 
@@ -547,19 +606,20 @@ body {
 }
 
 .VPDocAsideOutline .outline-title {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--vp-c-text-3);
   margin-bottom: 12px;
 }
 
 .VPDocAsideOutline .outline-link {
-  font-size: 13px;
-  color: var(--vp-c-text-2);
-  padding: 4px 0;
-  transition: color 0.15s ease;
+  font-size: 12.5px;
+  color: var(--vp-c-text-3);
+  padding: 3px 0;
+  transition: color 0.12s ease;
+  line-height: 1.5;
 }
 
 .VPDocAsideOutline .outline-link:hover,
@@ -577,7 +637,7 @@ body {
 
 .VPFooter .message,
 .VPFooter .copyright {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--vp-c-text-3);
 }
 
@@ -585,23 +645,23 @@ body {
    Search
    ============================================ */
 .DocSearch-Button {
-  border-radius: 10px !important;
+  border-radius: 8px !important;
   background: var(--vp-c-bg-soft) !important;
   border: 1px solid var(--vp-c-border) !important;
-  transition: all 0.2s ease !important;
+  transition: all 0.15s ease !important;
 }
 
 .DocSearch-Button:hover {
   border-color: var(--vp-c-brand-soft) !important;
-  box-shadow: var(--vp-shadow-2) !important;
+  box-shadow: var(--vp-shadow-1) !important;
 }
 
 /* ============================================
    Scrollbar
    ============================================ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -610,7 +670,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--vp-c-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -626,7 +686,7 @@ body {
   }
 
   .VPHero .text {
-    font-size: 16px !important;
+    font-size: 17px !important;
   }
 
   .VPHero .tagline {
@@ -638,30 +698,35 @@ body {
   }
 
   .vp-doc h2 {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
   }
 
   .VPDoc {
     padding: 24px 16px !important;
   }
+
+  .vp-doc p,
+  .vp-doc li {
+    font-size: 15px;
+  }
 }
 
 /* ============================================
-   Animations
+   Animations — Subtle
    ============================================ */
+.VPContent {
+  animation: fadeIn 0.2s ease-out;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.VPContent {
-  animation: fadeIn 0.3s ease-out;
 }
 
 /* ============================================
