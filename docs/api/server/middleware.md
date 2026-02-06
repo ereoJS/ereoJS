@@ -317,6 +317,6 @@ export const config = {
 
 ## Related
 
-- [Middleware Concepts](/core-concepts/middleware)
+- [Middleware Concepts](/concepts/middleware)
 - [RequestContext](/api/core/context)
 - [Authentication Guide](/guides/authentication)

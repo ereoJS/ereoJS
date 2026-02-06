@@ -2,7 +2,7 @@
 
 Actions handle form submissions and data mutations. They run on the server when a non-GET request (POST, PUT, DELETE, etc.) is sent to a route.
 
-> **Not sure which approach to use?** See the [Data Loading overview](/core-concepts/data-loading) for a comparison of all three approaches (plain export, createAction, defineRoute).
+> **Not sure which approach to use?** See the [Data Loading overview](/concepts/data-loading) for a comparison of all three approaches (plain export, createAction, defineRoute).
 
 ## Import
 
@@ -553,7 +553,7 @@ function LikeButton({ postId, initialLikes }) {
 
 ## Related
 
-- [Data Loading Concepts](/core-concepts/data-loading) — Overview of all approaches
+- [Data Loading Concepts](/concepts/data-loading) — Overview of all approaches
 - [Loaders](/api/data/loaders) — Data fetching
 - [defineRoute Builder](/api/data/define-route) — Builder pattern
 - [Forms Guide](/guides/forms) — Form handling patterns

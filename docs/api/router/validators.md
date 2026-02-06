@@ -479,4 +479,4 @@ const schema = {
 
 - [Route Matching](./matching.md)
 - [File Router](./file-router.md)
-- [Routing Concepts](/core-concepts/routing)
+- [Routing Concepts](/concepts/routing)

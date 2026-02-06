@@ -167,7 +167,7 @@ export async function POST({ request }) {
 }
 ```
 
-Both approaches are valid. Use `loader`/`action` for page routes that render components. Use HTTP method exports for pure API endpoints. See [Data Loading](/core-concepts/data-loading) for details on all three approaches.
+Both approaches are valid. Use `loader`/`action` for page routes that render components. Use HTTP method exports for pure API endpoints. See [Data Loading](/concepts/data-loading) for details on all three approaches.
 
 ## Components Directory
 
@@ -232,7 +232,7 @@ export default function Home() {
 }
 ```
 
-For more advanced hydration control (lazy loading, viewport-based hydration), see [Islands Architecture](/core-concepts/islands).
+For more advanced hydration control (lazy loading, viewport-based hydration), see [Islands Architecture](/concepts/islands).
 
 ## Configuration Files
 

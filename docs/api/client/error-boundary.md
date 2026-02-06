@@ -464,4 +464,4 @@ export function ErrorBoundary() {
 
 - [Error Handling Guide](/guides/error-handling)
 - [Loaders](/api/data/loaders)
-- [Routing](/core-concepts/routing)
+- [Routing](/concepts/routing)

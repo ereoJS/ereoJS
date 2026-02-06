@@ -465,6 +465,6 @@ interface RevalidateResult {
 
 ## Related
 
-- [Caching Concepts](/core-concepts/caching)
+- [Caching Concepts](/concepts/caching)
 - [Cache API](/api/core/cache)
-- [Data Loading](/core-concepts/data-loading)
+- [Data Loading](/concepts/data-loading)

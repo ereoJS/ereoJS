@@ -484,5 +484,5 @@ registerMiddleware('errorHandler', async (request, context, next) => {
 ## Related
 
 - [Type-Safe Middleware](/api/router/typed-middleware)
-- [Middleware Concepts](/core-concepts/middleware)
+- [Middleware Concepts](/concepts/middleware)
 - [RequestContext](/api/core/context)

@@ -13,99 +13,287 @@ export default defineConfig({
     ['meta', { property: 'og:description', content: 'Build fast, modern web applications with React and Bun' }],
   ],
 
+  // Rewrites for backward compatibility with old URLs
+  rewrites: {
+    'core-concepts/:path*': 'concepts/:path*',
+    'advanced/caching-strategies': 'architecture/caching-deep-dive',
+    'advanced/streaming': 'architecture/streaming-deep-dive',
+    'advanced/optimization': 'architecture/performance',
+    'advanced/custom-adapters': 'architecture/custom-adapters',
+    'advanced/security': 'architecture/security',
+    'comparisons/:path*': 'architecture/comparisons/:path*',
+    'deployment/:path*': 'ecosystem/deployment/:path*',
+    'changelog': 'welcome/whats-new',
+  },
+
   themeConfig: {
     logo: '/logo.svg',
 
     nav: [
-      { text: 'Guide', link: '/getting-started/' },
+      { text: 'Learn', link: '/getting-started/' },
+      { text: 'Guides', link: '/guides/' },
       { text: 'API', link: '/api/core/create-app' },
-      { text: 'Examples', link: '/examples/minimal' },
+      {
+        text: 'More',
+        items: [
+          { text: 'Architecture', link: '/architecture/' },
+          { text: 'Migration', link: '/migration/' },
+          { text: 'Ecosystem', link: '/ecosystem/' },
+          { text: 'Troubleshooting', link: '/troubleshooting/' },
+          { text: 'Contributing', link: '/contributing/' },
+          { text: 'Reference', link: '/reference/' },
+        ]
+      },
       {
         text: 'Links',
         items: [
           { text: 'GitHub', link: 'https://github.com/ereo-framework/ereo' },
-          { text: 'Changelog', link: '/changelog' }
+          { text: "What's New", link: '/welcome/whats-new' }
         ]
       }
     ],
 
     sidebar: {
-      '/': [
+      '/welcome/': [
+        {
+          text: 'Welcome',
+          items: [
+            { text: 'What is EreoJS?', link: '/welcome/' },
+            { text: "What's New", link: '/welcome/whats-new' },
+            { text: 'Feature Overview', link: '/welcome/feature-overview' },
+            { text: 'Learning Paths', link: '/welcome/learning-paths' },
+          ]
+        }
+      ],
+      '/getting-started/': [
         {
           text: 'Getting Started',
           items: [
             { text: 'Introduction', link: '/getting-started/' },
+            { text: 'Prerequisites', link: '/getting-started/prerequisites' },
+            { text: 'Installation', link: '/getting-started/installation' },
             { text: 'Project Structure', link: '/getting-started/project-structure' },
             { text: 'Your First App', link: '/getting-started/your-first-app' },
-            { text: 'Migrating from Other Frameworks', link: '/getting-started/migrating' }
-          ]
-        },
-        {
-          text: 'Core Concepts',
-          items: [
-            { text: 'Overview', link: '/core-concepts/' },
-            { text: 'Routing', link: '/core-concepts/routing' },
-            { text: 'Data Loading', link: '/core-concepts/data-loading' },
-            { text: 'Rendering Modes', link: '/core-concepts/rendering-modes' },
-            { text: 'Islands Architecture', link: '/core-concepts/islands' },
-            { text: 'Caching', link: '/core-concepts/caching' },
-            { text: 'Middleware', link: '/core-concepts/middleware' }
+            { text: 'First Deployment', link: '/getting-started/first-deployment' },
           ]
         },
         {
           text: 'Tutorials',
           items: [
             { text: 'Overview', link: '/tutorials/' },
-            { text: 'Build a Blog', link: '/tutorials/blog-tutorial/01-setup' },
-            { text: 'Build a Dashboard', link: '/tutorials/dashboard-tutorial/' }
+            { text: 'Build a Blog', link: '/tutorials/blog/01-setup' },
+            { text: 'Build a Dashboard', link: '/tutorials/dashboard/' },
+          ]
+        }
+      ],
+      '/tutorials/': [
+        {
+          text: 'Tutorials',
+          items: [
+            { text: 'Overview', link: '/tutorials/' },
           ]
         },
         {
-          text: 'Guides',
+          text: 'Build a Blog',
+          items: [
+            { text: '1. Setup', link: '/tutorials/blog/01-setup' },
+            { text: '2. Routes', link: '/tutorials/blog/02-routes' },
+            { text: '3. Data Loading', link: '/tutorials/blog/03-data-loading' },
+            { text: '4. Forms', link: '/tutorials/blog/04-forms' },
+            { text: '5. Styling', link: '/tutorials/blog/05-styling' },
+            { text: '6. Deployment', link: '/tutorials/blog/06-deployment' },
+          ]
+        },
+        {
+          text: 'Build a Dashboard',
+          items: [
+            { text: 'Overview', link: '/tutorials/dashboard/' },
+            { text: '1. Setup', link: '/tutorials/dashboard/01-setup' },
+            { text: '2. Authentication', link: '/tutorials/dashboard/02-authentication' },
+            { text: '3. Islands', link: '/tutorials/dashboard/03-islands' },
+            { text: '4. Analytics', link: '/tutorials/dashboard/04-analytics' },
+            { text: '5. Deployment', link: '/tutorials/dashboard/05-deployment' },
+          ]
+        }
+      ],
+      '/concepts/': [
+        {
+          text: 'Core Concepts',
+          items: [
+            { text: 'Overview', link: '/concepts/' },
+            { text: 'Routing', link: '/concepts/routing' },
+            { text: 'Data Loading', link: '/concepts/data-loading' },
+            { text: 'Rendering Modes', link: '/concepts/rendering-modes' },
+            { text: 'Islands Architecture', link: '/concepts/islands' },
+            { text: 'Caching', link: '/concepts/caching' },
+            { text: 'Middleware', link: '/concepts/middleware' },
+            { text: 'State Management', link: '/concepts/state-management' },
+            { text: 'Forms', link: '/concepts/forms' },
+            { text: 'Type Safety', link: '/concepts/type-safety' },
+          ]
+        }
+      ],
+      '/guides/': [
+        {
+          text: 'Practical Guides',
+          items: [
+            { text: 'Overview', link: '/guides/' },
+          ]
+        },
+        {
+          text: 'Data & APIs',
+          items: [
+            { text: 'Database Integration', link: '/guides/database' },
+            { text: 'API Routes', link: '/guides/api-routes' },
+            { text: 'RPC', link: '/guides/rpc' },
+            { text: 'Real-Time', link: '/guides/real-time' },
+            { text: 'File Uploads', link: '/guides/file-uploads' },
+          ]
+        },
+        {
+          text: 'Auth & Security',
           items: [
             { text: 'Authentication', link: '/guides/authentication' },
-            { text: 'Database Integration', link: '/guides/database' },
-            { text: 'Testing', link: '/guides/testing' },
+          ]
+        },
+        {
+          text: 'UI & Forms',
+          items: [
+            { text: 'Forms (Basic)', link: '/guides/forms-basic' },
+            { text: 'Forms (Advanced)', link: '/guides/forms-advanced' },
             { text: 'Styling', link: '/guides/styling' },
-            { text: 'Forms', link: '/guides/forms' },
+            { text: 'SEO', link: '/guides/seo' },
+            { text: 'Internationalization', link: '/guides/internationalization' },
+          ]
+        },
+        {
+          text: 'Development',
+          items: [
             { text: 'Error Handling', link: '/guides/error-handling' },
-            { text: 'Environment Variables', link: '/guides/environment-variables' },
+            { text: 'Testing', link: '/guides/testing' },
             { text: 'TypeScript', link: '/guides/typescript' },
-            { text: 'Plugins', link: '/guides/plugins' }
+            { text: 'Environment Variables', link: '/guides/environment-variables' },
+            { text: 'Plugins', link: '/guides/plugins' },
+          ]
+        }
+      ],
+      '/architecture/': [
+        {
+          text: 'Architecture & Design',
+          items: [
+            { text: 'Overview', link: '/architecture/' },
+            { text: 'Why Bun?', link: '/architecture/why-bun' },
+            { text: 'Caching Deep Dive', link: '/architecture/caching-deep-dive' },
+            { text: 'Streaming Deep Dive', link: '/architecture/streaming-deep-dive' },
+            { text: 'Performance', link: '/architecture/performance' },
+            { text: 'Custom Adapters', link: '/architecture/custom-adapters' },
+            { text: 'Security', link: '/architecture/security' },
           ]
         },
         {
-          text: 'Comparisons',
+          text: 'Framework Comparisons',
           items: [
-            { text: 'vs Next.js', link: '/comparisons/vs-nextjs' },
-            { text: 'vs Remix', link: '/comparisons/vs-remix' },
-            { text: 'vs Astro', link: '/comparisons/vs-astro' }
+            { text: 'vs Next.js', link: '/architecture/comparisons/vs-nextjs' },
+            { text: 'vs Remix', link: '/architecture/comparisons/vs-remix' },
+            { text: 'vs Astro', link: '/architecture/comparisons/vs-astro' },
+          ]
+        }
+      ],
+      '/migration/': [
+        {
+          text: 'Migration Guides',
+          items: [
+            { text: 'Overview', link: '/migration/' },
+            { text: 'From Next.js', link: '/migration/from-nextjs' },
+            { text: 'From Remix', link: '/migration/from-remix' },
+            { text: 'From Express/Koa', link: '/migration/from-express' },
+            { text: 'Version Upgrade', link: '/migration/version-upgrade' },
+          ]
+        }
+      ],
+      '/ecosystem/': [
+        {
+          text: 'Ecosystem & Integrations',
+          items: [
+            { text: 'Overview', link: '/ecosystem/' },
+            { text: 'IDE Setup', link: '/ecosystem/ide-setup' },
+            { text: 'CI/CD', link: '/ecosystem/ci-cd' },
           ]
         },
         {
-          text: 'Advanced',
+          text: 'Plugins',
           items: [
-            { text: 'Caching Strategies', link: '/advanced/caching-strategies' },
-            { text: 'Streaming SSR', link: '/advanced/streaming' },
-            { text: 'Performance Optimization', link: '/advanced/optimization' },
-            { text: 'Custom Adapters', link: '/advanced/custom-adapters' },
-            { text: 'Security', link: '/advanced/security' }
+            { text: 'Tailwind CSS', link: '/ecosystem/plugins/tailwind' },
+            { text: 'Auth', link: '/ecosystem/plugins/auth' },
+            { text: 'Images', link: '/ecosystem/plugins/images' },
           ]
         },
         {
           text: 'Deployment',
           items: [
-            { text: 'Bun', link: '/deployment/bun' },
-            { text: 'Vercel', link: '/deployment/vercel' },
-            { text: 'Cloudflare', link: '/deployment/cloudflare' },
-            { text: 'Docker', link: '/deployment/docker' }
+            { text: 'Overview', link: '/ecosystem/deployment/' },
+            { text: 'Bun', link: '/ecosystem/deployment/bun' },
+            { text: 'Vercel', link: '/ecosystem/deployment/vercel' },
+            { text: 'Cloudflare', link: '/ecosystem/deployment/cloudflare' },
+            { text: 'Docker', link: '/ecosystem/deployment/docker' },
+            { text: 'Fly.io', link: '/ecosystem/deployment/fly-io' },
+            { text: 'Railway', link: '/ecosystem/deployment/railway' },
+          ]
+        }
+      ],
+      '/troubleshooting/': [
+        {
+          text: 'Troubleshooting & FAQ',
+          items: [
+            { text: 'Overview', link: '/troubleshooting/' },
+            { text: 'Common Errors', link: '/troubleshooting/common-errors' },
+            { text: 'Debugging', link: '/troubleshooting/debugging' },
+            { text: 'Known Issues', link: '/troubleshooting/known-issues' },
           ]
         },
         {
+          text: 'FAQ',
+          items: [
+            { text: 'Routing', link: '/troubleshooting/faq-routing' },
+            { text: 'Data Loading', link: '/troubleshooting/faq-data' },
+            { text: 'Deployment', link: '/troubleshooting/faq-deployment' },
+            { text: 'Forms', link: '/troubleshooting/faq-forms' },
+          ]
+        }
+      ],
+      '/contributing/': [
+        {
+          text: 'Contributing',
+          items: [
+            { text: 'Overview', link: '/contributing/' },
+            { text: 'Development Setup', link: '/contributing/development-setup' },
+            { text: 'Code Architecture', link: '/contributing/code-architecture' },
+            { text: 'Plugin Development', link: '/contributing/plugin-development' },
+            { text: 'Testing Internals', link: '/contributing/testing-internals' },
+            { text: 'Documentation', link: '/contributing/documentation' },
+          ]
+        }
+      ],
+      '/reference/': [
+        {
+          text: 'Quick Reference',
+          items: [
+            { text: 'Overview', link: '/reference/' },
+            { text: 'Glossary', link: '/reference/glossary' },
+            { text: 'Cheat Sheet', link: '/reference/cheat-sheet' },
+            { text: 'CLI Reference', link: '/reference/cli-reference' },
+            { text: 'Config Reference', link: '/reference/config-reference' },
+            { text: 'Route Conventions', link: '/reference/route-conventions' },
+          ]
+        }
+      ],
+      '/examples/': [
+        {
           text: 'Examples',
           items: [
+            { text: 'Overview', link: '/examples/' },
             { text: 'Minimal', link: '/examples/minimal' },
-            { text: 'Blog', link: '/examples/blog' }
+            { text: 'Blog', link: '/examples/blog' },
           ]
         }
       ],

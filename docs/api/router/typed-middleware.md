@@ -392,5 +392,5 @@ export const loader = createLoader(async ({ context }) => {
 ## Related
 
 - [Middleware](./middleware.md)
-- [Middleware Concepts](/core-concepts/middleware)
+- [Middleware Concepts](/concepts/middleware)
 - [RequestContext](/api/core/context)

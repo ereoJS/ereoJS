@@ -367,7 +367,7 @@ server.listen(3000)
 
 ## Related
 
-- [Routing Concepts](/core-concepts/routing)
+- [Routing Concepts](/concepts/routing)
 - [Route Matching](/api/router/matching)
 - [Route Tree](/api/router/route-tree)
 - [Middleware](/api/router/middleware)

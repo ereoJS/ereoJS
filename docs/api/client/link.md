@@ -416,4 +416,4 @@ type PrefetchStrategy = 'none' | 'intent' | 'render' | 'viewport'
 
 - [Navigation](/api/client/navigation)
 - [Prefetch](/api/client/prefetch)
-- [Routing](/core-concepts/routing)
+- [Routing](/concepts/routing)

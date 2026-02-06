@@ -160,6 +160,6 @@ export default function Layout({ children }: RouteComponentProps) {
 ## Related
 
 - [Getting Started](/getting-started/)
-- [Routing](/core-concepts/routing)
-- [Data Loading](/core-concepts/data-loading)
+- [Routing](/concepts/routing)
+- [Data Loading](/concepts/data-loading)
 - [Blog Example](/examples/blog) - More complete example

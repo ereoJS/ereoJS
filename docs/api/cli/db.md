@@ -641,6 +641,6 @@ DATABASE_URL=postgres://... bun ereo db:migrate
 
 ## Related
 
-- [Data Loading](/core-concepts/data-loading) - Using data in routes
+- [Data Loading](/concepts/data-loading) - Using data in routes
 - [Environment Variables](/guides/environment-variables) - Managing secrets
 - [Deployment](/api/cli/deploy) - Deploying with migrations

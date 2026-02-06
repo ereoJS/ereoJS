@@ -106,7 +106,7 @@ export async function loader({ context }: LoaderArgs) {
 ## Related Resources
 
 - [Getting Started](/getting-started/) - Set up a new project
-- [Routing](/core-concepts/routing) - File-based routing details
-- [Data Loading](/core-concepts/data-loading) - Loaders and actions
-- [Caching](/core-concepts/caching) - Cache strategies
+- [Routing](/concepts/routing) - File-based routing details
+- [Data Loading](/concepts/data-loading) - Loaders and actions
+- [Caching](/concepts/caching) - Cache strategies
 - [Tailwind Plugin](/api/plugins/tailwind) - CSS integration

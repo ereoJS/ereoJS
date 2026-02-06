@@ -333,7 +333,7 @@ export async function loader({ context }: LoaderArgs) {
 ## Related
 
 - [Minimal Example](/examples/minimal) - Simpler starting point
-- [Routing](/core-concepts/routing) - File-based routing details
-- [Data Loading](/core-concepts/data-loading) - Loader patterns
-- [Caching](/core-concepts/caching) - Cache strategies
+- [Routing](/concepts/routing) - File-based routing details
+- [Data Loading](/concepts/data-loading) - Loader patterns
+- [Caching](/concepts/caching) - Cache strategies
 - [Tailwind Plugin](/api/plugins/tailwind) - Tailwind CSS integration

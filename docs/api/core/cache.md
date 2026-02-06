@@ -384,6 +384,6 @@ async function getPost(id) {
 
 ## Related
 
-- [Caching Concepts](/core-concepts/caching)
+- [Caching Concepts](/concepts/caching)
 - [Revalidation](/api/data/revalidation)
-- [Data Loading](/core-concepts/data-loading)
+- [Data Loading](/concepts/data-loading)

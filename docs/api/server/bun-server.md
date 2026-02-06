@@ -203,4 +203,4 @@ const server = createServer({
 
 - [Middleware](/api/server/middleware)
 - [Streaming](/api/server/streaming)
-- [Deployment](/deployment/bun)
+- [Deployment](/ecosystem/deployment/bun)

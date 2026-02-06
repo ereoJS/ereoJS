@@ -335,4 +335,4 @@ if (isPlugin(maybePlugin)) {
 
 - [Guides: Plugins](/guides/plugins)
 - [createApp](/api/core/create-app)
-- [Middleware](/core-concepts/middleware)
+- [Middleware](/concepts/middleware)

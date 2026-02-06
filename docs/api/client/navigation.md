@@ -455,4 +455,4 @@ function CustomScrollRestoration() {
 - [Link Component](/api/client/link)
 - [Prefetch](/api/client/prefetch)
 - [useNavigation Hook](/api/client/hooks#usenavigation)
-- [Routing](/core-concepts/routing)
+- [Routing](/concepts/routing)

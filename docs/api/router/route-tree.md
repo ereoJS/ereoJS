@@ -328,4 +328,4 @@ console.log(blogIndex?.index)  // true
 
 - [File Router](./file-router.md)
 - [Route Matching](./matching.md)
-- [Routing Concepts](/core-concepts/routing)
+- [Routing Concepts](/concepts/routing)

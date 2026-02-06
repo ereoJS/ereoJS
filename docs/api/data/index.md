@@ -57,7 +57,7 @@ EreoJS supports three ways to define loaders and actions, from simplest to most 
 | **`createLoader` / `createAction`** | Most routes (recommended) | Caching, validation, transforms, error handling |
 | **`defineRoute` builder** | Complex routes, full type safety | All of the above + stable inference across head/meta |
 
-> For a detailed comparison with examples, see the [Data Loading concepts guide](/core-concepts/data-loading).
+> For a detailed comparison with examples, see the [Data Loading concepts guide](/concepts/data-loading).
 
 ## Quick Start
 

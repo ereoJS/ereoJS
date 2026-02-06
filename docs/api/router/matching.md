@@ -362,4 +362,4 @@ export const loader = createLoader(async ({ request }) => {
 - [File Router](./file-router.md)
 - [Route Tree](./route-tree.md)
 - [Validators](./validators.md)
-- [Routing Concepts](/core-concepts/routing)
+- [Routing Concepts](/concepts/routing)

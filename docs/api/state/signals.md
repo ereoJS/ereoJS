@@ -446,4 +446,4 @@ export default function Detail() {
 ## Related
 
 - [Stores](/api/state/stores)
-- [Islands](/core-concepts/islands)
+- [Islands](/concepts/islands)

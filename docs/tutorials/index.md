@@ -4,7 +4,7 @@ Hands-on tutorials to learn EreoJS by building real applications.
 
 ## Available Tutorials
 
-### [Build a Blog](/tutorials/blog-tutorial/01-setup)
+### [Build a Blog](/tutorials/blog/01-setup)
 
 A comprehensive 6-part tutorial that covers all the fundamentals by building a full-featured blog application.
 
@@ -20,7 +20,7 @@ A comprehensive 6-part tutorial that covers all the fundamentals by building a f
 
 **Time:** ~2 hours
 
-### [Build a Dashboard](/tutorials/dashboard-tutorial/)
+### [Build a Dashboard](/tutorials/dashboard/)
 
 Learn advanced patterns by building an authenticated dashboard with interactive islands.
 
@@ -38,11 +38,11 @@ Learn advanced patterns by building an authenticated dashboard with interactive 
 
 | Chapter | Topic | Duration |
 |---------|-------|----------|
-| [1. Setup](/tutorials/dashboard-tutorial/01-setup) | Project and database setup | 20 min |
-| [2. Authentication](/tutorials/dashboard-tutorial/02-authentication) | Login, registration, sessions | 30 min |
-| [3. Islands](/tutorials/dashboard-tutorial/03-islands) | Interactive widgets | 35 min |
-| [4. Analytics](/tutorials/dashboard-tutorial/04-analytics) | Shared state between islands | 30 min |
-| [5. Deployment](/tutorials/dashboard-tutorial/05-deployment) | Production deployment | 25 min |
+| [1. Setup](/tutorials/dashboard/01-setup) | Project and database setup | 20 min |
+| [2. Authentication](/tutorials/dashboard/02-authentication) | Login, registration, sessions | 30 min |
+| [3. Islands](/tutorials/dashboard/03-islands) | Interactive widgets | 35 min |
+| [4. Analytics](/tutorials/dashboard/04-analytics) | Shared state between islands | 30 min |
+| [5. Deployment](/tutorials/dashboard/05-deployment) | Production deployment | 25 min |
 
 ## Tutorial Structure
 
@@ -66,12 +66,12 @@ Each tutorial is broken into manageable sections:
 
 | Chapter | Topic | Duration |
 |---------|-------|----------|
-| [1. Setup](/tutorials/blog-tutorial/01-setup) | Project initialization | 15 min |
-| [2. Routes](/tutorials/blog-tutorial/02-routes) | Pages and navigation | 20 min |
-| [3. Data Loading](/tutorials/blog-tutorial/03-data-loading) | Loaders and database | 25 min |
-| [4. Forms](/tutorials/blog-tutorial/04-forms) | Actions and mutations | 25 min |
-| [5. Styling](/tutorials/blog-tutorial/05-styling) | Tailwind CSS | 20 min |
-| [6. Deployment](/tutorials/blog-tutorial/06-deployment) | Going live | 15 min |
+| [1. Setup](/tutorials/blog/01-setup) | Project initialization | 15 min |
+| [2. Routes](/tutorials/blog/02-routes) | Pages and navigation | 20 min |
+| [3. Data Loading](/tutorials/blog/03-data-loading) | Loaders and database | 25 min |
+| [4. Forms](/tutorials/blog/04-forms) | Actions and mutations | 25 min |
+| [5. Styling](/tutorials/blog/05-styling) | Tailwind CSS | 20 min |
+| [6. Deployment](/tutorials/blog/06-deployment) | Going live | 15 min |
 
 ## Example Code
 

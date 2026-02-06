@@ -2,7 +2,7 @@
 
 APIs for working with the islands architecture - selective hydration for interactive components.
 
-> **Note:** For most use cases, you can use the `'use client'` directive to mark components for hydration without manual registration. The APIs below are for the advanced `data-island` approach, which gives you control over hydration timing (idle, visible, media, etc.). See [Islands Architecture](/core-concepts/islands) for when to use each approach.
+> **Note:** For most use cases, you can use the `'use client'` directive to mark components for hydration without manual registration. The APIs below are for the advanced `data-island` approach, which gives you control over hydration timing (idle, visible, media, etc.). See [Islands Architecture](/concepts/islands) for when to use each approach.
 
 ## Import
 
@@ -581,6 +581,6 @@ function getIslandCount(): number
 
 ## Related
 
-- [Islands Concepts](/core-concepts/islands)
+- [Islands Concepts](/concepts/islands)
 - [Client Hooks](/api/client/hooks)
 - [State Management](/api/state/signals)

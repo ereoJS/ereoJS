@@ -44,6 +44,16 @@ cd my-app
 bun dev
 ```
 
+## Choose Your Learning Path
+
+**New to EreoJS?** Follow the [Getting Started guide](/getting-started/) to build your first app.
+
+**Coming from another framework?** Jump to the migration guide for [Next.js](/migration/from-nextjs), [Remix](/migration/from-remix), or [Express](/migration/from-express).
+
+**Looking for a specific topic?** Browse the [Guides](/guides/) for practical how-to articles or the [API Reference](/api/core/create-app) for detailed API docs.
+
+**Want to understand the architecture?** Read the [Core Concepts](/concepts/) to learn how EreoJS works under the hood.
+
 ## Why EreoJS?
 
 EreoJS combines the best ideas from modern React frameworks while staying true to web standards and keeping things simple:
@@ -64,7 +74,7 @@ EreoJS combines the best ideas from modern React frameworks while staying true t
 | Caching | Tag-based | ISR/Cache | Manual |
 | Forms | Progressive | Client-only | Progressive |
 
-[See detailed comparisons →](/comparisons/vs-nextjs)
+[See detailed comparisons →](/architecture/comparisons/vs-nextjs)
 
 ## Example
 

@@ -491,5 +491,5 @@ export const loader = createLoader(async ({ params }) => {
 - [@ereo/db](/api/db) — Core database abstractions
 - [@ereo/db-drizzle](/api/db/drizzle) — Drizzle ORM adapter (recommended)
 - [@ereo/db-surrealdb](/api/db/surrealdb) — SurrealDB adapter
-- [Caching](/core-concepts/caching) — Cache strategies for database queries
-- [Data Loading](/core-concepts/data-loading) — Loaders and actions
+- [Caching](/concepts/caching) — Cache strategies for database queries
+- [Data Loading](/concepts/data-loading) — Loaders and actions

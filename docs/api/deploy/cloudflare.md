@@ -339,7 +339,7 @@ Cloudflare Workers have a 1 MB compressed bundle limit. If exceeded:
 
 ## Related
 
-- [Deploying to Cloudflare Guide](/deployment/cloudflare) — Step-by-step deployment walkthrough
-- [Data Loading](/core-concepts/data-loading) — Loaders, actions, and all definition approaches
+- [Deploying to Cloudflare Guide](/ecosystem/deployment/cloudflare) — Step-by-step deployment walkthrough
+- [Data Loading](/concepts/data-loading) — Loaders, actions, and all definition approaches
 - [Vercel Deployment](/api/deploy/vercel) — Alternative deployment adapter
 - [Build CLI](/api/cli/build) — Build command reference

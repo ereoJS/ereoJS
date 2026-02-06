@@ -201,6 +201,6 @@ Nest boundaries for fine-grained loading:
 
 ## Related
 
-- [Rendering Modes](/core-concepts/rendering-modes)
-- [Advanced Streaming](/advanced/streaming)
+- [Rendering Modes](/concepts/rendering-modes)
+- [Advanced Streaming](/architecture/streaming-deep-dive)
 - [defer()](/api/data/loaders#defer)

@@ -571,6 +571,6 @@ await cache.deleteByTag('posts')
 
 ## Related
 
-- [Caching Concepts](/core-concepts/caching)
+- [Caching Concepts](/concepts/caching)
 - [Core Cache API](/api/core/cache)
 - [Revalidation](/api/data/revalidation)

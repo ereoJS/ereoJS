@@ -475,7 +475,7 @@ This package depends on:
 
 ## Related
 
-- [Deploying to Vercel Guide](/deployment/vercel) — Step-by-step deployment walkthrough
-- [Data Loading](/core-concepts/data-loading) — Loaders, actions, and all definition approaches
+- [Deploying to Vercel Guide](/ecosystem/deployment/vercel) — Step-by-step deployment walkthrough
+- [Data Loading](/concepts/data-loading) — Loaders, actions, and all definition approaches
 - [Cloudflare Deployment](/api/deploy/cloudflare) — Alternative deployment adapter
 - [Build CLI](/api/cli/build) — Build command reference

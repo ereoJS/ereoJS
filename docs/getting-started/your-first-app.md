@@ -362,7 +362,7 @@ export async function loader({ params }: LoaderArgs<{ id: string }>) {
 
 Data is available via the `loaderData` prop or `useLoaderData()` hook.
 
-> **Alternative approaches:** This tutorial uses plain function exports for simplicity. As your app grows, you can use `createLoader` from `@ereo/data` for built-in caching and error handling, or the `defineRoute` builder for full type safety. See [Data Loading](/core-concepts/data-loading) for all options.
+> **Alternative approaches:** This tutorial uses plain function exports for simplicity. As your app grows, you can use `createLoader` from `@ereo/data` for built-in caching and error handling, or the `defineRoute` builder for full type safety. See [Data Loading](/concepts/data-loading) for all options.
 
 ### Form Actions
 
@@ -378,7 +378,7 @@ export async function action({ request }: ActionArgs) {
 }
 ```
 
-> **Alternative approaches:** You can also use `createAction` from `@ereo/data` for built-in validation and auto-parsed FormData, or `typedAction` for typed JSON bodies. See [Data Loading](/core-concepts/data-loading) for all options.
+> **Alternative approaches:** You can also use `createAction` from `@ereo/data` for built-in validation and auto-parsed FormData, or `typedAction` for typed JSON bodies. See [Data Loading](/concepts/data-loading) for all options.
 
 ### Progressive Enhancement
 
@@ -395,7 +395,7 @@ The `<Link>` component provides client-side navigation with prefetching:
 
 ## Next Steps
 
-- [Learn about routing in depth](/core-concepts/routing)
-- [Understand data loading patterns](/core-concepts/data-loading)
-- [Add interactivity with islands](/core-concepts/islands)
-- [Build a complete blog app](/tutorials/blog-tutorial/01-setup)
+- [Learn about routing in depth](/concepts/routing)
+- [Understand data loading patterns](/concepts/data-loading)
+- [Add interactivity with islands](/concepts/islands)
+- [Build a complete blog app](/tutorials/blog/01-setup)

@@ -372,4 +372,4 @@ function createDevToolsStore<T extends Record<string, any>>(
 ## Related
 
 - [Signals](/api/state/signals)
-- [Islands](/core-concepts/islands)
+- [Islands](/concepts/islands)

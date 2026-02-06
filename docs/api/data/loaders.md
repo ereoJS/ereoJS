@@ -2,7 +2,7 @@
 
 Loaders fetch data on the server before rendering a route component. They are the primary way to get data into your pages.
 
-> **Not sure which approach to use?** See the [Data Loading overview](/core-concepts/data-loading) for a comparison of all three approaches (plain export, createLoader, defineRoute).
+> **Not sure which approach to use?** See the [Data Loading overview](/concepts/data-loading) for a comparison of all three approaches (plain export, createLoader, defineRoute).
 
 ## Import
 
@@ -363,7 +363,7 @@ export const loader = createLoader(async ({ request, params }) => {
 
 ## Related
 
-- [Data Loading Concepts](/core-concepts/data-loading) — Overview of all approaches
+- [Data Loading Concepts](/concepts/data-loading) — Overview of all approaches
 - [Actions](/api/data/actions) — Handling mutations
 - [Caching](/api/data/cache) — Cache configuration
 - [defineRoute Builder](/api/data/define-route) — Builder pattern

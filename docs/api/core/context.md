@@ -362,6 +362,6 @@ const user = context.get<{ id: string; name: string }>('user')
 
 ## Related
 
-- [Middleware](/core-concepts/middleware)
-- [Data Loading](/core-concepts/data-loading)
+- [Middleware](/concepts/middleware)
+- [Data Loading](/concepts/data-loading)
 - [createApp](/api/core/create-app)

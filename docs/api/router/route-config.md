@@ -647,8 +647,8 @@ export function ErrorBoundary() {
 
 ## Related
 
-- [Routing Concepts](/core-concepts/routing)
+- [Routing Concepts](/concepts/routing)
 - [File Router](/api/router/file-router)
 - [Loaders](/api/data/loaders)
 - [Actions](/api/data/actions)
-- [Caching](/core-concepts/caching)
+- [Caching](/concepts/caching)

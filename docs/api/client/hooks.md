@@ -782,6 +782,6 @@ function useFormStatus() {
 
 ## Related
 
-- [Data Loading](/core-concepts/data-loading)
+- [Data Loading](/concepts/data-loading)
 - [Form Component](/api/client/form)
 - [Navigation](/api/client/navigation)

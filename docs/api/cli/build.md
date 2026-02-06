@@ -252,4 +252,4 @@ NODE_OPTIONS="--max-old-space-size=8192" bun ereo build
 
 - [dev](/api/cli/dev)
 - [start](/api/cli/start)
-- [Deployment](/deployment/bun)
+- [Deployment](/ecosystem/deployment/bun)
