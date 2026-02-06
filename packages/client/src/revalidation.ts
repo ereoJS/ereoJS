@@ -6,12 +6,19 @@
  * unnecessary data re-fetching, improving performance.
  */
 
+import {
+  useState,
+  useCallback,
+  useContext,
+} from 'react';
 import type {
   RouteModule,
   RouteParams,
   ShouldRevalidateArgs,
   ShouldRevalidateFunction,
 } from '@ereo/core';
+import { LoaderDataContext, type LoaderDataContextValue } from './hooks';
+import { MatchesContext, type MatchesContextValue } from './matches';
 
 /**
  * A matched route with its loaded module, used for revalidation decisions.
@@ -126,4 +133,72 @@ export function checkShouldRevalidate(
   } catch {
     return args.defaultShouldRevalidate;
   }
+}
+
+/**
+ * State returned by useRevalidator.
+ */
+export interface RevalidatorState {
+  /** Current revalidation state */
+  state: 'idle' | 'loading';
+  /** Trigger a revalidation of the current route's data */
+  revalidate: () => Promise<void>;
+}
+
+/**
+ * Hook to manually revalidate the current route's loader data.
+ * Fetches fresh data from the server and updates contexts.
+ *
+ * @returns RevalidatorState with state and revalidate function
+ *
+ * @example
+ * ```tsx
+ * function Dashboard() {
+ *   const { state, revalidate } = useRevalidator();
+ *   return (
+ *     <button onClick={revalidate} disabled={state === 'loading'}>
+ *       {state === 'loading' ? 'Refreshing...' : 'Refresh Data'}
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function useRevalidator(): RevalidatorState {
+  const [state, setState] = useState<'idle' | 'loading'>('idle');
+  const loaderCtx = useContext(LoaderDataContext);
+  const matchesCtx = useContext(MatchesContext);
+
+  const revalidate = useCallback(async () => {
+    // SSR-safe: no-op on server
+    if (typeof window === 'undefined') return;
+
+    setState('loading');
+    try {
+      const response = await fetch(window.location.href, {
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Revalidation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Update loader data context
+      if (loaderCtx) {
+        loaderCtx.setData(result.data);
+      }
+
+      // Update matches context if matches data is returned
+      if (matchesCtx && result.matches) {
+        matchesCtx.setMatches(result.matches);
+      }
+    } catch (error) {
+      console.error('Revalidation error:', error);
+    } finally {
+      setState('idle');
+    }
+  }, [loaderCtx, matchesCtx]);
+
+  return { state, revalidate };
 }

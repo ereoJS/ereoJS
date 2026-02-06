@@ -6,7 +6,7 @@
  */
 
 import type { Server } from 'bun';
-import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler, HeadersFunction } from '@ereo/core';
+import type { FrameworkConfig, RouteMatch, Route, RouteModule, MetaDescriptor, MiddlewareHandler, HeadersFunction, MethodHandlerFunction } from '@ereo/core';
 import { createContext, RequestContext, EreoApp, NotFoundError } from '@ereo/core';
 import { FileRouter, createFileRouter, matchWithLayouts, type MatchResult } from '@ereo/router';
 import {
@@ -384,6 +384,36 @@ export class BunServer {
   ): Promise<Response> {
     const module = match.route.module!;
 
+    // --- Method Handler Dispatch (API Routes) ---
+    const httpMethod = request.method.toUpperCase();
+    const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'] as const;
+    if (HTTP_METHODS.includes(httpMethod as any)) {
+      const methodHandler = (module as Record<string, unknown>)[httpMethod] as MethodHandlerFunction | undefined;
+      if (typeof methodHandler === 'function') {
+        const result = await methodHandler({ request, params: match.params, context });
+        if (result instanceof Response) {
+          const routeHeaders = this.buildRouteHeaders(match);
+          return this.applyRouteHeaders(result, routeHeaders);
+        }
+        const jsonResponse = new Response(JSON.stringify(result), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const routeHeaders = this.buildRouteHeaders(match);
+        return this.applyRouteHeaders(jsonResponse, routeHeaders);
+      }
+    }
+
+    // --- beforeLoad Route Guards ---
+    const layouts = match.layouts || [];
+    for (const layout of layouts) {
+      if (layout.module?.beforeLoad) {
+        await layout.module.beforeLoad({ request, params: match.params, context });
+      }
+    }
+    if (module.beforeLoad) {
+      await module.beforeLoad({ request, params: match.params, context });
+    }
+
     // Handle actions (POST, PUT, DELETE, PATCH)
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       if (module.action) {
@@ -410,7 +440,7 @@ export class BunServer {
     }
 
     // Run all loaders in parallel: route loader + layout loaders
-    const layouts = match.layouts || [];
+    // (layouts already declared above for beforeLoad guards)
     const loaderArgs = { request, params: match.params, context };
 
     // Build array of loader promises: [route, ...layouts]

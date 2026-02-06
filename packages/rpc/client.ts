@@ -20,6 +20,22 @@ export type {
   SubscriptionStatus,
 } from './src/hooks';
 
+// Server Functions (isomorphic — works on both client and server)
+export { createServerFn, ServerFnError, SERVER_FN_BASE } from './src/server-fn';
+export type {
+  ServerFn,
+  ServerFnOptions,
+  ServerFnContext,
+  ServerFnMiddleware,
+  ServerFnErrorShape,
+  InferServerFnInput,
+  InferServerFnOutput,
+} from './src/server-fn';
+
+// Server Function Hooks
+export { useServerFn } from './src/server-fn-hooks';
+export type { UseServerFnOptions, UseServerFnReturn } from './src/server-fn-hooks';
+
 // Re-export types needed for type inference
 export type {
   InferClient,

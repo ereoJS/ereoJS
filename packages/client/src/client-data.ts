@@ -11,7 +11,9 @@ import type {
   ClientActionArgs,
   ClientActionFunction,
   RouteParams,
+  RouteModule,
 } from '@ereo/core';
+import type { ComponentType } from 'react';
 import { fetchLoaderData, submitAction } from './navigation';
 
 /**
@@ -89,4 +91,17 @@ export function shouldHydrateClientLoader(
 ): boolean {
   if (!clientLoader) return false;
   return clientLoader.hydrate === true;
+}
+
+/**
+ * Get the HydrateFallback component from a route module.
+ * Only returns the component when `clientLoader.hydrate === true`,
+ * since HydrateFallback is only meaningful during client-loader hydration.
+ */
+export function getHydrateFallback(
+  module: RouteModule | undefined,
+): ComponentType | undefined {
+  if (!module) return undefined;
+  if (!shouldHydrateClientLoader(module.clientLoader)) return undefined;
+  return module.HydrateFallback;
 }

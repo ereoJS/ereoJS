@@ -45,6 +45,8 @@ import type {
   ClientActionFunction,
   LinkDescriptor,
   LinksFunction,
+  MethodHandlerFunction,
+  BeforeLoadFunction,
 } from '@ereo/core';
 
 // ============================================================================
@@ -197,6 +199,8 @@ interface RouteBuilderState<
   links?: LinksFunction;
   config?: RouteConfig;
   cache?: CacheOptions;
+  beforeLoad?: BeforeLoadFunction<Params>;
+  methodHandlers?: Partial<Record<string, MethodHandlerFunction>>;
 }
 
 /**
@@ -265,6 +269,36 @@ export interface RouteBuilder<
    * Define per-route link descriptors (stylesheets, preloads, etc.).
    */
   links(fn: LinksFunction): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a beforeLoad guard that runs before the loader.
+   */
+  beforeLoad(fn: BeforeLoadFunction<Params>): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a GET method handler (API route).
+   */
+  get(fn: MethodHandlerFunction<unknown, Params>): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a POST method handler (API route).
+   */
+  post(fn: MethodHandlerFunction<unknown, Params>): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a PUT method handler (API route).
+   */
+  put(fn: MethodHandlerFunction<unknown, Params>): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a DELETE method handler (API route).
+   */
+  delete(fn: MethodHandlerFunction<unknown, Params>): RouteBuilder<Path, Params>;
+
+  /**
+   * Define a PATCH method handler (API route).
+   */
+  patch(fn: MethodHandlerFunction<unknown, Params>): RouteBuilder<Path, Params>;
 
   /**
    * Build the route definition (no loader case).
@@ -360,6 +394,36 @@ export interface RouteBuilderWithLoader<
   links(fn: LinksFunction): RouteBuilderWithLoader<Path, Params, LoaderData>;
 
   /**
+   * Define a beforeLoad guard that runs before the loader.
+   */
+  beforeLoad(fn: BeforeLoadFunction<Params>): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define a GET method handler (API route).
+   */
+  get(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define a POST method handler (API route).
+   */
+  post(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define a PUT method handler (API route).
+   */
+  put(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define a DELETE method handler (API route).
+   */
+  delete(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
+   * Define a PATCH method handler (API route).
+   */
+  patch(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoader<Path, Params, LoaderData>;
+
+  /**
    * Build the route definition.
    */
   build(): RouteDefinition<Path, Params, LoaderData, never, never>;
@@ -427,6 +491,36 @@ export interface RouteBuilderWithLoaderAndAction<
   links(fn: LinksFunction): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
 
   /**
+   * Define a beforeLoad guard that runs before the loader.
+   */
+  beforeLoad(fn: BeforeLoadFunction<Params>): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define a GET method handler (API route).
+   */
+  get(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define a POST method handler (API route).
+   */
+  post(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define a PUT method handler (API route).
+   */
+  put(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define a DELETE method handler (API route).
+   */
+  delete(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
+   * Define a PATCH method handler (API route).
+   */
+  patch(fn: MethodHandlerFunction<unknown, Params>): RouteBuilderWithLoaderAndAction<Path, Params, LoaderData, ActionData, ActionBody>;
+
+  /**
    * Build the route definition.
    */
   build(): RouteDefinition<Path, Params, LoaderData, ActionData, ActionBody>;
@@ -491,6 +585,16 @@ export interface RouteDefinition<
 
   /** Action body schema */
   actionBodySchema?: ValidationSchema<ActionBody>;
+
+  /** beforeLoad guard */
+  beforeLoad?: BeforeLoadFunction<Params>;
+
+  /** HTTP method handlers (API routes) */
+  GET?: MethodHandlerFunction;
+  POST?: MethodHandlerFunction;
+  PUT?: MethodHandlerFunction;
+  DELETE?: MethodHandlerFunction;
+  PATCH?: MethodHandlerFunction;
 
   /** Type brands for external type inference */
   readonly _types: {
@@ -600,6 +704,41 @@ export function defineRoute<Path extends string>(
       return createBuilder();
     },
 
+    beforeLoad(fn: BeforeLoadFunction<Params>) {
+      state.beforeLoad = fn;
+      return createBuilder();
+    },
+
+    get(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.GET = fn as MethodHandlerFunction;
+      return createBuilder();
+    },
+
+    post(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.POST = fn as MethodHandlerFunction;
+      return createBuilder();
+    },
+
+    put(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.PUT = fn as MethodHandlerFunction;
+      return createBuilder();
+    },
+
+    delete(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.DELETE = fn as MethodHandlerFunction;
+      return createBuilder();
+    },
+
+    patch(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.PATCH = fn as MethodHandlerFunction;
+      return createBuilder();
+    },
+
     build(): RouteDefinition<Path, Params, never, never, never> {
       return {
         path,
@@ -611,6 +750,8 @@ export function defineRoute<Path extends string>(
         links: state.links,
         searchParamsSchema: state.searchParamsSchema,
         hashParamsSchema: state.hashParamsSchema,
+        beforeLoad: state.beforeLoad,
+        ...(state.methodHandlers || {}),
         _types: {} as RouteDefinition<Path, Params, never, never, never>['_types'],
       };
     },
@@ -677,6 +818,41 @@ export function defineRoute<Path extends string>(
       return createBuilderWithLoader<LoaderData>();
     },
 
+    beforeLoad(fn: BeforeLoadFunction<Params>) {
+      state.beforeLoad = fn;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    get(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.GET = fn as MethodHandlerFunction;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    post(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.POST = fn as MethodHandlerFunction;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    put(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.PUT = fn as MethodHandlerFunction;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    delete(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.DELETE = fn as MethodHandlerFunction;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
+    patch(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.PATCH = fn as MethodHandlerFunction;
+      return createBuilderWithLoader<LoaderData>();
+    },
+
     build(): RouteDefinition<Path, Params, LoaderData, never, never> {
       return {
         path,
@@ -692,6 +868,8 @@ export function defineRoute<Path extends string>(
         links: state.links,
         searchParamsSchema: state.searchParamsSchema,
         hashParamsSchema: state.hashParamsSchema,
+        beforeLoad: state.beforeLoad,
+        ...(state.methodHandlers || {}),
         _types: {} as RouteDefinition<Path, Params, LoaderData, never, never>['_types'],
       };
     },
@@ -754,6 +932,41 @@ export function defineRoute<Path extends string>(
       return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
     },
 
+    beforeLoad(fn: BeforeLoadFunction<Params>) {
+      state.beforeLoad = fn;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    get(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.GET = fn as MethodHandlerFunction;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    post(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.POST = fn as MethodHandlerFunction;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    put(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.PUT = fn as MethodHandlerFunction;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    delete(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.DELETE = fn as MethodHandlerFunction;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
+    patch(fn: MethodHandlerFunction<unknown, Params>) {
+      if (!state.methodHandlers) state.methodHandlers = {};
+      state.methodHandlers.PATCH = fn as MethodHandlerFunction;
+      return createBuilderWithLoaderAndAction<LoaderData, ActionData, ActionBody>();
+    },
+
     build(): RouteDefinition<Path, Params, LoaderData, ActionData, ActionBody> {
       return {
         path,
@@ -771,6 +984,8 @@ export function defineRoute<Path extends string>(
         searchParamsSchema: state.searchParamsSchema,
         hashParamsSchema: state.hashParamsSchema,
         actionBodySchema: state.actionBodySchema as ValidationSchema<ActionBody>,
+        beforeLoad: state.beforeLoad,
+        ...(state.methodHandlers || {}),
         _types: {} as RouteDefinition<Path, Params, LoaderData, ActionData, ActionBody>['_types'],
       };
     },

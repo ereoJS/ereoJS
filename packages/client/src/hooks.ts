@@ -17,7 +17,7 @@ import {
 } from 'react';
 
 import type { RouteParams } from '@ereo/core';
-import { MatchesProvider, type RouteMatchData } from './matches';
+import { MatchesContext, MatchesProvider, type RouteMatchData } from './matches';
 
 // ============================================================================
 // Types
@@ -187,6 +187,30 @@ export function useLoaderData<T>(): T {
   }
 
   return context.data as T;
+}
+
+/**
+ * Access loader data from a specific route by its ID.
+ * Useful for accessing parent layout data or sibling route data.
+ *
+ * @returns The loader data for the specified route, or undefined if not found
+ *
+ * @example
+ * ```tsx
+ * function ChildComponent() {
+ *   const rootData = useRouteLoaderData<{ user: User }>('root-layout');
+ *   return <div>Hello {rootData?.user.name}</div>;
+ * }
+ * ```
+ */
+export function useRouteLoaderData<T>(routeId: string): T | undefined {
+  const context = useContext(MatchesContext);
+  if (context === null) {
+    return undefined;
+  }
+
+  const match = context.matches.find((m) => m.id === routeId);
+  return match?.data as T | undefined;
 }
 
 /**

@@ -418,6 +418,42 @@ export interface RouteModule {
    * If not exported, the framework defaults to always revalidating.
    */
   shouldRevalidate?: ShouldRevalidateFunction;
+
+  // --- Method Handlers (API Routes) ---
+
+  /** HTTP GET handler — takes precedence over loader when defined */
+  GET?: MethodHandlerFunction;
+  /** HTTP POST handler — takes precedence over action when defined */
+  POST?: MethodHandlerFunction;
+  /** HTTP PUT handler — takes precedence over action when defined */
+  PUT?: MethodHandlerFunction;
+  /** HTTP DELETE handler — takes precedence over action when defined */
+  DELETE?: MethodHandlerFunction;
+  /** HTTP PATCH handler — takes precedence over action when defined */
+  PATCH?: MethodHandlerFunction;
+  /** HTTP OPTIONS handler */
+  OPTIONS?: MethodHandlerFunction;
+  /** HTTP HEAD handler */
+  HEAD?: MethodHandlerFunction;
+
+  // --- Route Guards ---
+
+  /** Runs before the loader; throw a Response to redirect or an Error to short-circuit */
+  beforeLoad?: BeforeLoadFunction;
+
+  // --- SSG ---
+
+  /** Return an array of param objects for static generation at build time */
+  generateStaticParams?: GenerateStaticParamsFunction;
+
+  // --- Component Exports ---
+
+  /** Fallback component shown while clientLoader.hydrate is running */
+  HydrateFallback?: ComponentType;
+  /** Component shown while the route is pending (navigation in progress) */
+  PendingComponent?: ComponentType;
+  /** Component shown when a notFound() is thrown from the route */
+  NotFoundComponent?: ComponentType;
 }
 
 export interface RouteHandle {
@@ -452,6 +488,41 @@ export interface LoaderData<T = unknown> {
   data: T;
   headers?: Headers;
 }
+
+// ============================================================================
+// Method Handler Types (API Routes)
+// ============================================================================
+
+/**
+ * Handler for HTTP method exports (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD).
+ * When defined on a route module, takes precedence over loader/action.
+ * May return a Response directly, or a value that will be JSON-serialized.
+ */
+export type MethodHandlerFunction<T = unknown, P = RouteParams> = (
+  args: LoaderArgs<P>
+) => T | Response | Promise<T | Response>;
+
+// ============================================================================
+// Route Guard Types
+// ============================================================================
+
+/**
+ * Function that runs before the loader.
+ * Throw a Response (e.g. redirect) or an Error to short-circuit the request.
+ * Return void to allow the loader to proceed.
+ */
+export type BeforeLoadFunction<P = RouteParams> = (
+  args: LoaderArgs<P>
+) => void | Promise<void>;
+
+// ============================================================================
+// Static Generation Types
+// ============================================================================
+
+/**
+ * Return an array of param objects for static page generation at build time.
+ */
+export type GenerateStaticParamsFunction<P = RouteParams> = () => P[] | Promise<P[]>;
 
 // ============================================================================
 // Revalidation Types
@@ -815,6 +886,40 @@ export interface CacheControl {
 }
 
 // ============================================================================
+// Cookie Types
+// ============================================================================
+
+export interface CookieSetOptions {
+  /** Max-Age in seconds */
+  maxAge?: number;
+  /** Expiry date */
+  expires?: Date;
+  /** Cookie path (default: '/') */
+  path?: string;
+  /** Cookie domain */
+  domain?: string;
+  /** Secure flag (default: false, set automatically for HTTPS) */
+  secure?: boolean;
+  /** HttpOnly flag (default: true) */
+  httpOnly?: boolean;
+  /** SameSite attribute */
+  sameSite?: 'Strict' | 'Lax' | 'None';
+}
+
+export interface CookieJar {
+  /** Get a cookie value by name */
+  get(name: string): string | undefined;
+  /** Get all cookies as a record */
+  getAll(): Record<string, string>;
+  /** Set a cookie */
+  set(name: string, value: string, options?: CookieSetOptions): void;
+  /** Delete a cookie */
+  delete(name: string, options?: Pick<CookieSetOptions, 'path' | 'domain'>): void;
+  /** Check if a cookie exists */
+  has(name: string): boolean;
+}
+
+// ============================================================================
 // Context Types
 // ============================================================================
 
@@ -831,6 +936,8 @@ export interface AppContext {
   url: URL;
   /** Environment variables (safe for server) */
   env: Record<string, string | undefined>;
+  /** Cookie jar for reading/writing cookies (optional for backward compat) */
+  cookies?: CookieJar;
 }
 
 // ============================================================================

@@ -6,6 +6,7 @@
  */
 
 import type { ActionArgs, ActionFunction, RouteParams } from '@ereo/core';
+import { serializeLoaderData } from './loader';
 
 /**
  * Parsed action body - can be any type when using JSON.
@@ -501,11 +502,39 @@ export function jsonAction<TBody, TResult = TBody, P extends RouteParams = Route
 
 /**
  * Redirect response helper.
+ * Accepts a status code or full ResponseInit for custom headers.
  */
-export function redirect(url: string, status: 301 | 302 | 303 | 307 | 308 = 302): Response {
+export function redirect(url: string, init?: number | ResponseInit): Response {
+  const status = typeof init === 'number' ? init : (init?.status ?? 302);
+  const headers = new Headers(typeof init === 'object' ? init?.headers : undefined);
+  headers.set('Location', url);
   return new Response(null, {
+    ...(typeof init === 'object' ? init : undefined),
     status,
-    headers: { Location: url },
+    headers,
+  });
+}
+
+/**
+ * Throw a redirect response.
+ * The server catches thrown Responses and returns them directly.
+ */
+export function throwRedirect(url: string, init?: number | ResponseInit): never {
+  throw redirect(url, init);
+}
+
+/**
+ * XSS-safe data response helper.
+ * Uses serializeLoaderData to escape dangerous characters.
+ */
+export function data<T>(value: T, init?: ResponseInit): Response {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return new Response(serializeLoaderData(value), {
+    ...init,
+    headers,
   });
 }
 
@@ -513,12 +542,13 @@ export function redirect(url: string, status: 301 | 302 | 303 | 307 | 308 = 302)
  * JSON response helper.
  */
 export function json<T>(data: T, init?: ResponseInit): Response {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
   return new Response(JSON.stringify(data), {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers,
   });
 }
 

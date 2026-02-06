@@ -27,6 +27,7 @@ export type { HydrationProps } from './hydration';
 export {
   // Hooks
   useLoaderData,
+  useRouteLoaderData,
   useActionData,
   useNavigation,
   useError,
@@ -101,7 +102,7 @@ export {
   setupScrollRestoration,
 } from './navigation';
 
-export type { NavigationState, NavigationEvent, NavigationListener } from './navigation';
+export type { NavigationState, NavigationEvent, NavigationListener, BlockerFunction, PendingNavigation } from './navigation';
 
 // Prefetch
 export {
@@ -170,6 +171,7 @@ export {
   useFormContext,
   useSubmit,
   useFetcher,
+  useFetchers,
   useActionData as useFormActionData,
   useNavigation as useFormNavigation,
   serializeFormData,
@@ -193,12 +195,27 @@ export type {
 export {
   getRoutesToRevalidate,
   checkShouldRevalidate,
+  useRevalidator,
 } from './revalidation';
 
 export type {
   RevalidationRoute,
   RevalidationContext,
+  RevalidatorState,
 } from './revalidation';
+
+// Navigation Type Hook
+export { useNavigationType } from './use-navigation-type';
+export type { NavigationType } from './use-navigation-type';
+
+// Before Unload Hook
+export { useBeforeUnload } from './use-before-unload';
+export type { UseBeforeUnloadOptions } from './use-before-unload';
+
+// Navigation Blocker
+export { useBlocker } from './blocker';
+
+export type { BlockerState, UseBlockerReturn } from './blocker';
 
 // Error Boundary
 export {
@@ -261,6 +278,7 @@ export {
   executeClientLoader,
   executeClientAction,
   shouldHydrateClientLoader,
+  getHydrateFallback,
 } from './client-data';
 
 // Lazy Route Loading (code splitting)

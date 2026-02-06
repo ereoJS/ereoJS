@@ -122,6 +122,15 @@ export type {
   ActionFunction,
   LoaderData,
 
+  // Method Handlers (API Routes)
+  MethodHandlerFunction,
+
+  // Route Guards
+  BeforeLoadFunction,
+
+  // Static Generation
+  GenerateStaticParamsFunction,
+
   // Revalidation
   ShouldRevalidateArgs,
   ShouldRevalidateFunction,
@@ -159,6 +168,10 @@ export type {
   // Cache
   CacheOptions,
   CacheControl,
+
+  // Cookies
+  CookieSetOptions,
+  CookieJar,
 
   // Context
   AppContext,

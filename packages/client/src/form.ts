@@ -145,6 +145,55 @@ export function useFormContext(): FormContextValue | null {
 }
 
 // ============================================================================
+// Fetcher Registry (for useFetchers)
+// ============================================================================
+
+/** Global registry of all active fetcher states */
+const fetcherRegistry = new Map<string, FetcherState>();
+/** Listeners notified when the registry changes */
+const fetcherListeners = new Set<() => void>();
+
+let fetcherIdCounter = 0;
+
+function generateFetcherId(): string {
+  return `__fetcher_${++fetcherIdCounter}`;
+}
+
+function registerFetcher(id: string, state: FetcherState): void {
+  fetcherRegistry.set(id, state);
+  notifyFetcherListeners();
+}
+
+function updateFetcherInRegistry(id: string, state: FetcherState): void {
+  if (fetcherRegistry.has(id)) {
+    fetcherRegistry.set(id, state);
+    notifyFetcherListeners();
+  }
+}
+
+function unregisterFetcher(id: string): void {
+  fetcherRegistry.delete(id);
+  notifyFetcherListeners();
+}
+
+function notifyFetcherListeners(): void {
+  for (const listener of fetcherListeners) {
+    listener();
+  }
+}
+
+function subscribeFetcherRegistry(listener: () => void): () => void {
+  fetcherListeners.add(listener);
+  return () => {
+    fetcherListeners.delete(listener);
+  };
+}
+
+function getFetcherRegistrySnapshot(): FetcherState[] {
+  return Array.from(fetcherRegistry.values());
+}
+
+// ============================================================================
 // Form Component
 // ============================================================================
 
@@ -515,14 +564,27 @@ export function useFetcher<T = unknown>(key?: string): Fetcher<T> {
   const [formMethod, setFormMethod] = useState<string | undefined>(undefined);
   const [formAction, setFormAction] = useState<string | undefined>(undefined);
 
+  // Stable fetcher ID for registry
+  const fetcherIdRef = useRef<string>(key || generateFetcherId());
+
   // Track mounted state to prevent state updates after unmount
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
+    const id = fetcherIdRef.current;
+    registerFetcher(id, { state: 'idle' });
     return () => {
       mountedRef.current = false;
+      unregisterFetcher(id);
     };
   }, []);
+
+  // Sync fetcher state to registry whenever it changes
+  useEffect(() => {
+    updateFetcherInRegistry(fetcherIdRef.current, {
+      state, data, error, formData, formMethod, formAction,
+    } as FetcherState);
+  }, [state, data, error, formData, formMethod, formAction]);
 
   const safeSetState = useCallback((newState: SubmissionState) => {
     if (mountedRef.current) {
@@ -786,6 +848,26 @@ export function useNavigation(): FormNavigationState {
     ...navigationState,
     state: formContext?.state || 'idle',
   };
+}
+
+// ============================================================================
+// useFetchers Hook
+// ============================================================================
+
+/**
+ * Hook that returns all active fetcher states.
+ * Useful for showing global loading indicators or progress bars.
+ */
+export function useFetchers(): FetcherState[] {
+  const [fetchers, setFetchers] = useState<FetcherState[]>(() => getFetcherRegistrySnapshot());
+
+  useEffect(() => {
+    return subscribeFetcherRegistry(() => {
+      setFetchers(getFetcherRegistrySnapshot());
+    });
+  }, []);
+
+  return fetchers;
 }
 
 // ============================================================================

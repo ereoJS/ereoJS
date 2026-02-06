@@ -5,7 +5,7 @@
  * Provides cache control, key-value storage, and response header management.
  */
 
-import type { AppContext, CacheControl, CacheOptions } from './types';
+import type { AppContext, CacheControl, CacheOptions, CookieJar, CookieSetOptions } from './types';
 
 /**
  * Create a new request context for handling a request.
@@ -29,11 +29,27 @@ export class RequestContext implements AppContext {
   private store = new Map<string, unknown>();
   private cacheOptions: CacheOptions | undefined;
   private cacheTags: string[] = [];
+  private cookieMap = new Map<string, string>();
+  private setCookieHeaders: string[] = [];
 
   constructor(request: Request) {
     this.url = new URL(request.url);
     this.env = typeof process !== 'undefined' ? process.env : {};
     this.responseHeaders = new Headers();
+
+    // Parse Cookie header
+    const cookieHeader = request.headers.get('Cookie');
+    if (cookieHeader) {
+      for (const pair of cookieHeader.split(';')) {
+        const eqIndex = pair.indexOf('=');
+        if (eqIndex === -1) continue;
+        const name = pair.slice(0, eqIndex).trim();
+        const value = pair.slice(eqIndex + 1).trim();
+        if (name) {
+          this.cookieMap.set(name, decodeURIComponent(value));
+        }
+      }
+    }
   }
 
   /**
@@ -51,6 +67,45 @@ export class RequestContext implements AppContext {
     getTags: () => this.cacheTags,
     addTags: (tags: string[]) => {
       this.cacheTags = [...new Set([...this.cacheTags, ...tags])];
+    },
+  };
+
+  /**
+   * Cookie jar for reading/writing cookies.
+   */
+  readonly cookies: CookieJar = {
+    get: (name: string): string | undefined => {
+      return this.cookieMap.get(name);
+    },
+    getAll: (): Record<string, string> => {
+      const result: Record<string, string> = {};
+      for (const [name, value] of this.cookieMap) {
+        result[name] = value;
+      }
+      return result;
+    },
+    set: (name: string, value: string, options: CookieSetOptions = {}): void => {
+      this.cookieMap.set(name, value);
+      const parts = [`${encodeURIComponent(name)}=${encodeURIComponent(value)}`];
+      if (options.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`);
+      if (options.expires) parts.push(`Expires=${options.expires.toUTCString()}`);
+      parts.push(`Path=${options.path ?? '/'}`);
+      if (options.domain) parts.push(`Domain=${options.domain}`);
+      if (options.httpOnly !== false) parts.push('HttpOnly');
+      if (options.secure) parts.push('Secure');
+      if (options.sameSite) parts.push(`SameSite=${options.sameSite}`);
+      this.setCookieHeaders.push(parts.join('; '));
+    },
+    delete: (name: string, options?: Pick<CookieSetOptions, 'path' | 'domain'>): void => {
+      this.cookieMap.delete(name);
+      const parts = [`${encodeURIComponent(name)}=`, 'Max-Age=0'];
+      parts.push(`Path=${options?.path ?? '/'}`);
+      if (options?.domain) parts.push(`Domain=${options.domain}`);
+      parts.push('HttpOnly');
+      this.setCookieHeaders.push(parts.join('; '));
+    },
+    has: (name: string): boolean => {
+      return this.cookieMap.has(name);
     },
   };
 
@@ -130,6 +185,11 @@ export class RequestContext implements AppContext {
     // Add cache tags header for CDN invalidation
     if (this.cacheTags.length > 0 && !headers.has('X-Cache-Tags')) {
       headers.set('X-Cache-Tags', this.cacheTags.join(','));
+    }
+
+    // Append Set-Cookie headers
+    for (const setCookie of this.setCookieHeaders) {
+      headers.append('Set-Cookie', setCookie);
     }
 
     return new Response(response.body, {

@@ -767,4 +767,53 @@ describe('@ereo/client - Form', () => {
       expect(defaults.fetcherKey).toBeUndefined();
     });
   });
+
+  describe('useFetchers - fetcher registry', () => {
+    test('FetcherState interface has expected shape', () => {
+      const state: import('./form').FetcherState = {
+        state: 'idle',
+      };
+
+      expect(state.state).toBe('idle');
+      expect(state.data).toBeUndefined();
+      expect(state.error).toBeUndefined();
+      expect(state.formData).toBeUndefined();
+      expect(state.formMethod).toBeUndefined();
+      expect(state.formAction).toBeUndefined();
+    });
+
+    test('FetcherState tracks submission state', () => {
+      const states: import('./form').SubmissionState[] = ['idle', 'submitting', 'loading', 'error'];
+      expect(states).toHaveLength(4);
+
+      for (const s of states) {
+        const fetcher: import('./form').FetcherState = { state: s };
+        expect(fetcher.state).toBe(s);
+      }
+    });
+
+    test('FetcherState can hold data and error', () => {
+      const withData: import('./form').FetcherState<{ message: string }> = {
+        state: 'idle',
+        data: { message: 'hello' },
+      };
+      expect(withData.data?.message).toBe('hello');
+
+      const withError: import('./form').FetcherState = {
+        state: 'error',
+        error: new Error('failed'),
+      };
+      expect(withError.error?.message).toBe('failed');
+    });
+
+    test('FetcherState can track form metadata', () => {
+      const fetcher: import('./form').FetcherState = {
+        state: 'submitting',
+        formMethod: 'POST',
+        formAction: '/api/submit',
+      };
+      expect(fetcher.formMethod).toBe('POST');
+      expect(fetcher.formAction).toBe('/api/submit');
+    });
+  });
 });

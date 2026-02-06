@@ -3,10 +3,12 @@ import {
   executeClientLoader,
   executeClientAction,
   shouldHydrateClientLoader,
+  getHydrateFallback,
 } from './client-data';
 import type {
   ClientLoaderFunction,
   ClientActionFunction,
+  RouteModule,
 } from '@ereo/core';
 
 // =================================================================
@@ -198,6 +200,54 @@ describe('@ereo/client - shouldHydrateClientLoader', () => {
 });
 
 // =================================================================
+// getHydrateFallback tests
+// =================================================================
+
+describe('@ereo/client - getHydrateFallback', () => {
+  test('returns undefined when module is undefined', () => {
+    expect(getHydrateFallback(undefined)).toBeUndefined();
+  });
+
+  test('returns undefined when no clientLoader', () => {
+    const module: RouteModule = {
+      HydrateFallback: () => null,
+    };
+    expect(getHydrateFallback(module)).toBeUndefined();
+  });
+
+  test('returns undefined when clientLoader.hydrate is false', () => {
+    const clientLoader: ClientLoaderFunction = async () => ({});
+    clientLoader.hydrate = false;
+
+    const module: RouteModule = {
+      clientLoader,
+      HydrateFallback: () => null,
+    };
+    expect(getHydrateFallback(module)).toBeUndefined();
+  });
+
+  test('returns undefined when clientLoader.hydrate is true but no HydrateFallback', () => {
+    const clientLoader: ClientLoaderFunction = async () => ({});
+    clientLoader.hydrate = true;
+
+    const module: RouteModule = { clientLoader };
+    expect(getHydrateFallback(module)).toBeUndefined();
+  });
+
+  test('returns HydrateFallback when clientLoader.hydrate is true', () => {
+    const clientLoader: ClientLoaderFunction = async () => ({});
+    clientLoader.hydrate = true;
+
+    const FallbackComponent = () => null;
+    const module: RouteModule = {
+      clientLoader,
+      HydrateFallback: FallbackComponent,
+    };
+    expect(getHydrateFallback(module)).toBe(FallbackComponent);
+  });
+});
+
+// =================================================================
 // defineRoute integration tests
 // =================================================================
 
@@ -284,5 +334,68 @@ describe('@ereo/data - defineRoute with clientLoader/clientAction/links', () => 
 
     expect(route.clientLoader).toBeDefined();
     expect(route.loader).toBeUndefined();
+  });
+
+  test('builder supports beforeLoad method', async () => {
+    const { defineRoute } = await import('@ereo/data');
+
+    const route = defineRoute('/admin')
+      .beforeLoad(async ({ context }) => {
+        // Guard: throw redirect if not authed
+      })
+      .loader(async () => ({ admin: true }))
+      .build();
+
+    expect(route.beforeLoad).toBeDefined();
+    expect(typeof route.beforeLoad).toBe('function');
+  });
+
+  test('builder supports method handlers (get/post/put/delete/patch)', async () => {
+    const { defineRoute } = await import('@ereo/data');
+
+    const route = defineRoute('/api/users')
+      .get(async () => ({ users: [] }))
+      .post(async ({ request }) => ({ created: true }))
+      .build();
+
+    expect(route.GET).toBeDefined();
+    expect(route.POST).toBeDefined();
+    expect(route.PUT).toBeUndefined();
+    expect(route.DELETE).toBeUndefined();
+    expect(route.PATCH).toBeUndefined();
+  });
+
+  test('method handlers can be combined with loader', async () => {
+    const { defineRoute } = await import('@ereo/data');
+
+    const route = defineRoute('/api/items/[id]')
+      .loader(async ({ params }) => ({ item: { id: params.id } }))
+      .delete(async ({ params }) => ({ deleted: params.id }))
+      .patch(async ({ params }) => ({ patched: params.id }))
+      .build();
+
+    expect(route.loader).toBeDefined();
+    expect(route.DELETE).toBeDefined();
+    expect(route.PATCH).toBeDefined();
+  });
+
+  test('beforeLoad + method handlers + loader all chain together', async () => {
+    const { defineRoute } = await import('@ereo/data');
+
+    const route = defineRoute('/api/protected/[id]')
+      .beforeLoad(async () => {
+        // auth guard
+      })
+      .loader(async ({ params }) => ({ data: params.id }))
+      .action(async () => ({ ok: true }))
+      .get(async () => new Response('custom GET'))
+      .post(async () => new Response('custom POST'))
+      .build();
+
+    expect(route.beforeLoad).toBeDefined();
+    expect(route.loader).toBeDefined();
+    expect(route.action).toBeDefined();
+    expect(route.GET).toBeDefined();
+    expect(route.POST).toBeDefined();
   });
 });

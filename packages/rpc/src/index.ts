@@ -48,6 +48,32 @@ export {
 } from './middleware';
 export type { LoggingOptions, RateLimitOptions, TimingContext } from './middleware';
 
+// Server Functions
+export {
+  createServerFn,
+  ServerFnError,
+  registerServerFn,
+  getServerFn,
+  getAllServerFns,
+  unregisterServerFn,
+  clearServerFnRegistry,
+  SERVER_FN_BASE,
+} from './server-fn';
+export type {
+  ServerFn,
+  ServerFnOptions,
+  ServerFnContext,
+  ServerFnMiddleware,
+  ServerFnErrorShape,
+  RegisteredServerFn,
+  InferServerFnInput,
+  InferServerFnOutput,
+} from './server-fn';
+
+// Server Function Handler
+export { createServerFnHandler } from './server-fn-handler';
+export type { ServerFnHandlerOptions, ServerFnRequestHandler } from './server-fn-handler';
+
 // Types
 export type {
   // Schema

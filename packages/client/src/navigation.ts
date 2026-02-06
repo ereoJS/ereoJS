@@ -36,15 +36,94 @@ export interface NavigationEvent {
 export type NavigationListener = (event: NavigationEvent) => void;
 
 /**
+ * Blocker function - returns true to block navigation.
+ */
+export type BlockerFunction = () => boolean;
+
+/**
+ * Pending navigation that was blocked.
+ */
+export interface PendingNavigation {
+  to: string;
+  options: { replace?: boolean; state?: unknown; viewTransition?: boolean | ViewTransitionOptions };
+}
+
+/**
  * Client router for SPA navigation.
  */
 class ClientRouter {
   private listeners = new Set<NavigationListener>();
   private currentState: NavigationState;
+  private blockers = new Set<BlockerFunction>();
+  private blockerListeners = new Set<() => void>();
+  pendingNavigation: PendingNavigation | null = null;
 
   constructor() {
     this.currentState = this.getStateFromLocation();
     this.setupPopState();
+  }
+
+  /**
+   * Add a blocker function. Returns a cleanup function.
+   */
+  addBlocker(fn: BlockerFunction): () => void {
+    this.blockers.add(fn);
+    return () => this.blockers.delete(fn);
+  }
+
+  /**
+   * Check if any blocker wants to block navigation.
+   */
+  isBlocked(): boolean {
+    for (const fn of this.blockers) {
+      if (fn()) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Subscribe to blocker state changes.
+   */
+  subscribeBlocker(listener: () => void): () => void {
+    this.blockerListeners.add(listener);
+    return () => this.blockerListeners.delete(listener);
+  }
+
+  /**
+   * Notify blocker listeners.
+   */
+  private notifyBlockers(): void {
+    for (const listener of this.blockerListeners) {
+      listener();
+    }
+  }
+
+  /**
+   * Proceed with a pending blocked navigation.
+   */
+  proceedNavigation(): void {
+    const pending = this.pendingNavigation;
+    this.pendingNavigation = null;
+    // Temporarily remove blockers
+    const savedBlockers = new Set(this.blockers);
+    this.blockers.clear();
+    this.notifyBlockers();
+    if (pending) {
+      this.navigate(pending.to, pending.options).then(() => {
+        // Restore blockers after navigation completes
+        for (const fn of savedBlockers) {
+          this.blockers.add(fn);
+        }
+      });
+    }
+  }
+
+  /**
+   * Reset pending navigation (user chose to stay).
+   */
+  resetNavigation(): void {
+    this.pendingNavigation = null;
+    this.notifyBlockers();
   }
 
   /**
@@ -70,6 +149,19 @@ class ClientRouter {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('popstate', (event) => {
+      // Check blockers for back/forward navigation
+      if (this.isBlocked()) {
+        // Undo the browser navigation
+        const current = this.currentState;
+        window.history.pushState(current.state, '', current.pathname + current.search + current.hash);
+        this.pendingNavigation = {
+          to: window.location.pathname + window.location.search + window.location.hash,
+          options: {},
+        };
+        this.notifyBlockers();
+        return;
+      }
+
       const from = this.currentState;
       this.currentState = this.getStateFromLocation();
 
@@ -89,6 +181,13 @@ class ClientRouter {
     options: { replace?: boolean; state?: unknown; viewTransition?: boolean | ViewTransitionOptions } = {}
   ): Promise<void> {
     if (typeof window === 'undefined') return;
+
+    // Check blockers before proceeding
+    if (this.isBlocked()) {
+      this.pendingNavigation = { to, options };
+      this.notifyBlockers();
+      return;
+    }
 
     const useTransition = options.viewTransition === true
       ? areViewTransitionsEnabled() || options.viewTransition
