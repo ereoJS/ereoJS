@@ -2,6 +2,8 @@
 
 In this chapter, we'll add edit and delete functionality, handle multiple actions, and implement optimistic UI.
 
+> **Note on approach:** This tutorial continues using `createLoader` and `createAction` with the shorthand form. For routes needing caching or validation, you can switch to the options object form. See [Data Loading](/core-concepts/data-loading) for details.
+
 ## Edit Post Page
 
 Create `app/routes/posts/[slug]/edit.tsx`:

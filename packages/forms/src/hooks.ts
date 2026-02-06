@@ -4,11 +4,14 @@ import { FormStore } from './store';
 import type {
   FormConfig,
   FormStoreInterface,
+  FormPath,
+  PathValue,
   FieldHandle,
   FieldOptions,
   ArrayFieldHelpers,
   ArrayFieldItem,
   FormSubmitState,
+  ErrorSource,
 } from './types';
 import { getPath, deepClone } from './utils';
 
@@ -34,18 +37,31 @@ export function useForm<T extends Record<string, any>>(
 
 // ─── useField ────────────────────────────────────────────────────────────────
 
-export function useField<T extends Record<string, any>, V = unknown>(
+export function useField<T extends Record<string, any>, P extends FormPath<T> = FormPath<T>>(
+  form: FormStoreInterface<T>,
+  name: P,
+  opts?: FieldOptions<PathValue<T, P>>
+): FieldHandle<PathValue<T, P>>;
+export function useField<T extends Record<string, any>>(
   form: FormStoreInterface<T>,
   name: string,
-  opts?: FieldOptions<V>
-): FieldHandle<V> {
+  opts?: FieldOptions<any>
+): FieldHandle<any>;
+export function useField<T extends Record<string, any>>(
+  form: FormStoreInterface<T>,
+  name: string,
+  opts?: FieldOptions<any>
+): FieldHandle<any> {
+  // Internal: cast form to bypass FormPath constraint in implementation overload
+  const f = form as FormStoreInterface<any>;
+
   // Register field options, and re-register if options change
   const optsRef = useRef(opts);
   const registered = useRef(false);
   if (!registered.current || optsRef.current !== opts) {
     optsRef.current = opts;
     if (opts) {
-      form.register(name, opts);
+      f.register(name, opts);
     }
     registered.current = true;
   }
@@ -53,95 +69,99 @@ export function useField<T extends Record<string, any>, V = unknown>(
   // Unregister on unmount
   useEffect(() => {
     return () => {
-      form.unregister(name);
+      f.unregister(name);
     };
-  }, [form, name]);
+  }, [f, name]);
 
   // Subscribe to per-field signal for value
-  const valueSig = form.getSignal(name);
-  const value = useSignal(valueSig) as V;
+  const valueSig = f.getSignal(name);
+  const value = useSignal(valueSig);
 
   // Subscribe to per-field error signal
-  const errorsSig = form.getErrors(name);
+  const errorsSig = f.getErrors(name);
   const errors = useSignal(errorsSig);
 
   // Subscribe to form-level state for touched/dirty
   const touched = useSyncExternalStore(
     useCallback(
-      (cb: () => void) => form.subscribe(cb),
-      [form]
+      (cb: () => void) => f.subscribe(cb),
+      [f]
     ),
-    () => form.getTouched(name),
-    () => form.getTouched(name)
+    () => f.getTouched(name),
+    () => f.getTouched(name)
   );
 
   const dirty = useSyncExternalStore(
     useCallback(
-      (cb: () => void) => form.subscribe(cb),
-      [form]
+      (cb: () => void) => f.subscribe(cb),
+      [f]
     ),
-    () => form.getDirty(name),
-    () => form.getDirty(name)
+    () => f.getDirty(name),
+    () => f.getDirty(name)
   );
 
-  const validatingSig = form.getFieldValidating(name);
+  const validatingSig = f.getFieldValidating(name);
   const validating = useSignal(validatingSig);
 
+  // Subscribe to error map signal
+  const errorMapSig = f.getErrorMap(name);
+  const errorMap = useSignal(errorMapSig);
+
   const setValue = useCallback(
-    (v: V) => form.setValue(name, v),
-    [form, name]
+    (v: any) => f.setValue(name, v),
+    [f, name]
   );
 
   const setError = useCallback(
-    (errs: string[]) => form.setErrors(name, errs),
-    [form, name]
+    (errs: string[]) => f.setErrors(name, errs),
+    [f, name]
   );
 
   const clearErrors = useCallback(
-    () => form.clearErrors(name),
-    [form, name]
+    () => f.clearErrors(name),
+    [f, name]
   );
 
   const setTouched = useCallback(
-    (t: boolean) => form.setTouched(name, t),
-    [form, name]
+    (t: boolean) => f.setTouched(name, t),
+    [f, name]
   );
 
   const reset = useCallback(() => {
-    const baseline = getPath((form as FormStore<T>).getBaseline(), name);
-    form.setValue(name, baseline);
-    form.clearErrors(name);
-    form.setTouched(name, false);
-  }, [form, name]);
+    const baseline = getPath((form as unknown as FormStore<T>).getBaseline(), name);
+    f.setValue(name, baseline);
+    f.clearErrors(name);
+    f.setTouched(name, false);
+  }, [f, form, name]);
 
   const onChange = useCallback(
     (e: any) => {
-      let newValue: V;
+      let newValue: any;
       if (opts?.parse) {
         newValue = opts.parse(e);
       } else if (e && typeof e === 'object' && 'target' in e) {
         const target = e.target;
-        newValue = (target.type === 'checkbox' ? target.checked : target.value) as V;
+        newValue = target.type === 'checkbox' ? target.checked : target.value;
       } else {
-        newValue = e as V;
+        newValue = e;
       }
       if (opts?.transform) {
         newValue = opts.transform(newValue);
       }
-      form.setValue(name, newValue);
+      f.setValue(name, newValue);
     },
-    [form, name, opts]
+    [f, name, opts]
   );
 
   const onBlur = useCallback(() => {
-    form.setTouched(name);
-    form.triggerBlurValidation(name);
-  }, [form, name]);
+    f.setTouched(name);
+    f.triggerBlurValidation(name);
+  }, [f, name]);
 
   const refCallback = useCallback(
     (el: HTMLElement | null) => {
-      if ((form as FormStore<T>).setFieldRef) {
-        (form as FormStore<T>).setFieldRef(name, el);
+      if ((form as any).setFieldRef) {
+        (form as any).setFieldRef(name, el);
       }
     },
     [form, name]
@@ -171,6 +191,7 @@ export function useField<T extends Record<string, any>, V = unknown>(
     touched,
     dirty,
     validating,
+    errorMap,
     setValue,
     setError,
     clearErrors,
@@ -181,16 +202,24 @@ export function useField<T extends Record<string, any>, V = unknown>(
 
 // ─── useFieldArray ───────────────────────────────────────────────────────────
 
-export function useFieldArray<T extends Record<string, any>, Item = unknown>(
+export function useFieldArray<T extends Record<string, any>, P extends FormPath<T> = FormPath<T>>(
+  form: FormStoreInterface<T>,
+  name: P
+): ArrayFieldHelpers<PathValue<T, P> extends (infer U)[] ? U : unknown>;
+export function useFieldArray<T extends Record<string, any>>(
   form: FormStoreInterface<T>,
   name: string
-): ArrayFieldHelpers<Item> {
+): ArrayFieldHelpers<any>;
+export function useFieldArray<T extends Record<string, any>>(
+  form: FormStoreInterface<T>,
+  name: string
+): ArrayFieldHelpers<any> {
   const idCounter = useRef(0);
   // Parallel array of stable IDs — manipulated in sync with items
   const idsRef = useRef<string[]>([]);
 
-  const arraySig = form.getSignal(name);
-  const rawArray = useSignal(arraySig) as Item[] | undefined;
+  const arraySig = form.getSignal(name as any);
+  const rawArray = useSignal(arraySig) as any[] | undefined;
   const items = rawArray ?? [];
 
   // Sync IDs with current array length (handles external changes)
@@ -202,7 +231,7 @@ export function useFieldArray<T extends Record<string, any>, Item = unknown>(
     idsRef.current.length = items.length;
   }
 
-  const fields: ArrayFieldItem<Item>[] = useMemo(
+  const fields: ArrayFieldItem<any>[] = useMemo(
     () =>
       items.map((value, index) => ({
         id: idsRef.current[index] ?? `${name}-fallback-${index}`,
@@ -214,65 +243,65 @@ export function useFieldArray<T extends Record<string, any>, Item = unknown>(
   );
 
   const append = useCallback(
-    (value: Item) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+    (value: any) => {
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       idsRef.current = [...idsRef.current, `${name}-${idCounter.current++}`];
-      form.setValue(name, [...current, value]);
+      (form as any).setValue(name, [...current, value]);
     },
     [form, name]
   );
 
   const prepend = useCallback(
-    (value: Item) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+    (value: any) => {
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       idsRef.current = [`${name}-${idCounter.current++}`, ...idsRef.current];
-      form.setValue(name, [value, ...current]);
+      (form as any).setValue(name, [value, ...current]);
     },
     [form, name]
   );
 
   const insert = useCallback(
-    (index: number, value: Item) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+    (index: number, value: any) => {
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       const next = [...current];
       next.splice(index, 0, value);
       const ids = [...idsRef.current];
       ids.splice(index, 0, `${name}-${idCounter.current++}`);
       idsRef.current = ids;
-      form.setValue(name, next);
+      (form as any).setValue(name, next);
     },
     [form, name]
   );
 
   const remove = useCallback(
     (index: number) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       const next = [...current];
       next.splice(index, 1);
       const ids = [...idsRef.current];
       ids.splice(index, 1);
       idsRef.current = ids;
-      form.setValue(name, next);
+      (form as any).setValue(name, next);
     },
     [form, name]
   );
 
   const swap = useCallback(
     (indexA: number, indexB: number) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       const next = [...current];
       [next[indexA], next[indexB]] = [next[indexB], next[indexA]];
       const ids = [...idsRef.current];
       [ids[indexA], ids[indexB]] = [ids[indexB], ids[indexA]];
       idsRef.current = ids;
-      form.setValue(name, next);
+      (form as any).setValue(name, next);
     },
     [form, name]
   );
 
   const move = useCallback(
     (from: number, to: number) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       const next = [...current];
       const [item] = next.splice(from, 1);
       next.splice(to, 0, item);
@@ -280,40 +309,40 @@ export function useFieldArray<T extends Record<string, any>, Item = unknown>(
       const [id] = ids.splice(from, 1);
       ids.splice(to, 0, id);
       idsRef.current = ids;
-      form.setValue(name, next);
+      (form as any).setValue(name, next);
     },
     [form, name]
   );
 
   const replace = useCallback(
-    (index: number, value: Item) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+    (index: number, value: any) => {
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       const next = [...current];
       next[index] = value;
       // Keep same ID — same position, updated value
-      form.setValue(name, next);
+      (form as any).setValue(name, next);
     },
     [form, name]
   );
 
   const replaceAll = useCallback(
-    (values: Item[]) => {
+    (values: any[]) => {
       idsRef.current = values.map(() => `${name}-${idCounter.current++}`);
-      form.setValue(name, values);
+      (form as any).setValue(name, values);
     },
     [form, name]
   );
 
   const clone = useCallback(
     (index: number) => {
-      const current = (form.getValue(name) as Item[] | undefined) ?? [];
+      const current = (form.getValue(name as any) as any[] | undefined) ?? [];
       const next = [...current];
       const cloned = deepClone(current[index]);
       next.splice(index + 1, 0, cloned);
       const ids = [...idsRef.current];
       ids.splice(index + 1, 0, `${name}-${idCounter.current++}`);
       idsRef.current = ids;
-      form.setValue(name, next);
+      (form as any).setValue(name, next);
     },
     [form, name]
   );
@@ -330,6 +359,59 @@ export function useFieldArray<T extends Record<string, any>, Item = unknown>(
     replaceAll,
     clone,
   };
+}
+
+// ─── useWatch ────────────────────────────────────────────────────────────────
+
+export function useWatch<T extends Record<string, any>, P extends FormPath<T>>(
+  form: FormStoreInterface<T>,
+  path: P
+): PathValue<T, P>;
+export function useWatch<T extends Record<string, any>, P extends FormPath<T>>(
+  form: FormStoreInterface<T>,
+  paths: P[]
+): unknown[];
+export function useWatch<T extends Record<string, any>>(
+  form: FormStoreInterface<T>,
+  pathOrPaths: string | string[]
+): any {
+  const f = form as FormStoreInterface<any>;
+
+  if (typeof pathOrPaths === 'string') {
+    const sig = f.getSignal(pathOrPaths as any);
+    return useSignal(sig);
+  }
+
+  // Multi-field: subscribe to all signals, return tuple with stable reference
+  const prevRef = useRef<any[]>([]);
+
+  const subscribe = useCallback(
+    (cb: () => void) => {
+      const unsubs = pathOrPaths.map(p => f.getSignal(p as any).subscribe(cb));
+      return () => unsubs.forEach(u => u());
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [f, ...pathOrPaths]
+  );
+
+  const getSnapshot = useCallback(
+    () => {
+      const next = pathOrPaths.map(p => f.getValue(p as any));
+      // Return prev ref if values haven't changed (shallow equal)
+      if (
+        next.length === prevRef.current.length &&
+        next.every((v, i) => v === prevRef.current[i])
+      ) {
+        return prevRef.current;
+      }
+      prevRef.current = next;
+      return next;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [f, ...pathOrPaths]
+  );
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 // ─── useFormStatus ───────────────────────────────────────────────────────────

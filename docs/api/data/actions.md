@@ -1,6 +1,8 @@
 # Actions
 
-Actions handle form submissions and data mutations.
+Actions handle form submissions and data mutations. They run on the server when a non-GET request (POST, PUT, DELETE, etc.) is sent to a route.
+
+> **Not sure which approach to use?** See the [Data Loading overview](/core-concepts/data-loading) for a comparison of all three approaches (plain export, createAction, defineRoute).
 
 ## Import
 
@@ -30,82 +32,99 @@ import {
 
 ## createAction
 
-Creates a type-safe action function.
+Creates a type-safe action function. Accepts either a **plain function** (shorthand) or an **options object** (with validation, error handling, and automatic FormData parsing).
 
 ### Signature
 
 ```ts
+// Shorthand — pass a function directly
 function createAction<T, P = Record<string, string>>(
-  options: ActionOptions<T, P> | ActionHandler<T, P>
+  fn: (args: ActionArgs<P>) => T | Promise<T>
+): ActionFunction<T, P>
+
+// Full options — with validation, auto-parsed FormData, error handling
+function createAction<T, P = Record<string, string>>(
+  options: ActionOptions<T, P>
 ): ActionFunction<T, P>
 ```
 
-### Parameters
+### ActionOptions
 
 ```ts
 interface ActionOptions<T, P> {
-  // The action handler function
-  handler: ActionHandler<T, P>
-
-  // Validation function
-  validate?: (formData: FormData) => ValidationResult
-
-  // Transform formData before handling
-  transform?: (formData: FormData) => any
+  handler: (args: ActionArgs<P> & { formData: FormData }) => T | Promise<T>;
+  validate?: (formData: FormData) => ValidationResult | Promise<ValidationResult>;
+  onError?: (error: Error, args: ActionArgs<P>) => T | Response | Promise<T | Response>;
 }
+```
 
-type ActionHandler<T, P> = (args: ActionArgs<P>) => T | Promise<T>
+### ActionArgs
 
-interface ActionArgs<P> {
-  request: Request
-  params: P
-  context: RequestContext
+```ts
+interface ActionArgs<P = RouteParams> {
+  request: Request;    // The incoming Request object
+  params: P;           // URL parameters from dynamic segments
+  context: AppContext;  // App context (cookies, headers, session, etc.)
 }
 ```
 
 ### Examples
 
-#### Basic Action
+#### Shorthand (Plain Function)
+
+The simplest way to use `createAction` — just pass an async function. You handle FormData parsing yourself:
 
 ```ts
 export const action = createAction(async ({ request }) => {
   const formData = await request.formData()
-  const title = formData.get('title')
-  const content = formData.get('content')
+  const title = formData.get('title') as string
+  const content = formData.get('content') as string
 
   const post = await db.posts.create({ title, content })
   return redirect(`/posts/${post.id}`)
 })
 ```
 
-#### With Validation
+This is equivalent to a plain function export:
+
+```ts
+// These two are equivalent:
+export const action = createAction(async (args) => { ... })
+export async function action(args) { ... }
+```
+
+#### Options Object (With Validation)
+
+Use the options object when you want automatic FormData parsing and a validation step. The `handler` receives pre-parsed `formData`, and validation runs before the handler:
 
 ```ts
 export const action = createAction({
-  handler: async ({ request }) => {
-    const formData = await request.formData()
+  handler: async ({ formData }) => {
+    // formData is already parsed — no need to call request.formData()
     await db.posts.create(Object.fromEntries(formData))
     return redirect('/posts')
   },
   validate: (formData) => {
-    const errors = {}
+    const errors: Record<string, string[]> = {}
     if (!formData.get('title')) {
-      errors.title = 'Title is required'
+      errors.title = ['Title is required']
     }
     if (!formData.get('content')) {
-      errors.content = 'Content is required'
+      errors.content = ['Content is required']
     }
-    return Object.keys(errors).length ? { errors } : { valid: true }
-  }
+    return { success: Object.keys(errors).length === 0, errors }
+  },
 })
 ```
+
+When validation fails, the action returns `{ success: false, errors: { ... } }` without calling the handler.
 
 #### Returning Errors
 
 ```ts
 export const action = createAction(async ({ request }) => {
   const formData = await request.formData()
-  const email = formData.get('email')
+  const email = formData.get('email') as string
 
   if (!isValidEmail(email)) {
     return {
@@ -119,41 +138,71 @@ export const action = createAction(async ({ request }) => {
 })
 ```
 
-## action
+## Plain Function Export (Alternative)
 
-Shorthand for creating simple actions.
-
-### Signature
+You can also export a plain async function as `action`. No imports needed:
 
 ```ts
-function action<T, P>(
-  handler: (args: ActionArgs<P> & { formData: FormData }) => T | Promise<T>
-): ActionFunction<T, P>
+import type { ActionArgs } from '@ereo/core'
+
+export async function action({ request, params }: ActionArgs<{ id: string }>) {
+  const formData = await request.formData()
+  const intent = formData.get('intent')
+
+  if (intent === 'delete') {
+    await db.posts.delete(params.id)
+    return redirect('/posts')
+  }
+
+  return { success: true }
+}
 ```
 
-### Example
+This works because the EreoJS server calls whatever function is exported as `action`. The `createAction` helpers add features like validation and automatic FormData parsing on top.
+
+## action (Shorthand Helper)
+
+A convenience function that wraps a handler in `createAction`. The handler receives `formData` as part of its arguments (no need to parse it yourself):
 
 ```ts
-export const action = action(async ({ formData, params }) => {
-  const title = formData.get('title')
+import { action } from '@ereo/data'
+
+export const myAction = action(async ({ formData, params }) => {
+  const title = formData.get('title') as string
   await db.posts.update(params.id, { title })
   return { success: true }
 })
 ```
 
+> **Note:** Avoid naming conflicts by using a different variable name (e.g., `myAction`) when importing the `action` helper, since route files conventionally export `action`.
+
 ## typedAction
 
-Creates an action with typed request body.
+Creates an action with a typed request body. Automatically handles both JSON and FormData content types with type coercion.
 
 ### Signature
 
 ```ts
 function typedAction<TBody, TResult, P>(
   options: TypedActionOptions<TBody, TResult, P>
-): ActionFunction<TResult, P>
+): ActionFunction<ActionResult<TResult>, P>
 ```
 
-### Example
+### TypedActionOptions
+
+```ts
+interface TypedActionOptions<TBody, TResult, P> {
+  handler: (args: TypedActionArgs<TBody, P>) => TResult | Promise<TResult>;
+  validate?: (body: TBody) => ValidationResult | Promise<ValidationResult>;
+  transform?: (raw: unknown) => TBody;
+  schema?: { parse(data: unknown): TBody; safeParse?(...): {...} };
+  onError?: (error: Error, args: ActionArgs<P>) => TResult | Response | Promise<TResult | Response>;
+}
+```
+
+### Examples
+
+#### With Inline Type
 
 ```ts
 interface CreatePostBody {
@@ -164,37 +213,61 @@ interface CreatePostBody {
 
 export const action = typedAction<CreatePostBody, { id: string }>({
   handler: async ({ body }) => {
+    // body is typed as CreatePostBody
     const post = await db.posts.create(body)
     return { id: post.id }
   },
   validate: (body) => {
     if (!body.title || body.title.length < 3) {
-      return { error: 'Title must be at least 3 characters' }
+      return { success: false, errors: { title: ['Title must be at least 3 characters'] } }
     }
-    return { valid: true }
-  }
+    return { success: true }
+  },
+})
+```
+
+#### With Schema (Zod)
+
+```ts
+import { z } from 'zod'
+
+const CreatePostSchema = z.object({
+  title: z.string().min(1).max(200),
+  content: z.string().min(10),
+  tags: z.array(z.string()).default([]),
+  published: z.boolean().default(false),
+})
+
+export const action = typedAction({
+  schema: CreatePostSchema,
+  handler: async ({ body }) => {
+    // body is inferred from schema. Validation is automatic.
+    return db.posts.create({ data: body })
+  },
 })
 ```
 
 ## jsonAction
 
-Creates an action that accepts JSON body.
+Creates an action that only accepts JSON payloads. Useful for strict API endpoints.
 
 ### Signature
 
 ```ts
-function jsonAction<T, P>(
-  handler: (args: ActionArgs<P> & { body: any }) => T | Promise<T>
-): ActionFunction<T, P>
+function jsonAction<TBody, TResult, P>(
+  options: TypedActionOptions<TBody, TResult, P> & { strict?: boolean }
+): ActionFunction<ActionResult<TResult>, P>
 ```
 
 ### Example
 
 ```ts
-export const action = jsonAction(async ({ body, params }) => {
-  const { title, content } = body
-  await db.posts.update(params.id, { title, content })
-  return { success: true }
+export const action = jsonAction<{ ids: number[] }>({
+  strict: true,  // Returns 415 if Content-Type is not application/json
+  handler: async ({ body }) => {
+    await db.posts.deleteMany({ where: { id: { in: body.ids } } })
+    return { deleted: body.ids.length }
+  },
 })
 ```
 
@@ -209,8 +282,8 @@ function redirect(url: string, status?: number): Response
 ```
 
 ```ts
-return redirect('/posts')           // 302 redirect
-return redirect('/posts', 301)      // 301 redirect
+return redirect('/posts')           // 302 redirect (default)
+return redirect('/posts', 301)      // 301 permanent redirect
 return redirect('/posts', 303)      // 303 redirect (after POST)
 ```
 
@@ -225,9 +298,6 @@ function json(data: any, init?: ResponseInit): Response
 ```ts
 return json({ success: true })
 return json({ error: 'Not found' }, { status: 404 })
-return json(data, {
-  headers: { 'X-Custom': 'header' }
-})
 ```
 
 ### error
@@ -239,32 +309,34 @@ function error(message: string, status?: number): Response
 ```
 
 ```ts
-return error('Not found', 404)
-return error('Unauthorized', 401)
-return error('Server error', 500)
+throw error('Not found', 404)
+throw error('Unauthorized', 401)
 ```
 
 ## Utility Functions
 
 ### parseRequestBody
 
-Parses the request body based on content type.
+Parses the request body based on content type. Automatically handles JSON, FormData, and text.
 
 ```ts
-function parseRequestBody(request: Request): Promise<any>
+function parseRequestBody(request: Request): Promise<{
+  body: unknown;
+  formData?: FormData;
+  contentType: 'json' | 'form' | 'text' | 'unknown';
+}>
 ```
 
 ```ts
 export const action = createAction(async ({ request }) => {
-  // Automatically handles JSON, FormData, URLSearchParams
-  const body = await parseRequestBody(request)
-  return { received: body }
+  const { body, contentType } = await parseRequestBody(request)
+  // body is parsed based on Content-Type header
 })
 ```
 
 ### formDataToObject
 
-Converts FormData to a typed object with automatic type coercion and nested object support.
+Converts FormData to a typed object with automatic type coercion and support for nested objects/arrays.
 
 ```ts
 function formDataToObject<T = Record<string, unknown>>(
@@ -273,11 +345,11 @@ function formDataToObject<T = Record<string, unknown>>(
 ): T
 ```
 
-**Features:**
-- `field[]` or multiple same-name fields → array
-- `field.nested` → nested object
-- `field[0]`, `field[1]` → indexed array
-- Automatic type coercion (when `coerce: true`, default)
+**Conventions supported:**
+- `field[]` or multiple same-name fields -> array
+- `field.nested` -> nested object
+- `field[0]`, `field[1]` -> indexed array
+- Automatic type coercion: `"true"` -> `true`, `"42"` -> `42`, ISO dates -> `Date`
 
 ```ts
 const formData = new FormData()
@@ -285,43 +357,22 @@ formData.append('user.name', 'Alice')
 formData.append('user.email', 'alice@example.com')
 formData.append('tags[]', 'typescript')
 formData.append('tags[]', 'react')
-formData.append('items[0].name', 'Item 1')
-formData.append('items[0].price', '100')
 formData.append('active', 'true')
 
 const data = formDataToObject(formData)
 // {
 //   user: { name: 'Alice', email: 'alice@example.com' },
 //   tags: ['typescript', 'react'],
-//   items: [{ name: 'Item 1', price: 100 }],
 //   active: true  // coerced from string
 // }
-
-// Disable coercion to keep string values
-const rawData = formDataToObject(formData, { coerce: false })
-// { ..., active: 'true', items: [{ price: '100' }] }
 ```
 
 ### parseFormData
 
-Simple FormData to typed object conversion without nested object support.
+Simple FormData to typed object conversion (flat only, no nested objects).
 
 ```ts
-function parseFormData<T extends Record<string, unknown>>(
-  formData: FormData
-): Partial<T>
-```
-
-```ts
-interface ContactForm {
-  name: string
-  email: string
-  tags: string[]
-}
-
-const formData = await request.formData()
-const data = parseFormData<ContactForm>(formData)
-// { name: 'John', email: 'john@example.com', tags: ['support'] }
+function parseFormData<T extends Record<string, unknown>>(formData: FormData): Partial<T>
 ```
 
 ### coerceValue
@@ -332,60 +383,19 @@ Coerces a string value to the appropriate JavaScript type.
 function coerceValue(value: string): unknown
 ```
 
-**Supported conversions:**
-- `'true'` / `'false'` → boolean
-- `'null'` → null
-- `'undefined'` → undefined
-- Numeric strings → number
-- ISO date strings → Date
-- JSON objects/arrays → parsed object
-
-```ts
-coerceValue('true')           // true (boolean)
-coerceValue('false')          // false (boolean)
-coerceValue('null')           // null
-coerceValue('undefined')      // undefined
-coerceValue('42')             // 42 (number)
-coerceValue('3.14')           // 3.14 (number)
-coerceValue('2024-01-15')     // Date object
-coerceValue('{"a":1}')        // { a: 1 } (parsed JSON)
-coerceValue('[1,2,3]')        // [1, 2, 3] (parsed JSON array)
-coerceValue('hello')          // 'hello' (string unchanged)
-```
+Supported conversions: `'true'`/`'false'` -> boolean, `'null'` -> null, numeric strings -> number, ISO dates -> Date, JSON strings -> parsed object.
 
 ### validateRequired
 
 Validates that required fields are present in FormData.
 
 ```ts
-function validateRequired(
-  formData: FormData,
-  fields: string[]
-): ValidationResult
-
-interface ValidationResult {
-  success: boolean
-  errors?: Record<string, string[]>
-}
+function validateRequired(formData: FormData, fields: string[]): ValidationResult
 ```
 
 ```ts
-const formData = new FormData()
-formData.append('email', 'user@example.com')
-
 const result = validateRequired(formData, ['email', 'password'])
-// {
-//   success: false,
-//   errors: { password: ['password is required'] }
-// }
-
-// Use in createAction
-export const action = createAction({
-  validate: (formData) => validateRequired(formData, ['title', 'content']),
-  handler: async ({ formData }) => {
-    // ...
-  },
-})
+// { success: false, errors: { password: ['password is required'] } }
 ```
 
 ### combineValidators
@@ -399,35 +409,16 @@ function combineValidators(
 ```
 
 ```ts
-const validateEmail = (formData: FormData): ValidationResult => {
-  const email = formData.get('email') as string
-  if (!email?.includes('@')) {
-    return { success: false, errors: { email: ['Invalid email format'] } }
-  }
-  return { success: true }
-}
-
-const validatePassword = (formData: FormData): ValidationResult => {
-  const password = formData.get('password') as string
-  if (!password || password.length < 8) {
-    return { success: false, errors: { password: ['Password must be at least 8 characters'] } }
-  }
-  return { success: true }
-}
-
-// Combine validators
 const validateSignup = combineValidators(
   (fd) => validateRequired(fd, ['email', 'password', 'name']),
   validateEmail,
-  validatePassword
+  validatePassword,
 )
 
 export const action = createAction({
   validate: validateSignup,
   handler: async ({ formData }) => {
     // All validations passed
-    const email = formData.get('email')
-    // ...
   },
 })
 ```
@@ -449,7 +440,7 @@ export const action = createAction(async ({ request }) => {
     case 'delete':
       return handleDelete(formData)
     default:
-      return error('Unknown action', 400)
+      throw error('Unknown action', 400)
   }
 })
 ```
@@ -484,12 +475,8 @@ export default function NewPost() {
         name="title"
         defaultValue={actionData?.values?.title}
       />
-      {actionData?.error && (
-        <p className="error">{actionData.error}</p>
-      )}
-      {actionData?.success && (
-        <p className="success">Created!</p>
-      )}
+      {actionData?.error && <p className="error">{actionData.error}</p>}
+      {actionData?.success && <p className="success">Created!</p>}
       <button type="submit">Create</button>
     </Form>
   )
@@ -498,7 +485,7 @@ export default function NewPost() {
 
 ## Optimistic Updates
 
-Combine actions with optimistic UI:
+Combine actions with optimistic UI using `useFetcher`:
 
 ```tsx
 import { useFetcher } from '@ereo/client'
@@ -506,7 +493,7 @@ import { useFetcher } from '@ereo/client'
 function LikeButton({ postId, initialLikes }) {
   const fetcher = useFetcher()
 
-  // Optimistic value
+  // Optimistic: show +1 immediately while submitting
   const likes = fetcher.formData
     ? initialLikes + 1
     : initialLikes
@@ -524,17 +511,19 @@ function LikeButton({ postId, initialLikes }) {
 
 ## Best Practices
 
-1. **Validate input** - Always validate form data before processing
-2. **Return meaningful data** - Include success/error status and relevant data
-3. **Use redirects after mutations** - Prevent form resubmission
-4. **Handle errors gracefully** - Return error objects instead of throwing
-5. **Use intent for multiple actions** - Keep related actions in one file
-6. **Type your actions** - Use generics for type safety
+1. **Start with the shorthand** — Use `createAction(fn)` until you need validation
+2. **Validate input** — Use the options object form for server-side validation
+3. **Return meaningful data** — Include success/error status and relevant data
+4. **Use redirects after mutations** — Prevent form resubmission with POST-redirect-GET
+5. **Handle errors gracefully** — Return error objects for the UI, throw for error boundaries
+6. **Use intent for multiple actions** — Keep related actions in one route file
+7. **Type your actions** — Use `typedAction` or generics for type safety
 
 ## Related
 
-- [Data Loading Concepts](/core-concepts/data-loading)
-- [Loaders](/api/data/loaders)
-- [Forms Guide](/guides/forms)
-- [useActionData](/api/client/hooks#useactiondata)
-- [Form Component](/api/client/form)
+- [Data Loading Concepts](/core-concepts/data-loading) — Overview of all approaches
+- [Loaders](/api/data/loaders) — Data fetching
+- [defineRoute Builder](/api/data/define-route) — Builder pattern
+- [Forms Guide](/guides/forms) — Form handling patterns
+- [useActionData](/api/client/hooks#useactiondata) — Client hook
+- [Form Component](/api/client/form) — Enhanced form component

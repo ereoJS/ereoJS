@@ -2,6 +2,8 @@
 
 In this chapter, we'll add the ability to create new posts using actions and handle form submissions.
 
+> **Note on approach:** This tutorial uses `createLoader` and `createAction` with the shorthand form (passing a function directly). This is one of several valid ways to define loaders and actions in EreoJS. See [Data Loading](/core-concepts/data-loading) for a comparison of all approaches.
+
 ## Create Post Page
 
 Create `app/routes/posts/new.tsx`:

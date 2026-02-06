@@ -396,6 +396,204 @@ announce('Form saved successfully')
 
 `ActionForm` calls these automatically on validation failure and submit status changes.
 
+## Type-Safe Field Paths
+
+All form methods, hooks, and components enforce valid field paths at compile time.
+TypeScript will show an error if you use a path that doesn't exist in your form's type:
+
+```tsx
+const form = useForm({
+  defaultValues: { user: { email: '', name: '' } }
+})
+
+// Autocomplete shows: 'user' | 'user.email' | 'user.name'
+const field = useField(form, 'user.email')    // OK
+const field = useField(form, 'usr.emial')     // TS Error!
+```
+
+Array indices work with template literals:
+
+```tsx
+const form = useForm({ defaultValues: { tags: [''] } })
+const { fields } = useFieldArray(form, 'tags')
+
+fields.map((item) => {
+  const field = useField(form, `tags.${item.index}`)  // OK
+})
+```
+
+## Reset Individual Fields
+
+Use `resetField` to reset a single field to its default value:
+
+```tsx
+form.resetField('user.email')  // resets value, clears errors, unmarks touched/dirty
+```
+
+## Manual Validation
+
+Trigger validation programmatically without submitting:
+
+```tsx
+// Validate a single field
+const isValid = await form.trigger('email')
+
+// Validate all fields
+const allValid = await form.trigger()
+```
+
+Useful for "check availability" buttons or validating a field when a related field changes.
+
+## Focus on Error
+
+When form submission fails validation, the first invalid field is automatically focused
+and scrolled into view. This is enabled by default.
+
+To disable:
+
+```tsx
+const form = useForm({
+  defaultValues: { ... },
+  focusOnError: false,
+})
+```
+
+## Validation Gating
+
+Sync validators automatically gate async validators. If a sync validator fails (like `required()`),
+async validators (like checking username availability) won't run — avoiding unnecessary
+network calls and confusing error messages.
+
+```tsx
+const form = useForm({
+  defaultValues: { username: '' },
+  validators: {
+    username: [required(), async(checkAvailability)],
+    // If required() fails, checkAvailability won't fire
+  },
+})
+```
+
+## Linked Field Validation
+
+When one field depends on another (like "confirm password" depends on "password"),
+use `dependsOn` to automatically re-validate when the dependency changes:
+
+```tsx
+const endDate = useField(form, 'endDate', {
+  validate: custom((value, context) => {
+    const start = context?.getValue('startDate')
+    if (start && value && value < start) return 'End date must be after start date'
+  }),
+  dependsOn: 'startDate',
+})
+```
+
+The `matches()` validator auto-detects its dependency — no `dependsOn` needed:
+
+```tsx
+const confirm = useField(form, 'confirmPassword', {
+  validate: compose(required(), matches('password')),
+  // No dependsOn needed — matches() registers the dependency automatically
+})
+```
+
+For config-level dependencies:
+
+```tsx
+const form = useForm({
+  defaultValues: { startDate: '', endDate: '' },
+  dependencies: {
+    endDate: 'startDate',  // re-validate endDate when startDate changes
+  },
+})
+```
+
+Dependents only re-validate if they have been touched — untouched fields won't show premature errors.
+
+## Watching Field Values
+
+Use `useWatch` to observe field values reactively without registering the field:
+
+```tsx
+import { useWatch } from '@ereo/forms'
+
+// Single field — returns the value
+const email = useWatch(form, 'email')
+
+// Multiple fields — returns a tuple
+const [start, end] = useWatch(form, ['startDate', 'endDate'])
+```
+
+Unlike `useField`, `useWatch` does not register validators or track touched/dirty state.
+Use it for conditional rendering, computed display values, or side effects.
+
+## Schema Validation
+
+### Standard Schema (Recommended)
+
+Pass any [Standard Schema](https://standardschema.dev)-compliant validator directly — Zod v4+, Valibot v1+, ArkType, etc.:
+
+```tsx
+import { z } from 'zod'
+
+const form = useForm({
+  defaultValues: { name: '', email: '' },
+  schema: z.object({
+    name: z.string().min(1),
+    email: z.string().email(),
+  }),
+})
+```
+
+Any object with a `~standard` property is auto-detected and adapted — no wrapper needed.
+
+### Legacy Adapters
+
+For older versions of Zod/Valibot that don't support Standard Schema:
+
+```tsx
+import { zodAdapter, valibotAdapter } from '@ereo/forms'
+
+// Zod v3
+const form = useForm({
+  schema: zodAdapter(myZodSchema),
+})
+
+// Valibot v0.x
+const form = useForm({
+  schema: valibotAdapter(mySchema, parse, safeParse),
+})
+```
+
+## Error Sources
+
+Track where errors originate to build smarter UX:
+
+```tsx
+const field = useField(form, 'username')
+
+// field.errorMap groups errors by source:
+// { sync: [], async: [], schema: [], server: [], manual: [] }
+
+// Show server errors differently
+{field.errorMap.server.length > 0 && (
+  <div className="server-error">{field.errorMap.server[0]}</div>
+)}
+```
+
+Programmatically manage errors by source:
+
+```tsx
+// Set errors with a specific source
+form.setErrorsWithSource('email', ['Already taken'], 'server')
+
+// Clear only server errors (keep client-side errors)
+form.clearErrorsBySource('email', 'server')
+```
+
+Error sources are automatically tagged: `'sync'` and `'async'` from validators, `'schema'` from schema validation, `'server'` from `ActionForm` error mapping, and `'manual'` from `setErrors()`.
+
 ## Best Practices
 
 1. **Use `defaultValues` for all fields** — the form needs a complete initial shape

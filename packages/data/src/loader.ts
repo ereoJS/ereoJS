@@ -30,7 +30,17 @@ export interface LoaderOptions<T, P extends RouteParams = RouteParams> {
 /**
  * Create a type-safe loader function.
  *
+ * Accepts either a plain async function (shorthand) or an options object
+ * with caching, transforms, and error handling.
+ *
  * @example
+ * // Shorthand — just pass a function directly
+ * export const loader = createLoader(async ({ params }) => {
+ *   return db.post.findUnique({ where: { slug: params.slug } });
+ * });
+ *
+ * @example
+ * // Full options — with caching, transforms, and error handling
  * export const loader = createLoader({
  *   load: async ({ params }) => {
  *     return db.post.findUnique({ where: { slug: params.slug } });
@@ -39,8 +49,15 @@ export interface LoaderOptions<T, P extends RouteParams = RouteParams> {
  * });
  */
 export function createLoader<T, P extends RouteParams = RouteParams>(
-  options: LoaderOptions<T, P>
+  optionsOrFn: LoaderOptions<T, P> | ((args: LoaderArgs<P>) => T | Promise<T>)
 ): LoaderFunction<T, P> {
+  // Shorthand: createLoader(async (args) => { ... })
+  if (typeof optionsOrFn === 'function') {
+    return optionsOrFn;
+  }
+
+  const options = optionsOrFn;
+
   return async (args: LoaderArgs<P>): Promise<T> => {
     const { context } = args;
 

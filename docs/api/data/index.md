@@ -47,31 +47,67 @@ import {
 } from '@ereo/data'
 ```
 
+## Choosing an Approach
+
+EreoJS supports three ways to define loaders and actions, from simplest to most feature-rich:
+
+| Approach | When to Use | Features |
+|----------|-------------|----------|
+| **Plain function export** | Quick prototyping, simple routes | None — you handle everything yourself |
+| **`createLoader` / `createAction`** | Most routes (recommended) | Caching, validation, transforms, error handling |
+| **`defineRoute` builder** | Complex routes, full type safety | All of the above + stable inference across head/meta |
+
+> For a detailed comparison with examples, see the [Data Loading concepts guide](/core-concepts/data-loading).
+
 ## Quick Start
 
-### Basic Loader
+### Plain Function Export (Simplest)
 
-```ts
+No imports from `@ereo/data` needed — just export a function named `loader` or `action`:
+
+```tsx
+// routes/posts/index.tsx
+import type { LoaderArgs, ActionArgs } from '@ereo/core'
+
+export async function loader({ params }: LoaderArgs) {
+  const posts = await db.posts.findMany()
+  return { posts }
+}
+
+export async function action({ request }: ActionArgs) {
+  const formData = await request.formData()
+  await db.posts.create({ title: formData.get('title') })
+  return { success: true }
+}
+
+export default function Posts({ loaderData }) {
+  return <ul>{loaderData.posts.map(p => <li key={p.id}>{p.title}</li>)}</ul>
+}
+```
+
+### createLoader / createAction (Recommended)
+
+Use `createLoader` and `createAction` when you need caching, validation, or error handling. Pass either a **plain function** (shorthand) or an **options object** (full features):
+
+```tsx
 // routes/posts/[slug]/page.tsx
-import { createLoader } from '@ereo/data'
-import { db } from '~/lib/db'
+import { createLoader, createAction, redirect } from '@ereo/data'
 
+// Shorthand loader — just a function
+export const loader = createLoader(async ({ params }) => {
+  const post = await db.posts.findUnique({ where: { slug: params.slug } })
+  if (!post) throw new Response('Not Found', { status: 404 })
+  return { post }
+})
+
+// Options object loader — with caching
 export const loader = createLoader({
   load: async ({ params }) => {
-    const post = await db.posts.findUnique({
-      where: { slug: params.slug }
-    })
-
-    if (!post) {
-      throw new Response('Not Found', { status: 404 })
-    }
-
+    const post = await db.posts.findUnique({ where: { slug: params.slug } })
+    if (!post) throw new Response('Not Found', { status: 404 })
     return { post }
   },
-  cache: {
-    maxAge: 300,
-    tags: ['posts'],
-  },
+  cache: { maxAge: 300, tags: ['posts'] },
 })
 
 export default function PostPage({ loaderData }) {
@@ -79,43 +115,71 @@ export default function PostPage({ loaderData }) {
 }
 ```
 
-### Basic Action
+```tsx
+// Shorthand action — you parse formData yourself
+export const action = createAction(async ({ request }) => {
+  const formData = await request.formData()
+  const title = formData.get('title') as string
+  await db.posts.create({ data: { title } })
+  return redirect('/posts')
+})
 
-```ts
-// routes/posts/new/page.tsx
-import { createAction, redirect } from '@ereo/data'
-import { db } from '~/lib/db'
-
+// Options object action — with auto-parsed formData and validation
 export const action = createAction({
   handler: async ({ formData }) => {
     const title = formData.get('title') as string
-    const content = formData.get('content') as string
-
-    const post = await db.posts.create({
-      data: { title, content }
-    })
-
-    return redirect(`/posts/${post.slug}`)
+    await db.posts.create({ data: { title } })
+    return redirect('/posts')
   },
   validate: (formData) => {
     const errors: Record<string, string[]> = {}
-
     if (!formData.get('title')) {
       errors.title = ['Title is required']
     }
-
     return { success: Object.keys(errors).length === 0, errors }
   },
 })
 ```
 
+### defineRoute Builder (Full Type Safety)
+
+Use `defineRoute` when you need stable type inference across loader, action, head, and meta:
+
+```tsx
+// routes/posts/[slug].tsx
+import { defineRoute } from '@ereo/data'
+
+export const route = defineRoute('/posts/[slug]')
+  .loader(async ({ params }) => {
+    const post = await db.posts.findUnique({ where: { slug: params.slug } })
+    if (!post) throw new Response('Not Found', { status: 404 })
+    return { post }
+  })
+  .head(({ data }) => ({
+    title: data.post.title,         // Types flow through — never breaks!
+    description: data.post.excerpt,
+  }))
+  .cache({ maxAge: 60 })
+  .build()
+
+export const { loader } = route
+```
+
+> See [defineRoute Builder](/api/data/define-route) for the full API reference.
+
 ## Loaders API
 
 ### createLoader
 
-Creates a type-safe loader function.
+Creates a type-safe loader function. Accepts a **plain function** (shorthand) or an **options object** (with caching, transforms, error handling).
 
 ```ts
+// Shorthand
+function createLoader<T, P = RouteParams>(
+  fn: (args: LoaderArgs<P>) => T | Promise<T>
+): LoaderFunction<T, P>
+
+// Full options
 function createLoader<T, P = RouteParams>(
   options: LoaderOptions<T, P>
 ): LoaderFunction<T, P>
@@ -307,12 +371,18 @@ if (isDeferred(value)) {
 
 ### createAction
 
-Create type-safe form action handlers.
+Create type-safe form action handlers. Accepts a **plain function** (shorthand) or an **options object** (with validation, auto-parsed FormData, error handling).
 
 ```ts
+// Shorthand
+function createAction<T, P = RouteParams>(
+  fn: (args: ActionArgs<P>) => T | Promise<T>
+): ActionFunction<T, P>
+
+// Full options
 function createAction<T, P = RouteParams>(
   options: ActionOptions<T, P>
-): ActionFunction<ActionResult<T>, P>
+): ActionFunction<T, P>
 ```
 
 #### Options

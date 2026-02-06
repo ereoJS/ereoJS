@@ -4,7 +4,7 @@ export { createValuesProxy } from './proxy';
 export { getPath, setPath, deepClone, deepEqual, parsePath, flattenToPaths } from './utils';
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
-export { useForm, useField, useFieldArray, useFormStatus } from './hooks';
+export { useForm, useField, useFieldArray, useWatch, useFormStatus } from './hooks';
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 export { FormProvider, useFormContext } from './context';
@@ -48,6 +48,8 @@ export {
   ereoSchema,
   isEreoSchema,
   formDataToObject,
+  isStandardSchema,
+  standardSchemaAdapter,
 } from './schema';
 
 // ─── Server / Actions ────────────────────────────────────────────────────────
@@ -107,6 +109,8 @@ export type {
   ValidationResult,
   ValidationSchema,
   CrossFieldValidationContext,
+  ErrorSource,
+  FormError,
   FieldState,
   FieldInputProps,
   FieldRegistration,

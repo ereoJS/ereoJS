@@ -5,6 +5,7 @@ import { useFormContext } from './context';
 import { getErrorA11y, getLabelA11y } from './a11y';
 import type {
   FormStoreInterface,
+  FormPath,
   FieldComponentProps,
   TextareaFieldProps,
   SelectFieldProps,
@@ -43,7 +44,7 @@ function inferRequired(form: FormStoreInterface<any>, name: string, explicit?: b
 
 export function Field<
   T extends Record<string, any>,
-  K extends string = string,
+  K extends FormPath<T> = FormPath<T>,
 >(props: FieldComponentProps<T, K>): ReactElement | null {
   const contextForm = useFormContext<T>();
   const form = props.form ?? contextForm;
@@ -103,7 +104,7 @@ export function Field<
 
 export function TextareaField<
   T extends Record<string, any>,
-  K extends string = string,
+  K extends FormPath<T> = FormPath<T>,
 >(props: TextareaFieldProps<T, K>): ReactElement | null {
   const contextForm = useFormContext<T>();
   const form = props.form ?? contextForm;
@@ -153,7 +154,7 @@ export function TextareaField<
 
 export function SelectField<
   T extends Record<string, any>,
-  K extends string = string,
+  K extends FormPath<T> = FormPath<T>,
 >(props: SelectFieldProps<T, K>): ReactElement | null {
   const contextForm = useFormContext<T>();
   const form = props.form ?? contextForm;
@@ -212,7 +213,7 @@ export function SelectField<
 
 export function FieldArrayComponent<
   T extends Record<string, any>,
-  K extends string = string,
+  K extends FormPath<T> = FormPath<T>,
 >(props: FieldArrayComponentProps<T, K>): ReactElement | null {
   const contextForm = useFormContext<T>();
   const form = props.form ?? contextForm;

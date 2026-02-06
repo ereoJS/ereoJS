@@ -7,6 +7,7 @@ import type {
   ValidationSchema,
 } from './types';
 import type { FormStore } from './store';
+import { isStandardSchema, standardSchemaAdapter } from './schema';
 
 interface FieldValidation {
   validators: ValidatorFunction[];
@@ -23,6 +24,8 @@ export class ValidationEngine<T extends Record<string, any>> {
   private _validatingSignals = new Map<string, Signal<boolean>>();
   private _fieldGenerations = new Map<string, number>();
   private _validateAllController: AbortController | null = null;
+  private _dependents = new Map<string, Set<string>>();  // source → fields that depend on source
+  private _validatingDependents = new Set<string>(); // guard against circular deps
 
   constructor(store: FormStore<T>) {
     this._store = store;
@@ -41,12 +44,26 @@ export class ValidationEngine<T extends Record<string, any>> {
         }
       }
     }
+
+    // Register config-level dependencies
+    const { dependencies } = store.config;
+    if (dependencies) {
+      for (const [dependent, sources] of Object.entries(dependencies)) {
+        if (sources) {
+          const sourceArr = Array.isArray(sources) ? sources : [sources];
+          for (const source of sourceArr) {
+            this._registerDependency(dependent, source as string);
+          }
+        }
+      }
+    }
   }
 
   registerFieldValidators(
     path: string,
     validators: ValidatorFunction[],
-    explicitTrigger?: ValidateOn
+    explicitTrigger?: ValidateOn,
+    dependsOn?: string | string[]
   ): void {
     const derivedTrigger = explicitTrigger ?? this._deriveValidateOn(validators);
     this._fieldValidations.set(path, {
@@ -54,6 +71,21 @@ export class ValidationEngine<T extends Record<string, any>> {
       validateOn: explicitTrigger,
       derivedTrigger,
     });
+
+    // Auto-detect dependencies from validator metadata
+    for (const v of validators) {
+      if (v._dependsOnField) {
+        this._registerDependency(path, v._dependsOnField);
+      }
+    }
+
+    // Explicit dependsOn
+    if (dependsOn) {
+      const deps = Array.isArray(dependsOn) ? dependsOn : [dependsOn];
+      for (const dep of deps) {
+        this._registerDependency(path, dep);
+      }
+    }
   }
 
   // ─── Derive-don't-configure ─────────────────────────────────────────
@@ -70,18 +102,21 @@ export class ValidationEngine<T extends Record<string, any>> {
 
   onFieldChange(path: string): void {
     const validation = this._fieldValidations.get(path);
-    if (!validation) return;
-
-    const trigger = validation.validateOn ?? validation.derivedTrigger;
-    if (trigger !== 'change') return;
-
-    // Check for debounce on async validators
-    const debounceMs = this._getDebounceMs(validation.validators);
-    if (debounceMs > 0) {
-      this._debounceValidation(path, debounceMs);
-    } else {
-      this._runFieldValidation(path);
+    if (validation) {
+      const trigger = validation.validateOn ?? validation.derivedTrigger;
+      if (trigger === 'change') {
+        // Check for debounce on async validators
+        const debounceMs = this._getDebounceMs(validation.validators);
+        if (debounceMs > 0) {
+          this._debounceValidation(path, debounceMs);
+        } else {
+          this._runFieldValidation(path);
+        }
+      }
     }
+
+    // Trigger re-validation for dependent fields
+    this._triggerDependents(path);
   }
 
   onFieldBlur(path: string): void {
@@ -142,17 +177,29 @@ export class ValidationEngine<T extends Record<string, any>> {
 
     this._setFieldValidating(path, true);
 
-    const errors: string[] = [];
+    const syncErrors: string[] = [];
+    const asyncErrors: string[] = [];
     const value = this._store.getValue(path);
     const context = this._createContext(controller.signal);
 
     try {
-      for (const validator of validation.validators) {
-        if (controller.signal.aborted) break;
+      // Partition validators into sync and async
+      const syncValidators = validation.validators.filter(v => !v._isAsync);
+      const asyncValidators = validation.validators.filter(v => v._isAsync);
 
+      // Run sync validators first
+      for (const validator of syncValidators) {
+        if (controller.signal.aborted) break;
         const result = await validator(value, context);
-        if (result) {
-          errors.push(result);
+        if (result) syncErrors.push(result);
+      }
+
+      // Only run async validators if all sync validators passed
+      if (syncErrors.length === 0 && !controller.signal.aborted) {
+        for (const validator of asyncValidators) {
+          if (controller.signal.aborted) break;
+          const result = await validator(value, context);
+          if (result) asyncErrors.push(result);
         }
       }
     } finally {
@@ -163,10 +210,25 @@ export class ValidationEngine<T extends Record<string, any>> {
       }
     }
 
+    const allErrors = [...syncErrors, ...asyncErrors];
+
     // Only write results if not aborted AND this is still the latest generation
     if (!controller.signal.aborted && this._fieldGenerations.get(path) === generation) {
-      this._store.setErrors(path, errors);
-      return errors;
+      // Clear previous sync/async errors, then set new ones with source tagging
+      this._store.clearErrorsBySource(path, 'sync');
+      this._store.clearErrorsBySource(path, 'async');
+      if (syncErrors.length > 0) {
+        this._store.setErrorsWithSource(path, syncErrors, 'sync');
+      }
+      if (asyncErrors.length > 0) {
+        this._store.setErrorsWithSource(path, asyncErrors, 'async');
+      }
+      // If no errors from either, ensure flat errors are cleared
+      if (allErrors.length === 0) {
+        this._store.clearErrorsBySource(path, 'sync');
+        this._store.clearErrorsBySource(path, 'async');
+      }
+      return allErrors;
     }
 
     // Return empty for aborted/superseded validations — caller should discard
@@ -201,11 +263,12 @@ export class ValidationEngine<T extends Record<string, any>> {
 
     const allErrors: Record<string, string[]> = {};
     let hasErrors = false;
+    let schemaResult: ValidationResult | null = null;
 
     // Schema validation first
     const schema = this._store.config.schema;
     if (schema) {
-      const schemaResult = await this._validateSchema(schema);
+      schemaResult = await this._validateSchema(schema as ValidationSchema);
       if (controller.signal.aborted) return { success: true };
       if (!schemaResult.success && schemaResult.errors) {
         for (const [path, errors] of Object.entries(schemaResult.errors)) {
@@ -229,10 +292,24 @@ export class ValidationEngine<T extends Record<string, any>> {
         const context = this._createContext(controller.signal);
         const errors: string[] = [];
 
-        for (const validator of validation.validators) {
+        // Partition validators into sync and async
+        const syncValidators = validation.validators.filter(v => !v._isAsync);
+        const asyncValidators = validation.validators.filter(v => v._isAsync);
+
+        // Run sync validators first
+        for (const validator of syncValidators) {
           if (controller.signal.aborted) break;
           const result = await validator(value, context);
           if (result) errors.push(result);
+        }
+
+        // Only run async validators if all sync validators passed
+        if (errors.length === 0 && !controller.signal.aborted) {
+          for (const validator of asyncValidators) {
+            if (controller.signal.aborted) break;
+            const result = await validator(value, context);
+            if (result) errors.push(result);
+          }
         }
 
         if (errors.length > 0 && !controller.signal.aborted) {
@@ -257,9 +334,45 @@ export class ValidationEngine<T extends Record<string, any>> {
     // This ensures schema-only errors are cleared when the schema passes.
     this._store.clearErrors();
 
-    // Write all errors to store in one pass
+    // Write schema errors with 'schema' source
+    if (schema) {
+      const schemaErrors = schemaResult?.errors ?? {};
+      for (const [path, errors] of Object.entries(schemaErrors)) {
+        this._store.setErrorsWithSource(path, errors, 'schema');
+      }
+    }
+
+    // Write field validator errors with appropriate sources
     for (const [path, errors] of Object.entries(allErrors)) {
-      this._store.setErrors(path, errors);
+      // Skip paths already handled by schema
+      const schemaErrors = schemaResult?.errors ?? {};
+      if (schemaErrors[path]) {
+        // Merge: field errors are sync/async, already have schema errors
+        // Determine if they're sync or async based on validators
+        const validation = this._fieldValidations.get(path);
+        const hasAsync = validation?.validators.some(v => v._isAsync);
+        const source = hasAsync && errors.length > 0 ? 'sync' : 'sync';
+        const fieldOnlyErrors = errors.filter(e => !schemaErrors[path]?.includes(e));
+        if (fieldOnlyErrors.length > 0) {
+          this._store.setErrorsWithSource(path, fieldOnlyErrors, source);
+        }
+      } else {
+        const validation = this._fieldValidations.get(path);
+        if (validation) {
+          const syncValidators = validation.validators.filter(v => !v._isAsync);
+          const asyncValidators = validation.validators.filter(v => v._isAsync);
+          // In validateAll, sync errors gate async. If errors exist and sync validators exist, they're sync.
+          if (syncValidators.length > 0 && errors.length > 0) {
+            this._store.setErrorsWithSource(path, errors, 'sync');
+          } else if (asyncValidators.length > 0 && errors.length > 0) {
+            this._store.setErrorsWithSource(path, errors, 'async');
+          } else {
+            this._store.setErrors(path, errors);
+          }
+        } else {
+          this._store.setErrors(path, errors);
+        }
+      }
     }
 
     return { success: !hasErrors, errors: hasErrors ? allErrors : undefined };
@@ -268,12 +381,19 @@ export class ValidationEngine<T extends Record<string, any>> {
   // ─── Schema Validation ─────────────────────────────────────────────
 
   private async _validateSchema(
-    schema: ValidationSchema
+    schema: ValidationSchema | { readonly '~standard': any }
   ): Promise<ValidationResult> {
-    const values = this._store._getCurrentValues();
+    // Auto-detect Standard Schema
+    let resolvedSchema: ValidationSchema;
+    if (isStandardSchema(schema)) {
+      resolvedSchema = standardSchemaAdapter(schema);
+    } else {
+      resolvedSchema = schema as ValidationSchema;
+    }
 
-    if (schema.safeParse) {
-      const result = schema.safeParse(values);
+    const values = this._store._getCurrentValues();
+    if (resolvedSchema.safeParse) {
+      const result = resolvedSchema.safeParse(values);
       if (result.success) {
         return { success: true };
       }
@@ -289,7 +409,7 @@ export class ValidationEngine<T extends Record<string, any>> {
     }
 
     try {
-      schema.parse(values);
+      resolvedSchema.parse(values);
       return { success: true };
     } catch (e: any) {
       if (e?.issues) {
@@ -308,6 +428,49 @@ export class ValidationEngine<T extends Record<string, any>> {
     }
   }
 
+  getRegisteredPaths(): IterableIterator<string> {
+    return this._fieldValidations.keys();
+  }
+
+  // ─── Dependency Management ──────────────────────────────────────────
+
+  private _registerDependency(dependentField: string, sourceField: string): void {
+    let set = this._dependents.get(sourceField);
+    if (!set) {
+      set = new Set();
+      this._dependents.set(sourceField, set);
+    }
+    set.add(dependentField);
+  }
+
+  private _triggerDependents(sourcePath: string): void {
+    const dependents = this._dependents.get(sourcePath);
+    if (!dependents) return;
+
+    for (const dep of dependents) {
+      // Guard against circular deps
+      if (this._validatingDependents.has(dep)) continue;
+
+      // Only re-validate if the dependent field has validators registered
+      const validation = this._fieldValidations.get(dep);
+      if (!validation) continue;
+
+      // Only re-validate if the field has been touched (avoid premature errors)
+      if (!this._store.getTouched(dep)) continue;
+
+      this._validatingDependents.add(dep);
+      this._runFieldValidation(dep);
+      // Clear guard after microtask to allow future validations
+      Promise.resolve().then(() => {
+        this._validatingDependents.delete(dep);
+      });
+    }
+  }
+
+  getDependents(sourcePath: string): Set<string> | undefined {
+    return this._dependents.get(sourcePath);
+  }
+
   // ─── Cleanup ───────────────────────────────────────────────────────
 
   unregisterField(path: string): void {
@@ -315,6 +478,11 @@ export class ValidationEngine<T extends Record<string, any>> {
     this._fieldValidations.delete(path);
     this._validatingSignals.delete(path);
     this._fieldGenerations.delete(path);
+    // Remove from dependency maps
+    this._dependents.delete(path);
+    for (const [, set] of this._dependents) {
+      set.delete(path);
+    }
   }
 
   dispose(): void {
@@ -329,6 +497,8 @@ export class ValidationEngine<T extends Record<string, any>> {
     this._validatingFields.clear();
     this._validatingSignals.clear();
     this._fieldGenerations.clear();
+    this._dependents.clear();
+    this._validatingDependents.clear();
     if (this._validateAllController) {
       this._validateAllController.abort();
       this._validateAllController = null;

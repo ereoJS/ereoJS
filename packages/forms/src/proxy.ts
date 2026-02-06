@@ -8,6 +8,8 @@ export function createValuesProxy<T extends Record<string, any>>(
   proxyCache?: Map<string, any>
 ): T {
   const cache = proxyCache ?? new Map<string, any>();
+  // Use untyped reference for dynamic path access
+  const s = store as FormStoreInterface<any>;
 
   // Return cached proxy for nested paths to preserve reference equality
   if (basePath && cache.has(basePath)) {
@@ -20,7 +22,7 @@ export function createValuesProxy<T extends Record<string, any>>(
       if (typeof prop === 'symbol') return undefined;
 
       const fullPath = basePath ? `${basePath}.${String(prop)}` : String(prop);
-      const value = store.getValue(fullPath);
+      const value = s.getValue(fullPath);
 
       if (value !== null && typeof value === 'object') {
         return createValuesProxy(store, fullPath, cache);
@@ -34,7 +36,7 @@ export function createValuesProxy<T extends Record<string, any>>(
       if (typeof prop === 'symbol') return true;
 
       const fullPath = basePath ? `${basePath}.${String(prop)}` : String(prop);
-      store.setValue(fullPath, value);
+      s.setValue(fullPath, value);
       return true;
     },
 
@@ -43,7 +45,7 @@ export function createValuesProxy<T extends Record<string, any>>(
       if (typeof prop === 'symbol') return false;
 
       // Check if the key exists in the object shape, not just if value is defined
-      const obj = basePath ? store.getValue(basePath) : store.getValues();
+      const obj = basePath ? s.getValue(basePath) : s.getValues();
       if (obj !== null && typeof obj === 'object') {
         return String(prop) in (obj as object);
       }
@@ -51,7 +53,7 @@ export function createValuesProxy<T extends Record<string, any>>(
     },
 
     ownKeys() {
-      const obj = basePath ? store.getValue(basePath) : store.getValues();
+      const obj = basePath ? s.getValue(basePath) : s.getValues();
       if (obj !== null && typeof obj === 'object') {
         return Object.keys(obj as object);
       }
@@ -62,14 +64,14 @@ export function createValuesProxy<T extends Record<string, any>>(
       if (typeof prop === 'symbol') return undefined;
 
       // Must return a descriptor for any key reported by ownKeys to satisfy Proxy invariants
-      const obj = basePath ? store.getValue(basePath) : store.getValues();
+      const obj = basePath ? s.getValue(basePath) : s.getValues();
       if (obj !== null && typeof obj === 'object' && String(prop) in (obj as object)) {
         const fullPath = basePath ? `${basePath}.${String(prop)}` : String(prop);
         return {
           configurable: true,
           enumerable: true,
           writable: true,
-          value: store.getValue(fullPath),
+          value: s.getValue(fullPath),
         };
       }
       return undefined;

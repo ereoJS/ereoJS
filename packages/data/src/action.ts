@@ -76,7 +76,20 @@ export interface ActionResult<T = unknown> {
 /**
  * Create a type-safe action function.
  *
+ * Accepts either a plain async function (shorthand) or an options object
+ * with validation, error handling, and automatic FormData parsing.
+ *
  * @example
+ * // Shorthand — just pass a function directly
+ * export const action = createAction(async ({ request }) => {
+ *   const formData = await request.formData();
+ *   const title = formData.get('title');
+ *   await db.post.create({ data: { title } });
+ *   return redirect('/posts');
+ * });
+ *
+ * @example
+ * // Full options — with validation and auto-parsed FormData
  * export const action = createAction({
  *   handler: async ({ formData }) => {
  *     const title = formData.get('title');
@@ -92,8 +105,21 @@ export interface ActionResult<T = unknown> {
  * });
  */
 export function createAction<T, P extends RouteParams = RouteParams>(
+  fn: (args: ActionArgs<P>) => T | Promise<T>
+): ActionFunction<T, P>;
+export function createAction<T, P extends RouteParams = RouteParams>(
   options: ActionOptions<T, P>
-): ActionFunction<ActionResult<T>, P> {
+): ActionFunction<ActionResult<T>, P>;
+export function createAction<T, P extends RouteParams = RouteParams>(
+  optionsOrFn: ActionOptions<T, P> | ((args: ActionArgs<P>) => T | Promise<T>)
+): ActionFunction<T, P> | ActionFunction<ActionResult<T>, P> {
+  // Shorthand: createAction(async (args) => { ... })
+  if (typeof optionsOrFn === 'function') {
+    return optionsOrFn;
+  }
+
+  const options = optionsOrFn;
+
   return async (args: ActionArgs<P>): Promise<ActionResult<T>> => {
     const { request } = args;
 

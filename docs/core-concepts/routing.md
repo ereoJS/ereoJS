@@ -200,40 +200,47 @@ export default function AppLayout({ children }) {
 
 ## API Routes
 
-API routes use `loader` for GET requests and `action` for mutations:
+For API-only routes, export functions named after HTTP methods (`GET`, `POST`, `PUT`, `DELETE`). These take priority over `loader`/`action` exports:
+
+```ts
+// routes/api/posts.ts
+export async function GET({ request, params, context }) {
+  const posts = await db.posts.findMany()
+  return Response.json({ posts })
+}
+
+export async function POST({ request }) {
+  const body = await request.json()
+  const post = await db.posts.create(body)
+  return Response.json(post, { status: 201 })
+}
+
+export async function DELETE({ request }) {
+  const { id } = await request.json()
+  await db.posts.delete(id)
+  return Response.json({ success: true })
+}
+```
+
+You can also use `loader` (for GET) and `action` (for non-GET) as an alternative:
 
 ```ts
 // routes/api/posts.ts
 import type { LoaderArgs, ActionArgs } from '@ereo/core'
 
-// GET handler
 export async function loader({ request }: LoaderArgs) {
   const posts = await db.posts.findMany()
-  return posts // Plain data is serialized to JSON
+  return posts // Automatically serialized to JSON
 }
 
-// POST/PUT/DELETE handler
 export async function action({ request }: ActionArgs) {
-  const method = request.method
-
-  if (method === 'POST') {
-    const body = await request.json()
-    const post = await db.posts.create(body)
-    return post
-  }
-
-  if (method === 'DELETE') {
-    const url = new URL(request.url)
-    const id = url.searchParams.get('id')
-    await db.posts.delete(id)
-    return { success: true }
-  }
-
-  return new Response('Method not allowed', { status: 405 })
+  const body = await request.json()
+  const post = await db.posts.create(body)
+  return post
 }
 ```
 
-**Note:** Request API endpoints with `Accept: application/json` header to receive JSON directly
+> **Which to use?** Use HTTP method exports (`GET`, `POST`, etc.) for REST APIs where you need fine-grained control per method. Use `loader`/`action` for page routes with components. See [Data Loading](/core-concepts/data-loading) for all approaches.
 
 ## Route Priority
 

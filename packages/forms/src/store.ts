@@ -3,6 +3,8 @@ import type {
   FormConfig,
   FormStoreInterface,
   FormSubmitState,
+  FormPath,
+  PathValue,
   FieldOptions,
   FieldRegistration,
   FieldInputProps,
@@ -10,10 +12,12 @@ import type {
   WatchCallback,
   DeepPartial,
   ValidatorFunction,
+  ErrorSource,
 } from './types';
 import { getPath, setPath, deepClone, deepEqual, flattenToPaths } from './utils';
 import { createValuesProxy } from './proxy';
 import { ValidationEngine } from './validation-engine';
+import { focusFirstError } from './a11y';
 
 export class FormStore<T extends Record<string, any> = Record<string, any>>
   implements FormStoreInterface<T>
@@ -23,6 +27,7 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
   // Per-field signal map — lazy creation on first access
   private _signals = new Map<string, Signal<unknown>>();
   private _errorSignals = new Map<string, Signal<string[]>>();
+  private _errorMapSignals = new Map<string, Signal<Record<ErrorSource, string[]>>>();
   private _formErrors: Signal<string[]>;
   private _baseline: T;
   private _touchedSet = new Set<string>();
@@ -91,6 +96,8 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   // ─── Signal Access ───────────────────────────────────────────────────────
 
+  getSignal<P extends FormPath<T>>(path: P): Signal<PathValue<T, P>>;
+  getSignal(path: string): Signal<unknown>;
   getSignal(path: string): Signal<unknown> {
     let sig = this._signals.get(path);
     if (!sig) {
@@ -122,6 +129,8 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     return sig;
   }
 
+  getErrors<P extends FormPath<T>>(path: P): Signal<string[]>;
+  getErrors(path: string): Signal<string[]>;
   getErrors(path: string): Signal<string[]> {
     let sig = this._errorSignals.get(path);
     if (!sig) {
@@ -137,11 +146,15 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   // ─── Value Access ──────────────────────────────────────────────────────
 
-  getValue<P extends string>(path: P): unknown {
+  getValue<P extends FormPath<T>>(path: P): PathValue<T, P>;
+  getValue(path: string): unknown;
+  getValue(path: string): unknown {
     return this.getSignal(path).get();
   }
 
-  setValue<P extends string>(path: P, value: unknown): void {
+  setValue<P extends FormPath<T>>(path: P, value: PathValue<T, P>): void;
+  setValue(path: string, value: unknown): void;
+  setValue(path: string, value: unknown): void {
     batch(() => {
       const sig = this.getSignal(path);
       const oldValue = sig.get();
@@ -313,19 +326,34 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   // ─── Error Management ────────────────────────────────────────────────
 
+  setErrors<P extends FormPath<T>>(path: P, errors: string[]): void;
+  setErrors(path: string, errors: string[]): void;
   setErrors(path: string, errors: string[]): void {
     this.getErrors(path).set(errors);
+    // Also update error map with 'manual' source (unless caller is engine which uses setErrorsWithSource)
+    const mapSig = this._errorMapSignals.get(path);
+    if (mapSig) {
+      const current = mapSig.get();
+      mapSig.set({ ...current, manual: errors });
+    }
     this._updateIsValid();
     this._notifySubscribers();
   }
 
+  clearErrors<P extends FormPath<T>>(path?: P): void;
+  clearErrors(path?: string): void;
   clearErrors(path?: string): void {
     if (path) {
       const sig = this._errorSignals.get(path);
       if (sig) sig.set([]);
+      const mapSig = this._errorMapSignals.get(path);
+      if (mapSig) mapSig.set(this._emptyErrorMap());
     } else {
       for (const sig of this._errorSignals.values()) {
         sig.set([]);
+      }
+      for (const sig of this._errorMapSignals.values()) {
+        sig.set(this._emptyErrorMap());
       }
       this._formErrors.set([]);
     }
@@ -335,6 +363,56 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   setFormErrors(errors: string[]): void {
     this._formErrors.set(errors);
+    this._updateIsValid();
+    this._notifySubscribers();
+  }
+
+  // ─── Error Map (Error Source Tracking) ──────────────────────────────
+
+  private _emptyErrorMap(): Record<ErrorSource, string[]> {
+    return { sync: [], async: [], schema: [], server: [], manual: [] };
+  }
+
+  getErrorMap<P extends FormPath<T>>(path: P): Signal<Record<ErrorSource, string[]>>;
+  getErrorMap(path: string): Signal<Record<ErrorSource, string[]>>;
+  getErrorMap(path: string): Signal<Record<ErrorSource, string[]>> {
+    let sig = this._errorMapSignals.get(path);
+    if (!sig) {
+      sig = signal<Record<ErrorSource, string[]>>(this._emptyErrorMap());
+      this._errorMapSignals.set(path, sig);
+    }
+    return sig;
+  }
+
+  setErrorsWithSource<P extends FormPath<T>>(path: P, errors: string[], source: ErrorSource): void;
+  setErrorsWithSource(path: string, errors: string[], source: ErrorSource): void;
+  setErrorsWithSource(path: string, errors: string[], source: ErrorSource): void {
+    const mapSig = this.getErrorMap(path);
+    const current = mapSig.get();
+    const updated = { ...current, [source]: errors };
+    mapSig.set(updated);
+    // Rebuild flat error signal from all sources
+    this._rebuildFlatErrors(path, updated);
+  }
+
+  clearErrorsBySource<P extends FormPath<T>>(path: P, source: ErrorSource): void;
+  clearErrorsBySource(path: string, source: ErrorSource): void;
+  clearErrorsBySource(path: string, source: ErrorSource): void {
+    const mapSig = this._errorMapSignals.get(path);
+    if (!mapSig) return;
+    const current = mapSig.get();
+    if (current[source].length === 0) return;
+    const updated = { ...current, [source]: [] };
+    mapSig.set(updated);
+    this._rebuildFlatErrors(path, updated);
+  }
+
+  private _rebuildFlatErrors(path: string, errorMap: Record<ErrorSource, string[]>): void {
+    const flat: string[] = [];
+    for (const source of ['sync', 'async', 'schema', 'server', 'manual'] as ErrorSource[]) {
+      flat.push(...errorMap[source]);
+    }
+    this.getErrors(path).set(flat);
     this._updateIsValid();
     this._notifySubscribers();
   }
@@ -354,10 +432,14 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   // ─── Touched / Dirty ────────────────────────────────────────────────
 
+  getTouched<P extends FormPath<T>>(path: P): boolean;
+  getTouched(path: string): boolean;
   getTouched(path: string): boolean {
     return this._touchedSet.has(path);
   }
 
+  setTouched<P extends FormPath<T>>(path: P, touched?: boolean): void;
+  setTouched(path: string, touched?: boolean): void;
   setTouched(path: string, touched = true): void {
     if (touched) {
       this._touchedSet.add(path);
@@ -367,43 +449,50 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     this._notifySubscribers();
   }
 
+  triggerBlurValidation<P extends FormPath<T>>(path: P): void;
+  triggerBlurValidation(path: string): void;
   triggerBlurValidation(path: string): void {
     this._validationEngine.onFieldBlur(path);
   }
 
+  getDirty<P extends FormPath<T>>(path: P): boolean;
+  getDirty(path: string): boolean;
   getDirty(path: string): boolean {
     return this._dirtySet.has(path);
   }
 
   // ─── Field Registration ──────────────────────────────────────────────
 
-  register<V = unknown>(path: string, options?: FieldOptions<V>): FieldRegistration<V> {
+  register<P extends FormPath<T>>(path: P, options?: FieldOptions<PathValue<T, P>>): FieldRegistration<PathValue<T, P>>;
+  register(path: string, options?: FieldOptions<any>): FieldRegistration<any>;
+  register(path: string, options?: FieldOptions<any>): FieldRegistration<any> {
     if (options) {
       this._fieldOptions.set(path, options);
       if (options.validate) {
         this._validationEngine.registerFieldValidators(
           path,
           (Array.isArray(options.validate) ? options.validate : [options.validate]) as ValidatorFunction<unknown>[],
-          options.validateOn
+          options.validateOn,
+          options.dependsOn
         );
       }
     }
 
-    const value = this.getValue(path) as V;
+    const value = this.getValue(path);
     const errorsSig = this.getErrors(path);
 
-    const inputProps: FieldInputProps<V> = {
+    const inputProps: FieldInputProps<any> = {
       name: path,
       value,
       onChange: (e: any) => {
-        let newValue: V;
+        let newValue: any;
         if (options?.parse) {
           newValue = options.parse(e);
         } else if (e && typeof e === 'object' && 'target' in e) {
           const target = e.target;
-          newValue = (target.type === 'checkbox' ? target.checked : target.value) as V;
+          newValue = target.type === 'checkbox' ? target.checked : target.value;
         } else {
-          newValue = e as V;
+          newValue = e;
         }
         if (options?.transform) {
           newValue = options.transform(newValue);
@@ -435,7 +524,7 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
         dirty: this.getDirty(path),
         validating: this.getFieldValidating(path).get(),
       },
-      setValue: (v: V) => this.setValue(path, v),
+      setValue: (v: any) => this.setValue(path, v),
       setError: (errs: string[]) => this.setErrors(path, errs),
       clearErrors: () => this.clearErrors(path),
       setTouched: (t: boolean) => this.setTouched(path, t),
@@ -448,6 +537,8 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     };
   }
 
+  unregister<P extends FormPath<T>>(path: P): void;
+  unregister(path: string): void;
   unregister(path: string): void {
     this._fieldOptions.delete(path);
     this._fieldRefs.delete(path);
@@ -460,7 +551,10 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     if (e) e.preventDefault?.();
     if (!this.config.onSubmit) {
       // Still validate even without onSubmit (for ActionForm usage)
-      await this._validationEngine.validateAll();
+      const result = await this._validationEngine.validateAll();
+      if (!result.success && this.config.focusOnError !== false) {
+        focusFirstError(this);
+      }
       return;
     }
     await this.submitWith(this.config.onSubmit);
@@ -503,6 +597,9 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
           this.isSubmitting.set(false);
           this.submitState.set('error');
         });
+        if (this.config.focusOnError !== false) {
+          focusFirstError(this);
+        }
         return;
       }
 
@@ -541,6 +638,44 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
   // ─── Validation-only (for ActionForm) ─────────────────────────────────
 
   async validate(): Promise<boolean> {
+    const result = await this._validationEngine.validateAll();
+    return result.success;
+  }
+
+  // ─── Single-field reset ──────────────────────────────────────────────
+
+  resetField<P extends FormPath<T>>(path: P): void;
+  resetField(path: string): void;
+  resetField(path: string): void {
+    batch(() => {
+      const baseline = getPath(this._baseline, path);
+      this.setValue(path, baseline);
+      this.clearErrors(path);
+      this.setTouched(path, false);
+      this._dirtySet.delete(path);
+      this.isDirty.set(this._dirtySet.size > 0);
+    });
+  }
+
+  // ─── Manual validation trigger ─────────────────────────────────────
+
+  async trigger<P extends FormPath<T>>(path?: P): Promise<boolean>;
+  async trigger(path?: string): Promise<boolean>;
+  async trigger(path?: string): Promise<boolean> {
+    if (path) {
+      this.setTouched(path, true);
+      const errors = await this._validationEngine.validateField(path);
+      return errors.length === 0;
+    }
+    // Validate all — touch all registered and validated fields
+    for (const p of this._fieldOptions.keys()) {
+      this._touchedSet.add(p);
+    }
+    // Also touch fields with config-level validators
+    for (const p of this._validationEngine.getRegisteredPaths()) {
+      this._touchedSet.add(p);
+    }
+    this._notifySubscribers();
     const result = await this._validationEngine.validateAll();
     return result.success;
   }
@@ -618,7 +753,9 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   // ─── Watch ───────────────────────────────────────────────────────────
 
-  watch(path: string, callback: WatchCallback): () => void {
+  watch<P extends FormPath<T>>(path: P, callback: WatchCallback<PathValue<T, P>>): () => void;
+  watch(path: string, callback: WatchCallback): () => void;
+  watch(path: string, callback: WatchCallback<any>): () => void {
     if (!this._watchers.has(path)) {
       this._watchers.set(path, new Set());
     }
@@ -633,8 +770,10 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     };
   }
 
+  watchFields<P extends FormPath<T>>(paths: P[], callback: WatchCallback): () => void;
+  watchFields(paths: string[], callback: WatchCallback): () => void;
   watchFields(paths: string[], callback: WatchCallback): () => void {
-    const unsubs = paths.map((p) => this.watch(p, callback));
+    const unsubs = paths.map((p) => this.watch(p as any, callback));
     return () => unsubs.forEach((fn) => fn());
   }
 
@@ -673,6 +812,8 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     return deepClone(this._baseline);
   }
 
+  getFieldValidating<P extends FormPath<T>>(path: P): Signal<boolean>;
+  getFieldValidating(path: string): Signal<boolean>;
   getFieldValidating(path: string): Signal<boolean> {
     return this._validationEngine.getFieldValidatingSignal(path);
   }
@@ -683,6 +824,7 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     this._watchers.clear();
     this._fieldRefs.clear();
     this._fieldOptions.clear();
+    this._errorMapSignals.clear();
     if (this._submitAbort) {
       this._submitAbort.abort();
       this._submitAbort = null;

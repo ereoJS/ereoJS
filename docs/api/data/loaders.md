@@ -1,6 +1,8 @@
 # Loaders
 
-Loaders fetch data on the server before rendering a route component.
+Loaders fetch data on the server before rendering a route component. They are the primary way to get data into your pages.
+
+> **Not sure which approach to use?** See the [Data Loading overview](/core-concepts/data-loading) for a comparison of all three approaches (plain export, createLoader, defineRoute).
 
 ## Import
 
@@ -21,11 +23,17 @@ import {
 
 ## createLoader
 
-Creates a type-safe loader function.
+Creates a type-safe loader function. Accepts either a **plain function** (shorthand) or an **options object** (with caching, transforms, and error handling).
 
 ### Signature
 
 ```ts
+// Shorthand — pass a function directly
+function createLoader<T, P extends RouteParams = RouteParams>(
+  fn: (args: LoaderArgs<P>) => T | Promise<T>
+): LoaderFunction<T, P>
+
+// Full options — with caching, transforms, error handling
 function createLoader<T, P extends RouteParams = RouteParams>(
   options: LoaderOptions<T, P>
 ): LoaderFunction<T, P>
@@ -42,20 +50,41 @@ interface LoaderOptions<T, P extends RouteParams = RouteParams> {
 }
 ```
 
-### Examples
-
-#### Basic Loader
+### LoaderArgs
 
 ```ts
-export const loader = createLoader({
-  load: async ({ params }) => {
-    const post = await db.posts.findUnique({ where: { slug: params.slug } });
-    return { post };
-  },
+interface LoaderArgs<P = RouteParams> {
+  request: Request;    // The incoming Request object
+  params: P;           // URL parameters from dynamic segments
+  context: AppContext;  // App context (cookies, headers, session, etc.)
+}
+```
+
+### Examples
+
+#### Shorthand (Plain Function)
+
+The simplest way to use `createLoader` — just pass an async function:
+
+```ts
+export const loader = createLoader(async ({ params }) => {
+  const post = await db.posts.findUnique({ where: { slug: params.slug } });
+  if (!post) throw new Response('Not Found', { status: 404 });
+  return { post };
 });
 ```
 
-#### With Caching
+This is equivalent to a plain function export but signals intent more clearly:
+
+```ts
+// These two are equivalent:
+export const loader = createLoader(async (args) => { ... })
+export async function loader(args) { ... }
+```
+
+#### Options Object (With Features)
+
+Use the options object when you need caching, transforms, or error handling:
 
 ```ts
 export const loader = createLoader({
@@ -98,99 +127,46 @@ export const loader = createLoader({
 });
 ```
 
-## defer
-
-Defers data loading for streaming responses.
+#### Typed Loader
 
 ```ts
-function defer<T>(promise: Promise<T>): DeferredData<T>
-```
+interface PostData {
+  post: Post;
+  comments: Comment[];
+}
 
-### Example
+interface PostParams {
+  slug: string;
+}
 
-```ts
-export const loader = createLoader({
+export const loader = createLoader<PostData, PostParams>({
   load: async ({ params }) => {
-    const post = await db.posts.find(params.id);
-    const comments = defer(db.comments.findByPost(params.id));
+    const post = await db.posts.findUnique({ where: { slug: params.slug } });
+    const comments = await db.comments.findMany({ where: { postId: post.id } });
     return { post, comments };
   },
 });
 ```
 
-## isDeferred
+## Plain Function Export (Alternative)
 
-Type guard for deferred data.
-
-```ts
-function isDeferred<T>(value: unknown): value is DeferredData<T>
-```
-
-## resolveDeferred
-
-Resolves deferred data.
+You can also export a plain async function as `loader`. No imports needed:
 
 ```ts
-function resolveDeferred<T>(deferred: DeferredData<T>): Promise<T>
-```
+import type { LoaderArgs } from '@ereo/core'
 
-## fetchData
-
-Fetches JSON data with error handling.
-
-```ts
-function fetchData<T>(
-  input: RequestInfo | URL,
-  init?: RequestInit
-): Promise<T>
-```
-
-Throws `FetchError` on non-OK responses.
-
-## FetchError
-
-Error thrown when fetch fails:
-
-```ts
-class FetchError extends Error {
-  response: Response;
-  get status(): number;
-  get statusText(): string;
+export async function loader({ params }: LoaderArgs<{ id: string }>) {
+  const post = await db.posts.find(params.id);
+  if (!post) throw new Response('Not Found', { status: 404 });
+  return { post };
 }
 ```
 
-## serializeLoaderData / parseLoaderData
-
-Serializes and deserializes loader data for transport:
-
-```ts
-const serialized = serializeLoaderData(data);
-const data = parseLoaderData<T>(serialized);
-```
-
-## combineLoaders
-
-Combines multiple loaders into one.
-
-```ts
-function combineLoaders<T extends Record<string, LoaderFunction<unknown>>>(
-  loaders: T
-): LoaderFunction<{ [K in keyof T]: Awaited<ReturnType<T[K]>> }>
-```
-
-## clientLoader
-
-Creates a client-side loader.
-
-```ts
-function clientLoader<T, P extends RouteParams = RouteParams>(
-  load: (params: P) => T | Promise<T>
-): LoaderFunction<T, P>
-```
+This works because the EreoJS server calls whatever function is exported as `loader`. The `createLoader` helpers add features like caching and transforms on top.
 
 ## defer
 
-Defers data loading for streaming responses.
+Defers data loading for streaming responses. Wrap a promise in `defer()` to stream the data to the client after the initial page render.
 
 ### Signature
 
@@ -202,10 +178,10 @@ function defer<T>(promise: Promise<T>): DeferredData<T>
 
 ```ts
 export const loader = createLoader(async ({ params }) => {
-  // Critical data - awaited immediately
+  // Critical data — awaited before render
   const post = await db.posts.find(params.id)
 
-  // Non-critical data - deferred
+  // Non-critical data — deferred and streamed later
   const comments = defer(db.comments.findByPost(params.id))
   const related = defer(db.posts.findRelated(params.id))
 
@@ -213,7 +189,7 @@ export const loader = createLoader(async ({ params }) => {
 })
 ```
 
-In the component:
+In the component, use `<Suspense>` and `<Await>`:
 
 ```tsx
 import { Suspense } from 'react'
@@ -236,25 +212,17 @@ export default function Post({ loaderData }) {
 
 ## isDeferred
 
-Type guard for deferred data.
-
-### Signature
+Type guard to check if a value is deferred data.
 
 ```ts
 function isDeferred<T>(value: unknown): value is DeferredData<T>
 ```
 
-### Example
-
 ```ts
-const maybeDeferred = loaderData.comments
-
-if (isDeferred(maybeDeferred)) {
-  // Handle as deferred
-  const resolved = await resolveDeferred(maybeDeferred)
+if (isDeferred(loaderData.comments)) {
+  const resolved = await resolveDeferred(loaderData.comments)
 } else {
-  // Handle as regular data
-  const comments = maybeDeferred
+  const comments = loaderData.comments
 }
 ```
 
@@ -262,153 +230,111 @@ if (isDeferred(maybeDeferred)) {
 
 Resolves deferred data to its actual value.
 
-### Signature
-
 ```ts
 function resolveDeferred<T>(deferred: DeferredData<T>): Promise<T>
 ```
 
-### Example
-
-```ts
-const comments = defer(fetchComments())
-
-// Later...
-const resolvedComments = await resolveDeferred(comments)
-```
-
 ## fetchData
 
-Utility for fetching JSON data with error handling.
-
-### Signature
+Utility for fetching JSON data with error handling. Throws `FetchError` on non-OK responses.
 
 ```ts
-function fetchData(url: string, options?: RequestInit): Promise<any>
+function fetchData<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T>
 ```
-
-### Example
 
 ```ts
 export const loader = createLoader(async () => {
-  const users = await fetchData('https://api.example.com/users')
+  const users = await fetchData<User[]>('https://api.example.com/users')
   return { users }
 })
 ```
 
-### FetchError
+## FetchError
 
-Thrown when fetch fails:
+Error thrown when `fetchData` receives a non-OK response:
 
 ```ts
 class FetchError extends Error {
-  status: number
-  statusText: string
-  url: string
+  response: Response;
+  get status(): number;
+  get statusText(): string;
 }
 ```
 
 ## combineLoaders
 
-Combines multiple loaders into one.
+Combines multiple loaders into one. All loaders run in parallel.
 
 ### Signature
 
 ```ts
-function combineLoaders<T extends LoaderFunction[]>(
-  ...loaders: T
-): LoaderFunction<CombinedData<T>>
+function combineLoaders<T extends Record<string, LoaderFunction<unknown>>>(
+  loaders: T
+): LoaderFunction<{ [K in keyof T]: Awaited<ReturnType<T[K]>> }>
 ```
 
 ### Example
 
 ```ts
 const userLoader = createLoader(async ({ request }) => {
-  const user = await getUser(request)
-  return { user }
+  return { user: await getUser(request) }
 })
 
 const settingsLoader = createLoader(async () => {
-  const settings = await getSettings()
-  return { settings }
+  return { settings: await getSettings() }
 })
 
-// Combined loader returns { user, settings }
-export const loader = combineLoaders(userLoader, settingsLoader)
+// Both run in parallel. Returns { user: {...}, settings: {...} }
+export const loader = combineLoaders({
+  user: userLoader,
+  settings: settingsLoader,
+})
 ```
 
 ## clientLoader
 
-Creates a client-side loader that runs after hydration.
+Creates a client-side loader that runs in the browser after hydration.
 
 ### Signature
 
 ```ts
-function clientLoader<T>(
-  fn: (params: Record<string, string>) => T | Promise<T>
-): ClientLoaderFunction<T>
+function clientLoader<T, P extends RouteParams = RouteParams>(
+  load: (params: P) => T | Promise<T>
+): LoaderFunction<T, P>
 ```
 
 ### Example
 
 ```ts
-// Server loader
+// Server loader — initial data
 export const loader = createLoader(async ({ params }) => {
   return { post: await db.posts.find(params.id) }
 })
 
-// Client loader - runs on client after hydration
+// Client loader — runs on client after hydration
 export const clientLoader = clientLoader(async (params) => {
-  // Fetch fresh data on the client
   const response = await fetch(`/api/posts/${params.id}`)
   return { post: await response.json() }
 })
 ```
 
-## serializeLoaderData
+## serializeLoaderData / parseLoaderData
 
-Serializes loader data for transport to the client.
-
-### Signature
+Serializes and deserializes loader data for transport. `serializeLoaderData` escapes dangerous characters to prevent XSS.
 
 ```ts
-function serializeLoaderData(data: unknown): string
-```
-
-### Example
-
-```ts
-const data = { user: { id: 1, name: 'Alice' } }
 const serialized = serializeLoaderData(data)
-// '{"user":{"id":1,"name":"Alice"}}'
-```
-
-## parseLoaderData
-
-Parses serialized loader data.
-
-### Signature
-
-```ts
-function parseLoaderData(json: string): unknown
-```
-
-### Example
-
-```ts
-const json = '{"user":{"id":1,"name":"Alice"}}'
-const data = parseLoaderData(json)
-// { user: { id: 1, name: 'Alice' } }
+const data = parseLoaderData<T>(serialized)
 ```
 
 ## Response Handling
 
-Loaders can throw Response objects for redirects and errors:
+Loaders can throw `Response` objects for redirects and errors:
 
 ```ts
 import { redirect } from '@ereo/data'
 
-export const loader = createLoader(async ({ request }) => {
+export const loader = createLoader(async ({ request, params }) => {
   const user = await getUser(request)
 
   // Redirect if not authenticated
@@ -422,27 +348,23 @@ export const loader = createLoader(async ({ request }) => {
     throw new Response('Not Found', { status: 404 })
   }
 
-  // Throw 403
-  if (post.authorId !== user.id) {
-    throw new Response('Forbidden', { status: 403 })
-  }
-
   return { post }
 })
 ```
 
 ## Best Practices
 
-1. **Keep loaders focused** - One responsibility per loader
-2. **Use defer for slow data** - Don't block on non-critical data
-3. **Handle errors explicitly** - Throw appropriate Response objects
-4. **Type your loaders** - Use generics for type safety
-5. **Validate params** - Use the validate option for input validation
-6. **Consider caching** - Use cache options for frequently accessed data
+1. **Start with the shorthand** — Use `createLoader(fn)` until you need options
+2. **Use defer for slow data** — Don't block rendering on non-critical content
+3. **Handle errors explicitly** — Throw `Response` objects with appropriate status codes
+4. **Type your loaders** — Use generics for type safety
+5. **Consider caching** — Use the options object form when data can be cached
+6. **Keep loaders focused** — One responsibility per loader, combine if needed
 
 ## Related
 
-- [Data Loading Concepts](/core-concepts/data-loading)
-- [Actions](/api/data/actions)
-- [Caching](/api/data/cache)
-- [useLoaderData](/api/client/hooks#useloaderdata)
+- [Data Loading Concepts](/core-concepts/data-loading) — Overview of all approaches
+- [Actions](/api/data/actions) — Handling mutations
+- [Caching](/api/data/cache) — Cache configuration
+- [defineRoute Builder](/api/data/define-route) — Builder pattern
+- [useLoaderData](/api/client/hooks#useloaderdata) — Client hook

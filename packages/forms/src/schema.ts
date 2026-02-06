@@ -1,6 +1,74 @@
 import type { ValidationSchema, ValidatorFunction, CrossFieldValidationContext } from './types';
 import { getPath } from './utils';
 
+// ─── Standard Schema V1 Support ──────────────────────────────────────────
+
+interface StandardSchemaV1<Input = unknown, Output = Input> {
+  readonly '~standard': {
+    readonly version: number;
+    readonly vendor: string;
+    readonly validate: (value: unknown) =>
+      StandardResult<Output> | Promise<StandardResult<Output>>;
+  };
+}
+
+type StandardResult<T> =
+  | { readonly value: T; readonly issues?: undefined }
+  | { readonly issues: ReadonlyArray<StandardIssue> };
+
+interface StandardIssue {
+  readonly message: string;
+  readonly path?: ReadonlyArray<PropertyKey | { readonly key: PropertyKey }>;
+}
+
+export function isStandardSchema(value: unknown): value is StandardSchemaV1 {
+  return value !== null && typeof value === 'object' && '~standard' in value;
+}
+
+function normalizePath(path?: ReadonlyArray<PropertyKey | { readonly key: PropertyKey }>): (string | number)[] {
+  if (!path) return [];
+  return path.map((segment) => {
+    if (typeof segment === 'object' && segment !== null && 'key' in segment) {
+      return typeof segment.key === 'number' ? segment.key : String(segment.key);
+    }
+    return typeof segment === 'number' ? segment : String(segment);
+  });
+}
+
+export function standardSchemaAdapter<T>(schema: StandardSchemaV1<unknown, T>): ValidationSchema<unknown, T> {
+  return {
+    parse: (data) => {
+      const result = schema['~standard'].validate(data);
+      if (result instanceof Promise) {
+        throw new Error('Async Standard Schema validation not supported in parse()');
+      }
+      if ('issues' in result && result.issues) {
+        const msgs = result.issues.map(i => i.message).join(', ');
+        throw new Error(msgs);
+      }
+      return (result as { value: T }).value;
+    },
+    safeParse: (data) => {
+      const result = schema['~standard'].validate(data);
+      if (result instanceof Promise) {
+        throw new Error('Async Standard Schema validation not supported in safeParse()');
+      }
+      if ('issues' in result && result.issues) {
+        return {
+          success: false,
+          error: {
+            issues: result.issues.map(issue => ({
+              path: normalizePath(issue.path),
+              message: issue.message,
+            })),
+          },
+        };
+      }
+      return { success: true, data: (result as { value: T }).value };
+    },
+  };
+}
+
 // ─── Zod Adapter ─────────────────────────────────────────────────────────────
 
 export function zodAdapter<T>(zodSchema: {

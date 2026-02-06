@@ -154,6 +154,7 @@ export function matches(
     return value === other ? undefined : msg ?? `Must match ${otherField}`;
   };
   validator._crossField = true;
+  validator._dependsOnField = otherField;
   return validator;
 }
 

@@ -362,6 +362,8 @@ export async function loader({ params }: LoaderArgs<{ id: string }>) {
 
 Data is available via the `loaderData` prop or `useLoaderData()` hook.
 
+> **Alternative approaches:** This tutorial uses plain function exports for simplicity. As your app grows, you can use `createLoader` from `@ereo/data` for built-in caching and error handling, or the `defineRoute` builder for full type safety. See [Data Loading](/core-concepts/data-loading) for all options.
+
 ### Form Actions
 
 The `action` function handles form submissions:
@@ -375,6 +377,8 @@ export async function action({ request }: ActionArgs) {
   return { success: true }
 }
 ```
+
+> **Alternative approaches:** You can also use `createAction` from `@ereo/data` for built-in validation and auto-parsed FormData, or `typedAction` for typed JSON bodies. See [Data Loading](/core-concepts/data-loading) for all options.
 
 ### Progressive Enhancement
 

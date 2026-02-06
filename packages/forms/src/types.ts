@@ -51,6 +51,7 @@ export interface ValidatorFunction<T = unknown> {
   _isRequired?: boolean;
   _crossField?: boolean;
   _debounce?: number;
+  _dependsOnField?: string;
 }
 
 export interface ValidationRule<T = unknown> {
@@ -73,6 +74,15 @@ export interface CrossFieldValidationContext<T> {
   getValue: <P extends string>(path: P) => unknown;
   getValues: () => T;
   signal?: AbortSignal;
+}
+
+// ─── Error Source Types ──────────────────────────────────────────────────
+
+export type ErrorSource = 'sync' | 'async' | 'schema' | 'server' | 'manual';
+
+export interface FormError {
+  message: string;
+  source: ErrorSource;
 }
 
 // ─── Field Types ─────────────────────────────────────────────────────────────
@@ -114,6 +124,7 @@ export interface FieldHandle<V = unknown> {
   touched: boolean;
   dirty: boolean;
   validating: boolean;
+  errorMap: Record<ErrorSource, string[]>;
   setValue: (value: V) => void;
   setError: (errors: string[]) => void;
   clearErrors: () => void;
@@ -127,6 +138,7 @@ export interface FieldOptions<V = unknown> {
   defaultValue?: V;
   transform?: (value: unknown) => V;
   parse?: (event: any) => V;
+  dependsOn?: string | string[];
 }
 
 // ─── Array Field Types ───────────────────────────────────────────────────────
@@ -168,11 +180,13 @@ export type SubmitHandler<T = unknown> = (
 export interface FormConfig<T extends Record<string, any> = Record<string, any>> {
   defaultValues: T;
   onSubmit?: SubmitHandler<T>;
-  schema?: ValidationSchema<unknown, T>;
+  schema?: ValidationSchema<unknown, T> | { readonly '~standard': any };
   validators?: Partial<Record<FormPath<T>, ValidatorFunction<any> | ValidatorFunction<any>[]>>;
   validateOn?: ValidateOn;
   validateOnMount?: boolean;
   resetOnSubmit?: boolean;
+  focusOnError?: boolean;
+  dependencies?: Partial<Record<FormPath<T>, FormPath<T> | FormPath<T>[]>>;
 }
 
 export interface FormState<T = unknown> {
@@ -196,23 +210,26 @@ export interface FormStoreInterface<T extends Record<string, any> = Record<strin
   values: T;
   config: FormConfig<T>;
 
-  getValue<P extends string>(path: P): unknown;
-  setValue<P extends string>(path: P, value: unknown): void;
+  getValue<P extends FormPath<T>>(path: P): PathValue<T, P>;
+  setValue<P extends FormPath<T>>(path: P, value: PathValue<T, P>): void;
   setValues(partial: DeepPartial<T>): void;
   getValues(): T;
-  getSignal(path: string): Signal<unknown>;
+  getSignal<P extends FormPath<T>>(path: P): Signal<PathValue<T, P>>;
 
-  getErrors(path: string): Signal<string[]>;
-  setErrors(path: string, errors: string[]): void;
-  clearErrors(path?: string): void;
+  getErrors<P extends FormPath<T>>(path: P): Signal<string[]>;
+  setErrors<P extends FormPath<T>>(path: P, errors: string[]): void;
+  clearErrors<P extends FormPath<T>>(path?: P): void;
   getFormErrors(): Signal<string[]>;
   setFormErrors(errors: string[]): void;
+  getErrorMap<P extends FormPath<T>>(path: P): Signal<Record<ErrorSource, string[]>>;
+  setErrorsWithSource<P extends FormPath<T>>(path: P, errors: string[], source: ErrorSource): void;
+  clearErrorsBySource<P extends FormPath<T>>(path: P, source: ErrorSource): void;
 
-  getTouched(path: string): boolean;
-  setTouched(path: string, touched?: boolean): void;
-  getDirty(path: string): boolean;
-  triggerBlurValidation(path: string): void;
-  getFieldValidating(path: string): Signal<boolean>;
+  getTouched<P extends FormPath<T>>(path: P): boolean;
+  setTouched<P extends FormPath<T>>(path: P, touched?: boolean): void;
+  getDirty<P extends FormPath<T>>(path: P): boolean;
+  triggerBlurValidation<P extends FormPath<T>>(path: P): void;
+  getFieldValidating<P extends FormPath<T>>(path: P): Signal<boolean>;
 
   isValid: Signal<boolean>;
   isDirty: Signal<boolean>;
@@ -220,18 +237,20 @@ export interface FormStoreInterface<T extends Record<string, any> = Record<strin
   submitState: Signal<FormSubmitState>;
   submitCount: Signal<number>;
 
-  register<V = unknown>(path: string, options?: FieldOptions<V>): FieldRegistration<V>;
-  unregister(path: string): void;
+  register<P extends FormPath<T>>(path: P, options?: FieldOptions<PathValue<T, P>>): FieldRegistration<PathValue<T, P>>;
+  unregister<P extends FormPath<T>>(path: P): void;
   handleSubmit(e?: Event): Promise<void>;
   submitWith(handler: SubmitHandler<T>, submitId?: string): Promise<void>;
   validate(): Promise<boolean>;
+  resetField<P extends FormPath<T>>(path: P): void;
+  trigger<P extends FormPath<T>>(path?: P): Promise<boolean>;
   reset(): void;
   resetTo(values: T): void;
   setBaseline(values: T): void;
   getChanges(): DeepPartial<T>;
 
-  watch(path: string, callback: WatchCallback): () => void;
-  watchFields(paths: string[], callback: WatchCallback): () => void;
+  watch<P extends FormPath<T>>(path: P, callback: WatchCallback<PathValue<T, P>>): () => void;
+  watchFields<P extends FormPath<T>>(paths: P[], callback: WatchCallback): () => void;
   subscribe(callback: () => void): () => void;
 
   toJSON(): T;
@@ -256,14 +275,14 @@ export interface FormActionConfig<T, TResult = unknown> {
 
 // ─── Wizard Types ────────────────────────────────────────────────────────────
 
-export interface WizardStepConfig {
+export interface WizardStepConfig<T extends Record<string, any> = Record<string, any>> {
   id: string;
-  fields?: string[];
+  fields?: FormPath<T>[];
   validate?: () => Promise<boolean> | boolean;
 }
 
 export interface WizardConfig<T extends Record<string, any> = Record<string, any>> {
-  steps: WizardStepConfig[];
+  steps: WizardStepConfig<T>[];
   form: FormConfig<T>;
   persist?: 'localStorage' | 'sessionStorage' | false;
   persistKey?: string;
@@ -282,7 +301,7 @@ export interface WizardState {
 
 // ─── Component Props ─────────────────────────────────────────────────────────
 
-export interface FieldComponentProps<T extends Record<string, any>, K extends string = string> {
+export interface FieldComponentProps<T extends Record<string, any>, K extends FormPath<T> = FormPath<T>> {
   form?: FormStoreInterface<T>;
   name: K;
   type?: string;
@@ -294,19 +313,19 @@ export interface FieldComponentProps<T extends Record<string, any>, K extends st
   children?: (field: FieldHandle<PathValue<T, K>>) => ReactNode;
 }
 
-export interface TextareaFieldProps<T extends Record<string, any>, K extends string = string> extends FieldComponentProps<T, K> {
+export interface TextareaFieldProps<T extends Record<string, any>, K extends FormPath<T> = FormPath<T>> extends FieldComponentProps<T, K> {
   rows?: number;
   cols?: number;
   maxLength?: number;
 }
 
-export interface SelectFieldProps<T extends Record<string, any>, K extends string = string> extends FieldComponentProps<T, K> {
+export interface SelectFieldProps<T extends Record<string, any>, K extends FormPath<T> = FormPath<T>> extends FieldComponentProps<T, K> {
   options: Array<{ value: string; label: string; disabled?: boolean }>;
   multiple?: boolean;
 }
 
-export interface FieldArrayComponentProps<T extends Record<string, any>, K extends string = string> {
+export interface FieldArrayComponentProps<T extends Record<string, any>, K extends FormPath<T> = FormPath<T>> {
   form?: FormStoreInterface<T>;
   name: K;
-  children: (helpers: ArrayFieldHelpers<any>) => ReactNode;
+  children: (helpers: ArrayFieldHelpers<PathValue<T, K> extends (infer U)[] ? U : unknown>) => ReactNode;
 }

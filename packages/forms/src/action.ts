@@ -200,11 +200,11 @@ export function ActionForm<T extends Record<string, any>>(
           });
           announceSubmitStatus('error');
 
-          // Auto-map server errors to fields
+          // Auto-map server errors to fields with 'server' source
           if (result.errors) {
             for (const [path, errors] of Object.entries(result.errors)) {
               if (path) {
-                form.setErrors(path, errors);
+                (form as FormStoreInterface<any>).setErrorsWithSource(path, errors, 'server');
               } else {
                 form.setFormErrors(errors);
               }

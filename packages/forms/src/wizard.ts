@@ -33,7 +33,7 @@ export interface WizardHelpers<T extends Record<string, any>> {
   submit: () => Promise<void>;
   reset: () => void;
   dispose: () => void;
-  getStepConfig: (index: number) => WizardStepConfig | undefined;
+  getStepConfig: (index: number) => WizardStepConfig<T> | undefined;
   canGoNext: () => boolean;
   canGoPrev: () => boolean;
 }
@@ -362,7 +362,7 @@ export function WizardStep({
 
 export interface WizardProgressProps {
   wizard?: WizardHelpers<any>;
-  renderStep?: (step: WizardStepConfig, index: number, state: { isActive: boolean; isCompleted: boolean }) => ReactNode;
+  renderStep?: (step: WizardStepConfig<any>, index: number, state: { isActive: boolean; isCompleted: boolean }) => ReactNode;
 }
 
 export function WizardProgress({
