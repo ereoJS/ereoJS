@@ -214,7 +214,7 @@ export interface SecurityHeadersOptions {
 
 export function securityHeaders(options: SecurityHeadersOptions = {}): MiddlewareHandler {
   const {
-    contentSecurityPolicy = "default-src 'self'",
+    contentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data:; connect-src 'self' ws: wss:",
     xFrameOptions = 'SAMEORIGIN',
     xContentTypeOptions = true,
     referrerPolicy = 'strict-origin-when-cross-origin',

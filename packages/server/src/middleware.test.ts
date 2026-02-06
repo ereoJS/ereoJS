@@ -243,7 +243,7 @@ describe('@ereo/server - Middleware', () => {
         return new Response('OK');
       });
 
-      expect(response.headers.get('Content-Security-Policy')).toBe("default-src 'self'");
+      expect(response.headers.get('Content-Security-Policy')).toBe("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data:; connect-src 'self' ws: wss:");
       expect(response.headers.get('X-Frame-Options')).toBe('SAMEORIGIN');
       expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
       expect(response.headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin');
