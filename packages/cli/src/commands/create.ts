@@ -13,6 +13,8 @@ import { mkdir } from 'node:fs/promises';
 export interface CreateOptions {
   template?: 'minimal' | 'default' | 'tailwind';
   typescript?: boolean;
+  /** CLI version — used as the @ereo/* dependency version in generated projects. */
+  version?: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export async function create(
   await mkdir(join(projectDir, 'public'), { recursive: true });
 
   // Generate files based on template
-  const files = generateTemplateFiles(template, typescript, projectName);
+  const files = generateTemplateFiles(template, typescript, projectName, options.version);
 
   // Sort files for consistent output
   const sortedPaths = Object.keys(files).sort();
@@ -64,26 +66,28 @@ export async function create(
 function generateTemplateFiles(
   template: string,
   typescript: boolean,
-  projectName: string
+  projectName: string,
+  version?: string
 ): Record<string, string> {
   const ext = typescript ? 'tsx' : 'jsx';
   const files: Record<string, string> = {};
 
   // package.json - includes all necessary dependencies
+  const ereoVersion = version ? `^${version}` : '^0.1.0';
   const dependencies: Record<string, string> = {
-    '@ereo/core': '^0.1.0',
-    '@ereo/router': '^0.1.0',
-    '@ereo/server': '^0.1.0',
-    '@ereo/client': '^0.1.0',
-    '@ereo/data': '^0.1.0',
-    '@ereo/cli': '^0.1.0',
+    '@ereo/core': ereoVersion,
+    '@ereo/router': ereoVersion,
+    '@ereo/server': ereoVersion,
+    '@ereo/client': ereoVersion,
+    '@ereo/data': ereoVersion,
+    '@ereo/cli': ereoVersion,
     'react': '^18.2.0',
     'react-dom': '^18.2.0',
   };
 
   // Add plugin-tailwind when using tailwind template
   if (template === 'tailwind') {
-    dependencies['@ereo/plugin-tailwind'] = '^0.1.0';
+    dependencies['@ereo/plugin-tailwind'] = ereoVersion;
   }
 
   files['package.json'] = JSON.stringify(

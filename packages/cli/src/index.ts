@@ -23,11 +23,13 @@ import {
   type DbPushOptions,
   type DbSeedOptions,
 } from './commands/db';
+import { join, dirname } from 'node:path';
 
 /**
- * CLI version.
+ * CLI version — read from package.json so it stays in sync after releases.
  */
-const VERSION = '0.1.0';
+const pkgJsonPath = join(dirname(import.meta.dir), 'package.json');
+const VERSION = (await Bun.file(pkgJsonPath).json()).version as string;
 
 /**
  * Print help message.
@@ -193,6 +195,7 @@ async function main(): Promise<void> {
         const createOptions: CreateOptions = {
           template: (options.template || options.t) as CreateOptions['template'],
           typescript: options.typescript !== 'false',
+          version: VERSION,
         };
         await create(projectName, createOptions);
         break;
