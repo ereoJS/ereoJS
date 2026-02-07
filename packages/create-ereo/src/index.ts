@@ -63,6 +63,7 @@ interface CreateOptions {
   typescript: boolean;
   git: boolean;
   install: boolean;
+  trace: boolean;
 }
 
 /**
@@ -73,6 +74,7 @@ const defaultOptions: CreateOptions = {
   typescript: true,
   git: true,
   install: true,
+  trace: false,
 };
 
 /**
@@ -99,6 +101,7 @@ function printHelp(): void {
     --no-typescript         Use JavaScript instead of TypeScript
     --no-git                Skip git initialization
     --no-install            Skip package installation
+    --trace                 Include @ereo/trace for full-stack observability
 
   \x1b[1mExamples:\x1b[0m
     bunx create-ereo@latest my-app
@@ -142,6 +145,8 @@ function parseArgs(args: string[]): {
       options.git = false;
     } else if (arg === '--no-install') {
       options.install = false;
+    } else if (arg === '--trace') {
+      options.trace = true;
     } else if (!arg.startsWith('-') && !projectName) {
       projectName = arg;
     }
@@ -234,7 +239,8 @@ coverage
 async function generateMinimalProject(
   projectDir: string,
   projectName: string,
-  typescript: boolean
+  typescript: boolean,
+  trace: boolean = false
 ): Promise<void> {
   const ext = typescript ? 'tsx' : 'jsx';
 
@@ -249,7 +255,7 @@ async function generateMinimalProject(
     version: '0.1.0',
     type: 'module',
     scripts: {
-      dev: 'ereo dev',
+      dev: trace ? 'ereo dev --trace' : 'ereo dev',
       build: 'ereo build',
       start: 'ereo start',
     },
@@ -260,6 +266,7 @@ async function generateMinimalProject(
       '@ereo/client': EREO_VERSION,
       '@ereo/data': EREO_VERSION,
       '@ereo/cli': EREO_VERSION,
+      ...(trace ? { '@ereo/trace': EREO_VERSION } : {}),
       react: '^18.2.0',
       'react-dom': '^18.2.0',
     },
@@ -297,9 +304,6 @@ export default function RootLayout({ children }${typescript ? ': { children: Rea
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${projectName}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
         <style dangerouslySetInnerHTML={{ __html: \`
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
           :root {
@@ -328,7 +332,7 @@ export default function RootLayout({ children }${typescript ? ': { children: Rea
             }
           }
           body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg);
             color: var(--text);
             line-height: 1.6;
@@ -370,7 +374,7 @@ export default function RootLayout({ children }${typescript ? ': { children: Rea
           .code-dot-r { background: #ff5f57; }
           .code-dot-y { background: #febc2e; }
           .code-dot-g { background: #28c840; }
-          .code-body { padding: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: #a5b4fc; line-height: 1.8; }
+          .code-body { padding: 1.25rem; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.875rem; color: #a5b4fc; line-height: 1.8; }
           .code-body .prompt { color: #6ee7b7; }
           .quickstart-section { background: var(--bg-soft); padding: 5rem 2rem; text-align: center; }
           .quickstart-section h2 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; }
@@ -535,7 +539,8 @@ export default function HomePage() {
 async function generateTailwindProject(
   projectDir: string,
   projectName: string,
-  typescript: boolean
+  typescript: boolean,
+  trace: boolean = false
 ): Promise<void> {
   const ext = typescript ? 'tsx' : 'jsx';
   const ts = typescript;
@@ -555,7 +560,7 @@ async function generateTailwindProject(
     version: '0.1.0',
     type: 'module',
     scripts: {
-      dev: 'ereo dev',
+      dev: trace ? 'ereo dev --trace' : 'ereo dev',
       build: 'ereo build',
       start: 'ereo start',
       test: 'bun test',
@@ -570,6 +575,7 @@ async function generateTailwindProject(
       '@ereo/cli': EREO_VERSION,
       '@ereo/runtime-bun': EREO_VERSION,
       '@ereo/plugin-tailwind': EREO_VERSION,
+      ...(trace ? { '@ereo/trace': EREO_VERSION } : {}),
       react: '^18.2.0',
       'react-dom': '^18.2.0',
     },
@@ -657,8 +663,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'monospace'],
       },
       colors: {
         primary: {
@@ -712,8 +718,6 @@ export default {
   // Global styles
   // ============================================================================
   const styles = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -811,6 +815,51 @@ export interface ActionResult<T = unknown> {
   // ============================================================================
   // Mock data
   // ============================================================================
+
+  const tracingBlogPost = trace ? `
+  {
+    slug: 'full-stack-tracing',
+    title: 'Full-Stack Tracing with @ereo/trace',
+    excerpt: 'See every request from HTTP to database in a beautiful timeline. Zero-config observability for your EreoJS app.',
+    content: \\\`
+# Full-Stack Tracing with @ereo/trace
+
+EreoJS includes built-in full-stack observability that traces every request across all 11 framework layers.
+
+## Enabling Tracing
+
+Tracing is already configured in this project! Run \\\\\\\`bun run dev\\\\\\\` and open http://localhost:3000/__ereo/traces to see the trace viewer.
+
+## What Gets Traced
+
+- **Request lifecycle** — HTTP method, path, status, total duration
+- **Route matching** — Which route patterns matched, layout chains
+- **Data loading** — Loader execution time, cache hits/misses
+- **Form actions** — Validation, processing, error counts
+- **Database queries** — SQL statements, row counts, duration
+
+## CLI Output
+
+The CLI reporter shows a live tree view of every request:
+
+\\\\\\\`\\\\\\\`\\\\\\\`
+  GET    /blog  200  42.1ms
+  |-- routing       1.2ms   matched /blog
+  |-- data         38.4ms
+  |   |-- posts    35.1ms  db query
+  \\\\\\\\\\\\\\\`-- render       2.5ms
+\\\\\\\`\\\\\\\`\\\\\\\`
+
+## Production
+
+For production, alias \\\\\\\`@ereo/trace\\\\\\\` to \\\\\\\`@ereo/trace/noop\\\\\\\` — a 592-byte no-op that tree-shakes to zero runtime cost.
+    \\\`.trim(),
+    author: 'EreoJS Team',
+    date: '2024-02-01',
+    readTime: '3 min read',
+    tags: ['ereo', 'tracing', 'devtools'],
+  },` : '';
+
   const mockData = `
 ${ts ? "import type { Post } from './types';\n" : ''}
 /**
@@ -930,7 +979,7 @@ export default function Button({ children }) {
     date: '2024-01-25',
     readTime: '4 min read',
     tags: ['ereo', 'tailwind', 'css'],
-  },
+  },${tracingBlogPost}
 ];
 
 /**
@@ -948,7 +997,7 @@ export function getPostBySlug(slug${ts ? ': string' : ''})${ts ? ': Post | undef
 }
 
 /**
- * Simulate API delay for demo purposes.
+ * Simulate API delay for demo purposes.${trace ? '\n * When tracing is enabled, these delays create visible spans in the trace viewer.' : ''}
  */
 export async function simulateDelay(ms${ts ? ': number' : ''} = 100)${ts ? ': Promise<void>' : ''} {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -1175,9 +1224,6 @@ export default function RootLayout({ children }${ts ? ': RootLayoutProps' : ''})
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="A modern web application built with EreoJS" />
         <title>${projectName}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="/__tailwind.css" />
       </head>
       <body className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
@@ -1852,7 +1898,11 @@ export default function AboutPage() {
                 <li className="flex items-center gap-2">
                   <span className="text-green-500">✓</span>
                   Tailwind CSS styling
-                </li>
+                </li>${trace ? `
+                <li className="flex items-center gap-2">
+                  <span className="text-green-500">✓</span>
+                  Full-stack tracing &amp; observability
+                </li>` : ''}
               </ul>
             </div>
 
@@ -2037,7 +2087,8 @@ This project demonstrates:
 - **Nested Layouts** - Shared layouts per route segment
 - **Islands Architecture** - Selective hydration for interactivity
 - **Error Boundaries** - Graceful error handling
-- **Tailwind CSS** - Utility-first styling
+- **Tailwind CSS** - Utility-first styling${trace ? `
+- **Full-Stack Tracing** - Request-level observability with \`@ereo/trace\`` : ''}
 
 ## Getting Started
 
@@ -2045,10 +2096,11 @@ This project demonstrates:
 # Install dependencies
 bun install
 
-# Start development server
+# Start development server${trace ? ' (tracing enabled by default)' : ''}
 bun run dev
 
-# Open http://localhost:3000
+# Open http://localhost:3000${trace ? `
+# Open http://localhost:3000/__ereo/traces for the trace viewer` : ''}
 \`\`\`
 
 ## Project Structure
@@ -2085,7 +2137,17 @@ app/
 - \`bun test\` - Run tests
 - \`bun run typecheck\` - TypeScript type checking
 
-## Learn More
+${trace ? `## Tracing
+
+This project includes \`@ereo/trace\` for full-stack observability.
+
+- **CLI Reporter** — Live tree view in your terminal for every request
+- **Trace Viewer** — Open http://localhost:3000/__ereo/traces for a timeline UI
+- **11 Layers** — Traces request, routing, data, forms, signals, RPC, database, auth, islands, build, and errors
+
+For production, alias \`@ereo/trace\` to \`@ereo/trace/noop\` in your bundler for zero runtime cost (592 bytes).
+
+` : ''}## Learn More
 
 - [EreoJS Documentation](https://ereo.dev/docs)
 - [Bun Documentation](https://bun.sh/docs)
@@ -2103,13 +2165,13 @@ async function generateProject(
   projectName: string,
   options: CreateOptions
 ): Promise<void> {
-  const { template, typescript } = options;
+  const { template, typescript, trace } = options;
 
   if (template === 'minimal') {
-    await generateMinimalProject(projectDir, projectName, typescript);
+    await generateMinimalProject(projectDir, projectName, typescript, trace);
   } else {
     // Both 'default' and 'tailwind' use the full template
-    await generateTailwindProject(projectDir, projectName, typescript);
+    await generateTailwindProject(projectDir, projectName, typescript, trace);
   }
 }
 
@@ -2177,7 +2239,8 @@ async function main(): Promise<void> {
 
   console.log(`  Creating \x1b[36m${projectName}\x1b[0m...\n`);
   console.log(`  Template: ${finalOptions.template}`);
-  console.log(`  TypeScript: ${finalOptions.typescript ? 'Yes' : 'No'}\n`);
+  console.log(`  TypeScript: ${finalOptions.typescript ? 'Yes' : 'No'}`);
+  console.log(`  Tracing: ${finalOptions.trace ? 'Yes' : 'No'}\n`);
 
   // Generate project
   await generateProject(projectDir, projectName, finalOptions);
@@ -2202,7 +2265,7 @@ async function main(): Promise<void> {
     \x1b[36mcd ${projectName}\x1b[0m
     ${!finalOptions.install ? '\x1b[36mbun install\x1b[0m\n    ' : ''}\x1b[36mbun run dev\x1b[0m
 
-  Open http://localhost:3000 to see your app.
+  Open http://localhost:3000 to see your app.${finalOptions.trace ? '\n  Open http://localhost:3000/__ereo/traces for the trace viewer.' : ''}
 
   Happy coding!
 `);

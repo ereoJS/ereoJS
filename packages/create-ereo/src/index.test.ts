@@ -83,6 +83,11 @@ describe('CLI Argument Parsing', () => {
     const args = ['my-app', '--no-install'];
     expect(args).toContain('--no-install');
   });
+
+  test('parses trace flag', () => {
+    const args = ['my-app', '--trace'];
+    expect(args).toContain('--trace');
+  });
 });
 
 describe('Generated Package.json', () => {
@@ -95,6 +100,15 @@ describe('Generated Package.json', () => {
     expect(scripts.dev).toBeDefined();
     expect(scripts.build).toBeDefined();
     expect(scripts.start).toBeDefined();
+  });
+
+  test('has trace-enabled dev script when trace flag is set', () => {
+    const scripts = {
+      dev: 'ereo dev --trace',
+      build: 'ereo build',
+      start: 'ereo start',
+    };
+    expect(scripts.dev).toBe('ereo dev --trace');
   });
 
   test('has core dependencies', () => {
@@ -111,6 +125,27 @@ describe('Generated Package.json', () => {
     deps.forEach((dep) => {
       expect(dep).toBeTruthy();
     });
+  });
+
+  test('includes @ereo/trace when trace flag is set', () => {
+    const traceEnabled = true;
+    const deps = {
+      '@ereo/core': '^0.1.27',
+      '@ereo/trace': '^0.1.27',
+    };
+    if (traceEnabled) {
+      expect(deps['@ereo/trace']).toBeDefined();
+    }
+  });
+
+  test('does not include @ereo/trace by default', () => {
+    const traceEnabled = false;
+    const deps: Record<string, string> = {
+      '@ereo/core': '^0.1.27',
+    };
+    if (!traceEnabled) {
+      expect(deps['@ereo/trace']).toBeUndefined();
+    }
   });
 
   test('is ES module', () => {
@@ -184,10 +219,11 @@ describe('Help Output', () => {
   });
 
   test('lists available options', () => {
-    const options = ['--template', '--no-typescript', '--no-git', '--no-install'];
+    const options = ['--template', '--no-typescript', '--no-git', '--no-install', '--trace'];
     expect(options).toContain('--template');
     expect(options).toContain('--no-typescript');
     expect(options).toContain('--no-git');
+    expect(options).toContain('--trace');
   });
 
   test('shows examples', () => {
