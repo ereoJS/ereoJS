@@ -200,7 +200,7 @@ bun --version
 # Expected: 1.0.0 or later
 
 # 2. You can create a new project
-bunx create-ereo test-app
+bunx create-ereo@latest test-app
 
 # 3. Dependencies install successfully
 cd test-app && bun install

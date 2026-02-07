@@ -23,7 +23,7 @@ The [Your First App](/getting-started/your-first-app) tutorial walks through bui
 ## Quick Start
 
 ```bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 cd my-app
 bun dev
 ```

@@ -178,7 +178,7 @@ describe('Route Files', () => {
 
 describe('Help Output', () => {
   test('shows usage information', () => {
-    const usage = 'bunx create-ereo <project-name> [options]';
+    const usage = 'bunx create-ereo@latest <project-name> [options]';
     expect(usage).toContain('create-ereo');
     expect(usage).toContain('<project-name>');
   });
@@ -192,8 +192,8 @@ describe('Help Output', () => {
 
   test('shows examples', () => {
     const examples = [
-      'bunx create-ereo my-app',
-      'bunx create-ereo my-app --template minimal',
+      'bunx create-ereo@latest my-app',
+      'bunx create-ereo@latest my-app --template minimal',
     ];
     expect(examples.length).toBeGreaterThan(0);
   });

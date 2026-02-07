@@ -82,7 +82,7 @@ The latest release consolidates the framework's core packages, adds the RPC laye
 - **`ereo dev`** — Development server with hot module replacement and fast refresh.
 - **`ereo build`** — Production build with tree-shaking, code splitting, and multiple output targets.
 - **`ereo start`** — Start the production server.
-- **`bunx create-ereo`** — Project scaffolding with template selection.
+- **`bunx create-ereo@latest`** — Project scaffolding with template selection.
 - **`ereo deploy`** — Platform-specific deployment commands for Vercel, Cloudflare, Fly.io, and Railway.
 - **`ereo db`** — Database migration and seed commands (works with Drizzle and SurrealDB adapters).
 

@@ -11,7 +11,7 @@ bun ereo create <project-name> [options]
 Or via the standalone package:
 
 ```bash
-bunx create-ereo <project-name> [options]
+bunx create-ereo@latest <project-name> [options]
 ```
 
 ## Options
@@ -345,14 +345,14 @@ await create('my-app', {
 
 ## Comparison with create-ereo
 
-| Feature | `ereo create` | `bunx create-ereo` |
+| Feature | `ereo create` | `bunx create-ereo@latest` |
 |---------|---------------|-------------------|
 | Git initialization | No | Yes (default) |
 | Auto-install | No | Yes (default) |
 | Interactive mode | No | Yes |
 | Template options | Same | Same |
 
-For full scaffolding with git and auto-install, use `bunx create-ereo`.
+For full scaffolding with git and auto-install, use `bunx create-ereo@latest`.
 
 ## Related
 

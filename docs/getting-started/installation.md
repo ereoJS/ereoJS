@@ -5,7 +5,7 @@
 The fastest way to start is with the `create-ereo` CLI:
 
 ```bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 cd my-app
 bun dev
 ```
@@ -20,10 +20,10 @@ This creates a new project with:
 
 ```bash
 # Use the minimal template (bare-bones starter)
-bunx create-ereo my-app --template minimal
+bunx create-ereo@latest my-app --template minimal
 
 # Skip TypeScript
-bunx create-ereo my-app --no-typescript
+bunx create-ereo@latest my-app --no-typescript
 ```
 
 See [`create-ereo`](/api/create-ereo/) for all available templates and options.

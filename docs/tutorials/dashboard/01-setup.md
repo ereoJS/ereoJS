@@ -19,7 +19,7 @@ A team dashboard with:
 ## Create the Project
 
 ```bash
-bunx create-ereo dashboard-app
+bunx create-ereo@latest dashboard-app
 cd dashboard-app
 ```
 

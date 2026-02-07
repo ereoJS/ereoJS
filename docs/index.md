@@ -39,7 +39,7 @@ features:
 Create a new EreoJS project:
 
 ```bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 cd my-app
 bun dev
 ```

@@ -5,20 +5,20 @@ Scaffold a new EreoJS project with a single command. Creates a fully configured 
 ## Usage
 
 ```bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 ```
 
 Or with npm/npx:
 
 ```bash
-npx create-ereo my-app
+npx create-ereo@latest my-app
 ```
 
 ## Quick Start
 
 ```bash
 # Create a new project with the default template
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 
 # Navigate to the project
 cd my-app
@@ -35,13 +35,13 @@ Choose from multiple starter templates:
 
 ```bash
 # Minimal template - bare essentials
-bunx create-ereo my-app --template minimal
+bunx create-ereo@latest my-app --template minimal
 
 # Default template - standard setup
-bunx create-ereo my-app --template default
+bunx create-ereo@latest my-app --template default
 
 # Tailwind template - full-featured with Tailwind CSS (default)
-bunx create-ereo my-app --template tailwind
+bunx create-ereo@latest my-app --template tailwind
 ```
 
 ### Template Contents
@@ -76,16 +76,16 @@ bunx create-ereo my-app --template tailwind
 
 ```bash
 # Create with minimal template
-bunx create-ereo my-app -t minimal
+bunx create-ereo@latest my-app -t minimal
 
 # Create without TypeScript
-bunx create-ereo my-app --no-typescript
+bunx create-ereo@latest my-app --no-typescript
 
 # Create without installing dependencies
-bunx create-ereo my-app --no-install
+bunx create-ereo@latest my-app --no-install
 
 # Create without git initialization
-bunx create-ereo my-app --no-git
+bunx create-ereo@latest my-app --no-git
 ```
 
 ## Project Structure

@@ -14,13 +14,13 @@ Scaffold a new EreoJS project with a single command. The `create-ereo` package p
 ### Using bunx (Recommended)
 
 ```bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 ```
 
 ### Using npx
 
 ```bash
-npx create-ereo my-app
+npx create-ereo@latest my-app
 ```
 
 ### Direct Installation
@@ -55,7 +55,7 @@ Full-featured template with Tailwind CSS styling, demonstrating all EreoJS featu
 - Error boundaries
 
 ```bash
-bunx create-ereo my-app --template tailwind
+bunx create-ereo@latest my-app --template tailwind
 ```
 
 ### default
@@ -63,7 +63,7 @@ bunx create-ereo my-app --template tailwind
 Same as tailwind template - includes all features with Tailwind CSS.
 
 ```bash
-bunx create-ereo my-app --template default
+bunx create-ereo@latest my-app --template default
 ```
 
 ### minimal
@@ -76,7 +76,7 @@ Bare-bones template for starting from scratch:
 - Minimal dependencies
 
 ```bash
-bunx create-ereo my-app --template minimal
+bunx create-ereo@latest my-app --template minimal
 ```
 
 ## Template Comparison
@@ -108,7 +108,7 @@ bunx create-ereo my-app --template minimal
 
 ```bash
 # Create with all defaults (TypeScript, Tailwind, git, auto-install)
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 
 # Navigate and start development
 cd my-app
@@ -118,20 +118,20 @@ bun run dev
 ### JavaScript Project
 
 ```bash
-bunx create-ereo my-app --no-typescript
+bunx create-ereo@latest my-app --no-typescript
 ```
 
 ### Minimal Setup
 
 ```bash
 # Minimal template, skip install (install later manually)
-bunx create-ereo my-app --template minimal --no-install
+bunx create-ereo@latest my-app --template minimal --no-install
 ```
 
 ### Skip Git Initialization
 
 ```bash
-bunx create-ereo my-app --no-git
+bunx create-ereo@latest my-app --no-git
 ```
 
 ## Project Structure
@@ -340,7 +340,7 @@ The generator will not overwrite existing directories. Choose a different name o
 
 ```bash
 rm -rf my-app
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 ```
 
 ### Network Issues
@@ -348,7 +348,7 @@ bunx create-ereo my-app
 If dependency installation fails:
 
 ```bash
-bunx create-ereo my-app --no-install
+bunx create-ereo@latest my-app --no-install
 cd my-app
 bun install --verbose
 ```
@@ -358,9 +358,9 @@ bun install --verbose
 Ensure you're using a valid template name:
 
 ```bash
-bunx create-ereo my-app --template minimal
-bunx create-ereo my-app --template default
-bunx create-ereo my-app --template tailwind
+bunx create-ereo@latest my-app --template minimal
+bunx create-ereo@latest my-app --template default
+bunx create-ereo@latest my-app --template tailwind
 ```
 
 ## Exit Codes

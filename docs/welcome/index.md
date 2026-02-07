@@ -90,7 +90,7 @@ You're moving from Next.js, Remix, or Express and want a smooth transition. Ereo
 ## Quick Start
 
 ```bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 cd my-app
 bun dev
 ```

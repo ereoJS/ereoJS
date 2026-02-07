@@ -20,7 +20,7 @@ In this tutorial, you'll build a full-featured blog application with EreoJS. By 
 ## Create the Project
 
 ```bash
-bunx create-ereo blog
+bunx create-ereo@latest blog
 cd blog
 ```
 

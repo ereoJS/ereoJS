@@ -19,7 +19,7 @@ performance, and developer experience.
 ## Installation
 
 \`\`\`bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 cd my-app
 bun run dev
 \`\`\`

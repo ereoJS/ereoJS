@@ -3,7 +3,7 @@
  * create-ereo
  *
  * Scaffold a new EreoJS project.
- * Usage: bunx create-ereo my-app
+ * Usage: bunx create-ereo@latest my-app
  */
 
 import { join, resolve, dirname } from 'node:path';
@@ -14,7 +14,41 @@ import { mkdir } from 'node:fs/promises';
  * All @ereo packages are published at the same version.
  */
 const pkgJsonPath = join(dirname(import.meta.dir), 'package.json');
-const EREO_VERSION = `^${(await Bun.file(pkgJsonPath).json()).version}`;
+const LOCAL_VERSION: string = (await Bun.file(pkgJsonPath).json()).version;
+const EREO_VERSION = `^${LOCAL_VERSION}`;
+
+/**
+ * Check npm registry for the latest version and warn if outdated.
+ * Runs with a short timeout so it never blocks project creation.
+ */
+async function checkForUpdates(): Promise<void> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch('https://registry.npmjs.org/create-ereo/latest', {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return;
+
+    const { version: latest } = (await res.json()) as { version: string };
+
+    if (latest && latest !== LOCAL_VERSION) {
+      console.log(
+        `  \x1b[33m⚠\x1b[0m  You are running \x1b[1mcreate-ereo@${LOCAL_VERSION}\x1b[0m.`
+      );
+      console.log(
+        `     The latest version is \x1b[1m\x1b[32m${latest}\x1b[0m. Update with:\n`
+      );
+      console.log(
+        `     \x1b[36mbunx create-ereo@latest ${process.argv[2] ?? '<project-name>'}\x1b[0m\n`
+      );
+    }
+  } catch {
+    // Network errors, timeouts, etc. — silently continue
+  }
+}
 
 /**
  * Available templates.
@@ -58,7 +92,7 @@ function printBanner(): void {
 function printHelp(): void {
   console.log(`
   \x1b[1mUsage:\x1b[0m
-    bunx create-ereo <project-name> [options]
+    bunx create-ereo@latest <project-name> [options]
 
   \x1b[1mOptions:\x1b[0m
     -t, --template <name>   Template to use (minimal, default, tailwind)
@@ -67,9 +101,9 @@ function printHelp(): void {
     --no-install            Skip package installation
 
   \x1b[1mExamples:\x1b[0m
-    bunx create-ereo my-app
-    bunx create-ereo my-app --template minimal
-    bunx create-ereo my-app --no-typescript
+    bunx create-ereo@latest my-app
+    bunx create-ereo@latest my-app --template minimal
+    bunx create-ereo@latest my-app --no-typescript
 `);
 }
 
@@ -444,7 +478,7 @@ export default function HomePage() {
             <span className="code-dot code-dot-g" />
           </div>
           <div className="code-body">
-            <div><span className="prompt">$</span> bunx create-ereo my-app</div>
+            <div><span className="prompt">$</span> bunx create-ereo@latest my-app</div>
             <div><span className="prompt">$</span> cd my-app</div>
             <div><span className="prompt">$</span> bun run dev</div>
           </div>
@@ -804,7 +838,7 @@ EreoJS is a modern React fullstack framework that runs on Bun, offering exceptio
 ## Quick Start
 
 \\\`\\\`\\\`bash
-bunx create-ereo my-app
+bunx create-ereo@latest my-app
 cd my-app
 bun run dev
 \\\`\\\`\\\`
@@ -1248,7 +1282,7 @@ export default function HomePage({ loaderData }${ts ? ': HomePageProps' : ''}) {
               <span className="code-window-dot bg-green-500" />
             </div>
             <div className="px-5 py-4 font-mono text-sm text-primary-300 leading-relaxed">
-              <div><span className="text-emerald-400">$</span> bunx create-ereo my-app</div>
+              <div><span className="text-emerald-400">$</span> bunx create-ereo@latest my-app</div>
               <div><span className="text-emerald-400">$</span> cd my-app</div>
               <div><span className="text-emerald-400">$</span> bun run dev</div>
             </div>
@@ -1428,7 +1462,7 @@ export async function action({ request }) {
             <span className="code-window-dot bg-green-500" />
           </div>
           <div className="px-5 py-3 font-mono text-sm text-primary-300">
-            <span className="text-emerald-400">$</span> bunx create-ereo my-app
+            <span className="text-emerald-400">$</span> bunx create-ereo@latest my-app
           </div>
         </div>
         <div className="flex flex-wrap gap-4 justify-center">
@@ -2115,6 +2149,7 @@ async function installDeps(projectDir: string): Promise<void> {
  */
 async function main(): Promise<void> {
   printBanner();
+  await checkForUpdates();
 
   const args = process.argv.slice(2);
   const { projectName, options } = parseArgs(args);

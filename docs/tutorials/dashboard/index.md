@@ -82,7 +82,7 @@ Before starting this tutorial, you should have:
 
 ```bash
 # Create new project
-bunx create-ereo dashboard-app
+bunx create-ereo@latest dashboard-app
 cd dashboard-app
 
 # Install dependencies

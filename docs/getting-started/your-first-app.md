@@ -7,7 +7,7 @@ Let's build a simple task list application to learn EreoJS's core features: rout
 Create a new project:
 
 ```bash
-bunx create-ereo tasks-app
+bunx create-ereo@latest tasks-app
 cd tasks-app
 ```
 
