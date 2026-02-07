@@ -1,5 +1,5 @@
 {
-  "name": "@ereo/cli",
+  "name": "@ereo/trace",
   "version": "0.1.27",
   "license": "MIT",
   "author": "Ereo Team",
@@ -7,39 +7,41 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/ereojs/ereo.git",
-    "directory": "packages/cli"
+    "directory": "packages/trace"
   },
   "bugs": {
     "url": "https://github.com/ereojs/ereo/issues"
   },
+  "description": "Full-stack developer observability and tracing for EreoJS framework",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "ereo": "./dist/index.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./noop": {
+      "types": "./dist/noop.d.ts",
+      "import": "./dist/noop.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun --external @ereo/core --external @ereo/router --external @ereo/server --external @ereo/bundler && bun run build:types",
+    "build": "bun build ./src/index.ts ./src/noop.ts ./src/client.ts --outdir ./dist --target bun --external @ereo/core && bun run build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
-    "dev": "bun run ./src/index.ts",
+    "dev": "bun build ./src/index.ts ./src/noop.ts ./src/client.ts --outdir ./dist --target bun --watch",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@ereo/core": "workspace:*",
-    "@ereo/router": "workspace:*",
-    "@ereo/server": "workspace:*",
-    "@ereo/bundler": "workspace:*",
-    "@ereo/trace": "workspace:*"
+  "peerDependencies": {
+    "@ereo/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",

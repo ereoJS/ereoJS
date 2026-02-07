@@ -61,6 +61,7 @@ export function generateDevToolsPanelHTML(data: DevToolsPanelData): string {
         <button class="nav-btn" data-tab="islands">Islands</button>
         <button class="nav-btn" data-tab="cache">Cache</button>
         <button class="nav-btn" data-tab="hmr">HMR</button>
+        <button class="nav-btn" data-tab="traces">Traces</button>
       </nav>
       <div class="devtools-actions">
         <button class="action-icon" onclick="window.__EREO_DEVTOOLS__.refresh()" title="Refresh">
@@ -100,6 +101,10 @@ export function generateDevToolsPanelHTML(data: DevToolsPanelData): string {
 
       <div class="tab-panel" id="hmr-panel">
         ${generateHMRTabHTML(hmrEvents)}
+      </div>
+
+      <div class="tab-panel" id="traces-panel">
+        ${generateTracesTabHTML()}
       </div>
     </main>
   </div>
@@ -195,6 +200,139 @@ function escapeHtml(str: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+/**
+ * Generate HTML for the Traces tab.
+ * Loads trace data from /__devtools/api/traces and renders an interactive waterfall.
+ */
+function generateTracesTabHTML(): string {
+  return `
+    <div class="traces-container" id="traces-root">
+      <div class="traces-header">
+        <h3>Request Traces</h3>
+        <button class="traces-refresh" onclick="window.__EREO_DEVTOOLS_TRACES__.refresh()">Refresh</button>
+      </div>
+      <div class="traces-layout">
+        <div class="traces-list" id="traces-list">
+          <div class="no-events">
+            <span class="no-events-icon">🔍</span>
+            <span class="no-events-text">Loading traces...</span>
+          </div>
+        </div>
+        <div class="traces-detail" id="traces-detail">
+          <div class="no-events">
+            <span class="no-events-text">Select a trace to view its waterfall</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+    (function() {
+      const TRACES_API = '/__devtools/api/traces';
+      let traces = [];
+      let selectedId = null;
+
+      function durClass(ms) { return ms < 50 ? 'dur-fast' : ms < 200 ? 'dur-medium' : 'dur-slow'; }
+      function statusClass(c) { return c < 300 ? 'status-ok' : c < 400 ? 'status-redirect' : 'status-error'; }
+      function fmtDur(ms) { return ms < 1 ? (ms*1000).toFixed(0)+'us' : ms < 1000 ? ms.toFixed(1)+'ms' : (ms/1000).toFixed(2)+'s'; }
+
+      function renderList() {
+        const el = document.getElementById('traces-list');
+        if (!traces.length) { el.innerHTML = '<div class="no-events"><span class="no-events-icon">🔍</span><span class="no-events-text">No traces yet</span><span class="no-events-hint">Make requests to your app to see traces</span></div>'; return; }
+        el.innerHTML = traces.map(t => {
+          const s = t.metadata.statusCode || 200;
+          return '<div class="trace-row'+(t.id===selectedId?' active':'')+'" data-id="'+t.id+'">' +
+            '<span class="trace-method">'+(t.metadata.method||'GET')+'</span>' +
+            '<span class="trace-path">'+(t.metadata.pathname||'/')+'</span>' +
+            '<span class="trace-status '+statusClass(s)+'">'+s+'</span>' +
+            '<span class="trace-dur '+durClass(t.duration)+'">'+fmtDur(t.duration)+'</span></div>';
+        }).join('');
+        el.querySelectorAll('.trace-row').forEach(r => { r.onclick = () => { selectedId = r.dataset.id; renderList(); renderDetail(); }; });
+      }
+
+      function renderDetail() {
+        const el = document.getElementById('traces-detail');
+        const t = traces.find(x => x.id === selectedId);
+        if (!t) { el.innerHTML = '<div class="no-events"><span class="no-events-text">Select a trace</span></div>'; return; }
+        const spans = Object.values(t.spans);
+        const root = spans.find(s => s.id === t.rootSpanId);
+        if (!root) return;
+        const flat = []; const minT = t.startTime; const dur = t.duration || 1;
+        function walk(s, d) { flat.push({...s, depth: d}); spans.filter(c => c.parentId === s.id && c.id !== s.id).sort((a,b)=>a.startTime-b.startTime).forEach(c => walk(c, d+1)); }
+        walk(root, 0);
+        el.innerHTML = '<div class="waterfall">' + flat.map(s => {
+          const l = ((s.startTime-minT)/dur*100).toFixed(2);
+          const w = Math.max(0.5, s.duration/dur*100).toFixed(2);
+          return '<div class="wf-row"><div class="wf-name" style="padding-left:'+(s.depth*12)+'px">'+s.name+'</div>' +
+            '<div class="wf-bar-bg"><div class="wf-bar layer-'+s.layer+'" style="left:'+l+'%;width:'+w+'%"></div></div>' +
+            '<div class="wf-dur '+durClass(s.duration)+'">'+fmtDur(s.duration)+'</div></div>';
+        }).join('') + '</div>';
+      }
+
+      async function load() {
+        try {
+          const res = await fetch(TRACES_API);
+          const data = await res.json();
+          traces = (data.traces || []).reverse();
+          renderList();
+          if (selectedId) renderDetail();
+        } catch {}
+      }
+
+      window.__EREO_DEVTOOLS_TRACES__ = { refresh: load };
+      load();
+
+      // Live updates via WebSocket
+      try {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(proto + '//' + location.host + '/__ereo/trace-ws');
+        ws.onmessage = (e) => { try { const d = JSON.parse(e.data); if (d.type === 'trace:end') { traces.unshift(d.trace); renderList(); } } catch {} };
+      } catch {}
+    })();
+    </script>
+    <style>
+      .traces-container { height: 100%; display: flex; flex-direction: column; }
+      .traces-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #2a2f3a; }
+      .traces-header h3 { font-size: 13px; color: #e2e8f0; }
+      .traces-refresh { background: #2563eb; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+      .traces-layout { display: flex; flex: 1; overflow: hidden; }
+      .traces-list { width: 320px; border-right: 1px solid #2a2f3a; overflow-y: auto; }
+      .traces-detail { flex: 1; overflow-y: auto; padding: 8px; }
+      .trace-row { display: flex; align-items: center; padding: 6px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #1e2330; gap: 6px; }
+      .trace-row:hover { background: #1e293b; }
+      .trace-row.active { background: #1e3a5f; border-left: 2px solid #3b82f6; }
+      .trace-method { font-weight: 600; width: 40px; color: #93c5fd; }
+      .trace-path { flex: 1; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .trace-status { width: 30px; text-align: center; }
+      .trace-dur { width: 55px; text-align: right; font-size: 11px; }
+      .status-ok { color: #4ade80; }
+      .status-redirect { color: #60a5fa; }
+      .status-error { color: #f87171; }
+      .dur-fast { color: #4ade80; }
+      .dur-medium { color: #facc15; }
+      .dur-slow { color: #f87171; }
+      .waterfall { padding: 4px 0; }
+      .wf-row { display: flex; align-items: center; padding: 3px 6px; font-size: 11px; }
+      .wf-row:hover { background: #1e293b; }
+      .wf-name { width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #cbd5e1; }
+      .wf-bar-bg { flex: 1; height: 14px; position: relative; margin: 0 8px; background: #1e2330; border-radius: 2px; }
+      .wf-bar { position: absolute; height: 10px; top: 2px; border-radius: 2px; min-width: 2px; }
+      .wf-dur { width: 50px; text-align: right; flex-shrink: 0; font-size: 10px; }
+      .layer-request { background: #64748b; }
+      .layer-routing { background: #60a5fa; }
+      .layer-data { background: #3b82f6; }
+      .layer-database { background: #a78bfa; }
+      .layer-auth { background: #facc15; }
+      .layer-rpc { background: #60a5fa; }
+      .layer-forms { background: #4ade80; }
+      .layer-islands { background: #a78bfa; }
+      .layer-build { background: #3b82f6; }
+      .layer-errors { background: #f87171; }
+      .layer-signals { background: #4ade80; }
+      .layer-custom { background: #64748b; }
+    </style>
+  `;
 }
 
 /**

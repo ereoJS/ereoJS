@@ -32,7 +32,8 @@
       "@ereo/router-conventions": ["./packages/router-conventions/src/index.ts"],
       "@ereo/db": ["./packages/db/src/index.ts"],
       "@ereo/db-drizzle": ["./packages/db-drizzle/src/index.ts"],
-      "@ereo/db-surrealdb": ["./packages/db-surrealdb/src/index.ts"]
+      "@ereo/db-surrealdb": ["./packages/db-surrealdb/src/index.ts"],
+      "@ereo/trace": ["./packages/trace/src/index.ts"]
     }
   },
   "include": [

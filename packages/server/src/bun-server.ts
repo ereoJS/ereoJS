@@ -117,6 +117,8 @@ export interface ServerOptions {
   clientEntry?: string;
   /** Default shell template */
   shell?: ShellTemplate;
+  /** Enable request tracing (dev only). Pass a Tracer instance or true for auto-creation. */
+  trace?: boolean | { tracer: unknown; middleware: MiddlewareHandler; viewerHandler?: (req: Request) => Response; tracesAPIHandler?: (req: Request) => Response };
 }
 
 /**
@@ -154,6 +156,11 @@ export class BunServer {
    * Setup default middleware.
    */
   private setupMiddleware(): void {
+    // Trace middleware (must be FIRST to wrap entire request lifecycle)
+    if (this.options.trace && typeof this.options.trace === 'object' && this.options.trace.middleware) {
+      this.middleware.use(this.options.trace.middleware);
+    }
+
     // Logging
     if (this.options.logging) {
       this.middleware.use(logger());
@@ -209,6 +216,17 @@ export class BunServer {
     const context = createContext(request);
 
     try {
+      // Handle trace endpoints (dev only)
+      if (this.options.trace && typeof this.options.trace === 'object') {
+        const url = new URL(request.url);
+        if (url.pathname === '/__ereo/traces' && this.options.trace.viewerHandler) {
+          return this.options.trace.viewerHandler(request);
+        }
+        if (url.pathname === '/__devtools/api/traces' && this.options.trace.tracesAPIHandler) {
+          return this.options.trace.tracesAPIHandler(request);
+        }
+      }
+
       // Check for static files first
       if (this.staticHandler) {
         const staticResponse = await this.staticHandler(request);

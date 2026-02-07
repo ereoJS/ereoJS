@@ -53,6 +53,7 @@ function printHelp(): void {
     --port, -p  Port number (default: 3000)
     --host, -h  Host name (default: localhost)
     --open, -o  Open browser
+    --trace     Enable request tracing
 
   \x1b[1mBuild Options:\x1b[0m
     --outDir    Output directory (default: .ereo)
@@ -160,6 +161,7 @@ async function main(): Promise<void> {
           port: options.port ? parseInt(options.port as string, 10) : undefined,
           host: (options.host || options.h) as string | undefined,
           open: !!(options.open || options.o),
+          trace: !!(options.trace),
         };
         await dev(devOptions);
         break;

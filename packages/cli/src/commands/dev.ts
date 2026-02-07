@@ -30,6 +30,8 @@ export interface DevOptions {
   port?: number;
   host?: string;
   open?: boolean;
+  /** Enable request tracing with CLI reporter */
+  trace?: boolean;
 }
 
 /** Extended config with env schema */
@@ -112,13 +114,34 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     hmr.jsUpdate(route.file);
   });
 
+  // Setup tracing if enabled
+  let traceConfig: import('@ereo/server').ServerOptions['trace'] = undefined;
+  if (options.trace) {
+    try {
+      const { createTracer, traceMiddleware, createCLIReporter, createViewerHandler, createTracesAPIHandler } = await import('@ereo/trace');
+      const tracer = createTracer();
+      const middleware = traceMiddleware(tracer);
+      const viewerHandler = createViewerHandler(tracer);
+      const tracesAPIHandler = createTracesAPIHandler(tracer);
+
+      // Start CLI reporter
+      createCLIReporter(tracer);
+
+      traceConfig = { tracer, middleware, viewerHandler, tracesAPIHandler };
+      console.log('  \x1b[35m⬡\x1b[0m Tracing enabled — view at /__ereo/traces\n');
+    } catch {
+      console.warn('  \x1b[33m⚠\x1b[0m @ereo/trace not installed, tracing disabled\n');
+    }
+  }
+
   // Create server with HMR
   const server = createServer({
     port,
     hostname,
     development: true,
-    logging: true,
+    logging: !options.trace, // Disable default logger when tracing (trace middleware provides richer output)
     websocket: createHMRWebSocket(hmr),
+    trace: traceConfig,
   });
 
   server.setApp(app);
