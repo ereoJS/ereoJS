@@ -821,14 +821,14 @@ export interface ActionResult<T = unknown> {
     slug: 'full-stack-tracing',
     title: 'Full-Stack Tracing with @ereo/trace',
     excerpt: 'See every request from HTTP to database in a beautiful timeline. Zero-config observability for your EreoJS app.',
-    content: \\\`
+    content: \`
 # Full-Stack Tracing with @ereo/trace
 
 EreoJS includes built-in full-stack observability that traces every request across all 11 framework layers.
 
 ## Enabling Tracing
 
-Tracing is already configured in this project! Run \\\\\\\`bun run dev\\\\\\\` and open http://localhost:3000/__ereo/traces to see the trace viewer.
+Tracing is already configured in this project! Run \\\`bun run dev\\\` and open http://localhost:3000/__ereo/traces to see the trace viewer.
 
 ## What Gets Traced
 
@@ -842,18 +842,18 @@ Tracing is already configured in this project! Run \\\\\\\`bun run dev\\\\\\\` a
 
 The CLI reporter shows a live tree view of every request:
 
-\\\\\\\`\\\\\\\`\\\\\\\`
+\\\`\\\`\\\`
   GET    /blog  200  42.1ms
   |-- routing       1.2ms   matched /blog
   |-- data         38.4ms
   |   |-- posts    35.1ms  db query
-  \\\\\\\\\\\\\\\`-- render       2.5ms
-\\\\\\\`\\\\\\\`\\\\\\\`
+  \\\\\\\`-- render       2.5ms
+\\\`\\\`\\\`
 
 ## Production
 
-For production, alias \\\\\\\`@ereo/trace\\\\\\\` to \\\\\\\`@ereo/trace/noop\\\\\\\` — a 592-byte no-op that tree-shakes to zero runtime cost.
-    \\\`.trim(),
+For production, alias \\\`@ereo/trace\\\` to \\\`@ereo/trace/noop\\\` — a 592-byte no-op that tree-shakes to zero runtime cost.
+    \`.trim(),
     author: 'EreoJS Team',
     date: '2024-02-01',
     readTime: '3 min read',
