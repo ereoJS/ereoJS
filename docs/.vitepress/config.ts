@@ -486,6 +486,19 @@ export default defineConfig({
           ]
         },
         {
+          text: '@ereo/trace',
+          collapsed: false,
+          items: [
+            { text: 'Overview', link: '/api/trace/' },
+            { text: 'Tracer & Span', link: '/api/trace/tracer' },
+            { text: 'Instrumentors', link: '/api/trace/instrumentors' },
+            { text: 'CLI Reporter', link: '/api/trace/cli-reporter' },
+            { text: 'Viewer & Transport', link: '/api/trace/viewer' },
+            { text: 'Client Tracing', link: '/api/trace/client' },
+            { text: 'Configuration', link: '/api/trace/configuration' },
+          ]
+        },
+        {
           text: '@ereo/dev-inspector',
           collapsed: true,
           items: [
