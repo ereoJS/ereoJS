@@ -199,10 +199,10 @@ EreoJS is not just a router with SSR bolted on. It's a complete platform for bui
 | **Forms** | `@ereo/forms` | Per-field validation, async rules, wizards, schema adapters |
 | **RPC** | `@ereo/rpc` | Type-safe procedures, middleware, subscriptions |
 | **Database** | `@ereo/db` | Drizzle ORM adapter, SurrealDB, connection pooling |
-| **Auth** | `@ereo/plugin-auth` | Credentials, OAuth (GitHub, Google, Discord), RBAC |
+| **Auth** | `@ereo/auth` | Credentials, OAuth (GitHub, Google, Discord), RBAC |
 | **Tracing** | `@ereo/trace` | Full-stack observability, 11 instrumentors, DevTools UI |
 | **CLI** | `@ereo/cli` | Dev server, builds, deployments, DB migrations |
-| **Deploy** | `@ereo/deploy-*` | Vercel, Cloudflare, Docker, Fly.io, Railway |
+| **Deploy** | `@ereo/deploy-*` | Vercel and Cloudflare adapters, Docker/Fly.io/Railway guides |
 
 Every piece is designed to work together, but each package is independent and tree-shakeable.
 
@@ -238,11 +238,11 @@ export const api = createRouter({
 
 ```tsx
 // Client -- fully typed, zero codegen
-import { useRPC } from '@ereo/rpc/client'
+import { useQuery } from '@ereo/rpc/client'
 
 function Posts() {
-  const { data: posts, loading } = useRPC(api.posts.list)
-  if (loading) return <p>Loading...</p>
+  const { data: posts, isLoading } = useQuery(api.posts.list)
+  if (isLoading) return <p>Loading...</p>
   return posts.map(p => <h2 key={p.id}>{p.title}</h2>)
 }
 ```
@@ -341,7 +341,7 @@ ereo dev --trace
 
 Full-stack tracing covers routing, data loading, form validation, RPC calls, database queries, hydration, and more. View traces in the built-in DevTools UI at `/__ereo/traces`, or in the CLI.
 
-In production, the tracer compiles to a **592-byte no-op** that tree-shakes completely.
+In production, the tracer compiles to a **616-byte no-op** that tree-shakes completely.
 
 ---
 
@@ -361,7 +361,7 @@ ereo deploy cloudflare --prod
 docker build -t my-app . && docker run -p 3000:3000 my-app
 ```
 
-Deployment adapters for Vercel, Cloudflare Workers/Pages, Docker, Fly.io, and Railway.
+Adapters for Vercel and Cloudflare Workers/Pages, plus deployment guides for Docker, Fly.io, and Railway.
 
 ---
 

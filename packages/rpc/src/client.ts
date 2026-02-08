@@ -178,7 +178,7 @@ export function createClient<T extends Router<RouterDef>>(
           const msg: WSServerMessage = JSON.parse(event.data);
 
           // Handle pong response
-          if ((msg as any).type === 'pong') {
+          if (msg.type === 'pong') {
             missedPongs = 0;
             return;
           }
@@ -278,7 +278,7 @@ export function createClient<T extends Router<RouterDef>>(
     }, delay);
   }
 
-  function handleServerMessage(msg: WSServerMessage) {
+  function handleServerMessage(msg: Exclude<WSServerMessage, { type: 'pong' }>) {
     const sub = subscriptions.get(msg.id);
     if (!sub) return;
 
