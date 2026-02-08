@@ -888,9 +888,10 @@ export function requireRoles(roles: string[], options?: {
 // ============================================================================
 
 /**
- * Helper to use auth in loaders/actions.
+ * Get the auth context from a request context.
+ * Use this in loaders and actions to access auth state.
  */
-export function useAuth(context: AppContext): AuthContext {
+export function getAuth(context: AppContext): AuthContext {
   const auth = context.get('auth') as AuthContext | undefined;
   if (!auth) {
     throw new Error('Auth context not found. Make sure createAuthPlugin is registered.');
@@ -922,7 +923,7 @@ export function withAuth<T>(
   options?: { roles?: string[] }
 ): (args: { request: Request; context: AppContext; params: Record<string, string> }) => Promise<T> {
   return async (args) => {
-    const auth = useAuth(args.context);
+    const auth = getAuth(args.context);
 
     if (!auth.isAuthenticated()) {
       throw new Response('Unauthorized', { status: 401 });
@@ -972,7 +973,7 @@ export async function handleOAuthCallback(
   providerId: string,
   params: { code: string; state: string; redirectUri: string }
 ): Promise<Session> {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   const config = context.get('authConfig') as AuthConfig | undefined;
   const provider = config?.providers?.find(p => p.id === providerId);
 

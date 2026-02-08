@@ -86,7 +86,7 @@ cookie: {
 // routes/login.tsx
 import { createLoader, createAction, redirect } from '@ereo/data'
 import { Form, useActionData } from '@ereo/client'
-import { useAuth, getSession } from '@ereo/auth'
+import { getAuth, getSession } from '@ereo/auth'
 
 export const loader = createLoader(async ({ context }) => {
   const session = getSession(context)
@@ -97,7 +97,7 @@ export const loader = createLoader(async ({ context }) => {
 })
 
 export const action = createAction(async ({ request, context }) => {
-  const auth = useAuth(context)
+  const auth = getAuth(context)
   const formData = await request.formData()
   const email = formData.get('email') as string
   const password = formData.get('password') as string
@@ -150,10 +150,10 @@ export default function Login() {
 ```tsx
 // routes/logout.tsx
 import { createAction, redirect } from '@ereo/data'
-import { useAuth } from '@ereo/auth'
+import { getAuth } from '@ereo/auth'
 
 export const action = createAction(async ({ context }) => {
-  const auth = useAuth(context)
+  const auth = getAuth(context)
   await auth.signOut()
 
   const cookieHeader = auth.getCookieHeader()
@@ -196,10 +196,10 @@ export default function DashboardLayout({ children }) {
 ```tsx
 // routes/dashboard/index.tsx
 import { createLoader } from '@ereo/data'
-import { useAuth, getUser } from '@ereo/auth'
+import { getAuth, getUser } from '@ereo/auth'
 
 export const loader = createLoader(async ({ context }) => {
-  const auth = useAuth(context)
+  const auth = getAuth(context)
 
   if (!auth.isAuthenticated()) {
     throw new Response(null, {
@@ -238,7 +238,7 @@ export const config = {
 
 ```tsx
 export const loader = createLoader(async ({ context }) => {
-  const auth = useAuth(context)
+  const auth = getAuth(context)
 
   if (!auth.hasRole('admin')) {
     throw new Response('Forbidden', { status: 403 })
@@ -279,10 +279,10 @@ fetch('/api/data', {
 
 ```ts
 // routes/api/protected.ts
-import { useAuth } from '@ereo/auth'
+import { getAuth } from '@ereo/auth'
 
 export async function loader({ context }) {
-  const auth = useAuth(context)
+  const auth = getAuth(context)
 
   if (!auth.isAuthenticated()) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -446,10 +446,10 @@ const mockProvider = mock({
 ## Helper Functions
 
 ```ts
-import { useAuth, getSession, getUser, withAuth } from '@ereo/auth'
+import { getAuth, getSession, getUser, withAuth } from '@ereo/auth'
 
 // Get auth context (throws if not configured)
-const auth = useAuth(context)
+const auth = getAuth(context)
 
 // Get session (returns null if not authenticated)
 const session = getSession(context)

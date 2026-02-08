@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, mock as bunMock, spyOn } from 'bun:test';
-import { createAuthPlugin, requireAuth, optionalAuth, requireRoles, useAuth, getSession, getUser } from './auth';
+import { createAuthPlugin, requireAuth, optionalAuth, requireRoles, getAuth, getSession, getUser } from './auth';
 import type { AuthContext, Session, User } from './auth';
 import { credentials, mock } from './providers/index';
 import type { AppContext } from '@ereo/core';
@@ -1141,7 +1141,7 @@ describe('optionalAuth', () => {
   });
 });
 
-describe('useAuth', () => {
+describe('getAuth', () => {
   it('should retrieve auth from context', () => {
     const mockAuth: AuthContext = {
       session: null,
@@ -1161,7 +1161,7 @@ describe('useAuth', () => {
       get: (key: string) => (key === 'auth' ? mockAuth : undefined),
     } as AppContext;
 
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     expect(auth.isAuthenticated()).toBe(false);
   });
 
@@ -1170,8 +1170,9 @@ describe('useAuth', () => {
       get: () => undefined,
     } as AppContext;
 
-    expect(() => useAuth(context)).toThrow('Auth context not found');
+    expect(() => getAuth(context)).toThrow('Auth context not found');
   });
+
 });
 
 describe('getSession', () => {

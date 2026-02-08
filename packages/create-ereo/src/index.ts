@@ -2827,13 +2827,13 @@ export function TaskCard({ task }${ts ? ': TaskCardProps' : ''}) {
   const rootLayout = `
 import { Navigation } from '~/components/Navigation';
 import { Footer } from '~/components/Footer';
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 
 ${ts ? 'interface RootLayoutProps {\n  children: React.ReactNode;\n  context: any;\n}\n' : ''}
 export async function loader({ context }${ts ? ': { context: any }' : ''}) {
   let user = null;
   try {
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     if (auth.isAuthenticated()) {
       user = auth.getUser();
     }
@@ -2871,11 +2871,11 @@ export default function RootLayout({ children, loaderData }${ts ? ': RootLayoutP
   // Landing Page
   // ============================================================================
   const indexPage = `
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 
 export async function loader({ context }${ts ? ': { context: any }' : ''}) {
   try {
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     if (auth.isAuthenticated()) {
       return new Response(null, {
         status: 302,
@@ -2990,7 +2990,7 @@ export default function LandingPage() {
               <pre className="px-5 py-4 font-mono text-sm text-primary-300 leading-relaxed overflow-x-auto">
 {\`// Server loader — fetches data
 export async function loader({ context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   const user = auth.getUser();
   const tasks = getTasksByUser(user.id);
   return { tasks };
@@ -3018,7 +3018,7 @@ export default function Tasks({ loaderData }) {
               <pre className="px-5 py-4 font-mono text-sm text-primary-300 leading-relaxed overflow-x-auto">
 {\`// Server action — handles mutations
 export async function action({ request, context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   const user = auth.getUser();
   const form = await request.formData();
 
@@ -3057,11 +3057,11 @@ export async function action({ request, context }) {
   // Login Page
   // ============================================================================
   const loginPage = `
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 
 export async function loader({ context }${ts ? ': { context: any }' : ''}) {
   try {
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     if (auth.isAuthenticated()) {
       return new Response(null, { status: 302, headers: { Location: '/tasks' } });
     }
@@ -3083,7 +3083,7 @@ export async function action({ request, context }${ts ? ': { request: Request; c
   }
 
   try {
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     await auth.signIn('credentials', { email, password });
 
     return new Response(null, {
@@ -3182,12 +3182,12 @@ export default function LoginPage({ actionData }${ts ? ': LoginPageProps' : ''})
   // Register Page
   // ============================================================================
   const registerPage = `
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 import { emailExists, createUser, hashPassword } from '~/lib/db';
 
 export async function loader({ context }${ts ? ': { context: any }' : ''}) {
   try {
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     if (auth.isAuthenticated()) {
       return new Response(null, { status: 302, headers: { Location: '/tasks' } });
     }
@@ -3224,7 +3224,7 @@ export async function action({ request, context }${ts ? ': { request: Request; c
 
   // Sign in the new user
   try {
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     await auth.signIn('credentials', { email, password });
 
     return new Response(null, {
@@ -3351,11 +3351,11 @@ export default function RegisterPage({ actionData }${ts ? ': RegisterPageProps' 
   // Logout Action Route
   // ============================================================================
   const logoutRoute = `
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 
 export async function action({ context }${ts ? ': { context: any }' : ''}) {
   try {
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     await auth.signOut();
   } catch {
     // Already signed out
@@ -3382,14 +3382,14 @@ export default function LogoutPage() {
   // Tasks List Page
   // ============================================================================
   const tasksIndex = `
-import { useAuth, requireAuth } from '@ereo/auth';
+import { getAuth, requireAuth } from '@ereo/auth';
 import { getTasksByUser, getTaskStats } from '~/lib/db';
 import { TaskCard } from '~/components/TaskCard';
 
 export const config = { ...requireAuth({ redirect: '/login' }) };
 
 export async function loader({ request, context }${ts ? ': { request: Request; context: any }' : ''}) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   if (!auth.isAuthenticated()) {
     return new Response(null, { status: 302, headers: { Location: '/login' } });
   }
@@ -3534,13 +3534,13 @@ export default function TasksPage({ loaderData }${ts ? ': TasksPageProps' : ''})
   // New Task Page
   // ============================================================================
   const newTaskPage = `
-import { useAuth, requireAuth } from '@ereo/auth';
+import { getAuth, requireAuth } from '@ereo/auth';
 import { createTask } from '~/lib/db';
 
 export const config = { ...requireAuth({ redirect: '/login' }) };
 
 export async function action({ request, context }${ts ? ': { request: Request; context: any }' : ''}) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   if (!auth.isAuthenticated()) {
     return new Response(null, { status: 302, headers: { Location: '/login' } });
   }
@@ -3652,13 +3652,13 @@ export default function NewTaskPage({ actionData }${ts ? ': NewTaskPageProps' : 
   // Task Detail / Edit Page (Dynamic Route)
   // ============================================================================
   const taskDetailPage = `
-import { useAuth, requireAuth } from '@ereo/auth';
+import { getAuth, requireAuth } from '@ereo/auth';
 import { getTaskById, updateTask, deleteTask } from '~/lib/db';
 
 export const config = { ...requireAuth({ redirect: '/login' }) };
 
 export async function loader({ params, context }${ts ? ': { params: { id: string }; context: any }' : ''}) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   if (!auth.isAuthenticated()) {
     return new Response(null, { status: 302, headers: { Location: '/login' } });
   }
@@ -3675,7 +3675,7 @@ export async function loader({ params, context }${ts ? ': { params: { id: string
 }
 
 export async function action({ request, params, context }${ts ? ': { request: Request; params: { id: string }; context: any }' : ''}) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   if (!auth.isAuthenticated()) {
     return new Response(null, { status: 302, headers: { Location: '/login' } });
   }

@@ -46,7 +46,7 @@ export default defineConfig({
 ## Using Auth in Routes
 
 ```typescript
-import { useAuth, requireAuth, getSession, getUser } from '@ereo/auth';
+import { getAuth, requireAuth, getSession, getUser } from '@ereo/auth';
 
 // Protect route with requireAuth
 export const config = {
@@ -55,7 +55,7 @@ export const config = {
 
 // Access auth in loader/action
 export async function loader({ context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
 
   if (auth.isAuthenticated()) {
     return { user: auth.getUser() };
@@ -66,7 +66,7 @@ export async function loader({ context }) {
 
 // Sign in
 export async function action({ request, context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   const formData = await request.formData();
 
   const session = await auth.signIn('credentials', {
@@ -103,7 +103,7 @@ import {
   requireAuth,
   optionalAuth,
   requireRoles,
-  useAuth,
+  getAuth,
   getSession,
   getUser,
   withAuth,

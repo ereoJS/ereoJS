@@ -54,7 +54,7 @@ import {
   requireAuth,
   optionalAuth,
   requireRoles,
-  useAuth,
+  getAuth,
   getSession,
   getUser,
   withAuth,
@@ -257,7 +257,7 @@ interface AuthProvider {
 
 ### AuthContext
 
-The `AuthContext` is available in route handlers via `context.get('auth')` or using the `useAuth()` helper:
+The `AuthContext` is available in route handlers via `context.get('auth')` or using the `getAuth()` helper:
 
 ```ts
 interface AuthContext {
@@ -517,13 +517,13 @@ apiKey({
 
 ### Get Auth Context
 
-Use the `useAuth()` helper to access the auth context in loaders and actions:
+Use the `getAuth()` helper to access the auth context in loaders and actions:
 
 ```ts
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 
 export async function loader({ context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
 
   if (!auth.isAuthenticated()) {
     return { user: null };
@@ -575,7 +575,7 @@ export const config = {
 
 export async function loader({ context }) {
   // User is guaranteed to be authenticated here
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   return { user: auth.getUser() };
 }
 ```
@@ -631,7 +631,7 @@ export const config = {
 };
 
 export async function loader({ context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
 
   if (auth.isAuthenticated()) {
     return { user: auth.getUser(), personalized: true };
@@ -661,10 +661,10 @@ export const loader = withAuth(
 ### Sign In Action
 
 ```ts
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 
 export async function action({ request, context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   const formData = await request.formData();
 
   try {
@@ -694,10 +694,10 @@ export async function action({ request, context }) {
 ### Sign Out Action
 
 ```ts
-import { useAuth } from '@ereo/auth';
+import { getAuth } from '@ereo/auth';
 
 export async function action({ context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
   await auth.signOut();
 
   const cookieHeader = auth.getCookieHeader();
@@ -729,7 +729,7 @@ export async function loader({ context }) {
 ### Handle OAuth Callback
 
 ```ts
-import { handleOAuthCallback, useAuth } from '@ereo/auth';
+import { handleOAuthCallback, getAuth } from '@ereo/auth';
 
 export async function loader({ request, context }) {
   const url = new URL(request.url);
@@ -747,7 +747,7 @@ export async function loader({ request, context }) {
       redirectUri: 'http://localhost:3000/auth/callback/github',
     });
 
-    const auth = useAuth(context);
+    const auth = getAuth(context);
     const cookieHeader = auth.getCookieHeader();
 
     return new Response(null, {
@@ -890,7 +890,7 @@ createAuthPlugin({
 
 ```ts
 export async function loader({ context }) {
-  const auth = useAuth(context);
+  const auth = getAuth(context);
 
   if (!auth.hasRole('admin')) {
     throw new Response('Forbidden', { status: 403 });

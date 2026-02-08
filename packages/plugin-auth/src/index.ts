@@ -15,7 +15,7 @@ export {
   requireAuth,
   optionalAuth,
   requireRoles,
-  useAuth,
+  getAuth,
   getSession,
   getUser,
   withAuth,
