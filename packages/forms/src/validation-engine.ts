@@ -1,4 +1,4 @@
-import { Signal, signal } from '@ereo/state';
+import { Signal, signal, batch } from '@ereo/state';
 import type {
   ValidatorFunction,
   ValidateOn,
@@ -330,50 +330,54 @@ export class ValidationEngine<T extends Record<string, any>> {
       this._validateAllController = null;
     }
 
-    // Clear all existing field errors first, then write new errors.
-    // This ensures schema-only errors are cleared when the schema passes.
-    this._store.clearErrors();
+    // Batch all error writes to consolidate signal notifications into one pass.
+    // Without this, each setErrorsWithSource/clearErrors call would fire O(N) notifications.
+    batch(() => {
+      // Clear all existing field errors first, then write new errors.
+      // This ensures schema-only errors are cleared when the schema passes.
+      this._store.clearErrors();
 
-    // Write schema errors with 'schema' source
-    if (schema) {
-      const schemaErrors = schemaResult?.errors ?? {};
-      for (const [path, errors] of Object.entries(schemaErrors)) {
-        this._store.setErrorsWithSource(path, errors, 'schema');
-      }
-    }
-
-    // Write field validator errors with appropriate sources
-    for (const [path, errors] of Object.entries(allErrors)) {
-      // Skip paths already handled by schema
-      const schemaErrors = schemaResult?.errors ?? {};
-      if (schemaErrors[path]) {
-        // Merge: field errors are sync/async, already have schema errors
-        // Determine if they're sync or async based on validators
-        const validation = this._fieldValidations.get(path);
-        const hasAsync = validation?.validators.some(v => v._isAsync);
-        const source = hasAsync && errors.length > 0 ? 'async' : 'sync';
-        const fieldOnlyErrors = errors.filter(e => !schemaErrors[path]?.includes(e));
-        if (fieldOnlyErrors.length > 0) {
-          this._store.setErrorsWithSource(path, fieldOnlyErrors, source);
+      // Write schema errors with 'schema' source
+      if (schema) {
+        const schemaErrors = schemaResult?.errors ?? {};
+        for (const [path, errors] of Object.entries(schemaErrors)) {
+          this._store.setErrorsWithSource(path, errors, 'schema');
         }
-      } else {
-        const validation = this._fieldValidations.get(path);
-        if (validation) {
-          const syncValidators = validation.validators.filter(v => !v._isAsync);
-          const asyncValidators = validation.validators.filter(v => v._isAsync);
-          // In validateAll, sync errors gate async. If errors exist and sync validators exist, they're sync.
-          if (syncValidators.length > 0 && errors.length > 0) {
-            this._store.setErrorsWithSource(path, errors, 'sync');
-          } else if (asyncValidators.length > 0 && errors.length > 0) {
-            this._store.setErrorsWithSource(path, errors, 'async');
+      }
+
+      // Write field validator errors with appropriate sources
+      for (const [path, errors] of Object.entries(allErrors)) {
+        // Skip paths already handled by schema
+        const schemaErrors = schemaResult?.errors ?? {};
+        if (schemaErrors[path]) {
+          // Merge: field errors are sync/async, already have schema errors
+          // Determine if they're sync or async based on validators
+          const validation = this._fieldValidations.get(path);
+          const hasAsync = validation?.validators.some(v => v._isAsync);
+          const source = hasAsync && errors.length > 0 ? 'async' : 'sync';
+          const fieldOnlyErrors = errors.filter(e => !schemaErrors[path]?.includes(e));
+          if (fieldOnlyErrors.length > 0) {
+            this._store.setErrorsWithSource(path, fieldOnlyErrors, source);
+          }
+        } else {
+          const validation = this._fieldValidations.get(path);
+          if (validation) {
+            const syncValidators = validation.validators.filter(v => !v._isAsync);
+            const asyncValidators = validation.validators.filter(v => v._isAsync);
+            // In validateAll, sync errors gate async. If errors exist and sync validators exist, they're sync.
+            if (syncValidators.length > 0 && errors.length > 0) {
+              this._store.setErrorsWithSource(path, errors, 'sync');
+            } else if (asyncValidators.length > 0 && errors.length > 0) {
+              this._store.setErrorsWithSource(path, errors, 'async');
+            } else {
+              this._store.setErrors(path, errors);
+            }
           } else {
             this._store.setErrors(path, errors);
           }
-        } else {
-          this._store.setErrors(path, errors);
         }
       }
-    }
+    });
 
     return { success: !hasErrors, errors: hasErrors ? allErrors : undefined };
   }
@@ -494,6 +498,7 @@ export class ValidationEngine<T extends Record<string, any>> {
       controller.abort();
     }
     this._abortControllers.clear();
+    this._fieldValidations.clear();
     this._validatingFields.clear();
     this._validatingSignals.clear();
     this._fieldGenerations.clear();

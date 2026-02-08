@@ -238,6 +238,7 @@ export function createWizard<T extends Record<string, any>>(
       clearTimeout(persistTimer);
       persistTimer = null;
     }
+    form.dispose();
   }
 
   return {

@@ -28,7 +28,7 @@ export class Signal<T> {
 
   /** Set new value (notifies subscribers) */
   set(value: T): void {
-    if (this._value !== value) {
+    if (!Object.is(this._value, value)) {
       this._value = value;
       this._notify();
     }
@@ -150,10 +150,29 @@ export function batch<T>(fn: () => T): T {
 export class Store<T extends Record<string, unknown>> {
   // Use Map<string, Signal<any>> internally to avoid complex type juggling
   private _state: Map<string, Signal<any>> = new Map();
+  /** Listeners notified on any value change or key addition */
+  private _listeners: Set<() => void> = new Set();
+  /** Internal signal subscriptions that forward to _listeners */
+  private _internalUnsubs: (() => void)[] = [];
 
   constructor(initialState: T) {
     for (const [key, value] of Object.entries(initialState)) {
-      this._state.set(key, signal(value));
+      const s = signal(value);
+      this._state.set(key, s);
+      this._subscribeToSignal(s);
+    }
+  }
+
+  /** Subscribe an internal signal to forward changes to store listeners */
+  private _subscribeToSignal(s: Signal<any>): void {
+    const unsub = s.subscribe(() => this._notifyListeners());
+    this._internalUnsubs.push(unsub);
+  }
+
+  /** Notify all store-level listeners */
+  private _notifyListeners(): void {
+    for (const listener of this._listeners) {
+      listener();
     }
   }
 
@@ -168,8 +187,17 @@ export class Store<T extends Record<string, unknown>> {
     if (s) {
       s.set(value);
     } else {
-      this._state.set(key as string, signal(value));
+      const newSignal = signal(value);
+      this._state.set(key as string, newSignal);
+      this._subscribeToSignal(newSignal);
+      this._notifyListeners();
     }
+  }
+
+  /** Subscribe to any change in the store (value changes or new keys) */
+  subscribe(listener: () => void): () => void {
+    this._listeners.add(listener);
+    return () => this._listeners.delete(listener);
   }
 
   /** Iterate over all signal entries */

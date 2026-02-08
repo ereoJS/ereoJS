@@ -72,9 +72,14 @@ export class PluginRegistry {
 
     for (const plugin of this.plugins) {
       if (plugin.transform) {
-        const transformed = await plugin.transform(result, id);
-        if (transformed !== null) {
-          result = transformed;
+        try {
+          const transformed = await plugin.transform(result, id);
+          if (transformed !== null) {
+            result = transformed;
+          }
+        } catch (error) {
+          console.error(`Plugin "${plugin.name}" transform failed for ${id}:`, error);
+          throw error;
         }
       }
     }

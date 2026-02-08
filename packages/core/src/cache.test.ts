@@ -353,6 +353,275 @@ describe('@ereo/core - Unified Cache Interface', () => {
     });
   });
 
+  describe('Edge cases', () => {
+    test('TTL of 0 means entry expires immediately', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('zero-ttl', 'value', { ttl: 0 });
+
+      // Should be expired immediately
+      expect(await cache.get('zero-ttl')).toBeUndefined();
+      expect(await cache.has('zero-ttl')).toBe(false);
+    });
+
+    test('maxSize of 1 keeps only last entry', async () => {
+      const cache = new MemoryCacheAdapter({ maxSize: 1 });
+
+      await cache.set('a', 1);
+      expect(await cache.get('a')).toBe(1);
+
+      await cache.set('b', 2);
+      expect(await cache.has('a')).toBe(false);
+      expect(await cache.get('b')).toBe(2);
+    });
+
+    test('special characters in keys work correctly', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('key with spaces', 'v1');
+      await cache.set('key/with/slashes', 'v2');
+      await cache.set('key:with:colons', 'v3');
+      await cache.set('', 'empty-key');
+
+      expect(await cache.get('key with spaces')).toBe('v1');
+      expect(await cache.get('key/with/slashes')).toBe('v2');
+      expect(await cache.get('key:with:colons')).toBe('v3');
+      expect(await cache.get('')).toBe('empty-key');
+    });
+
+    test('getByTag with empty tag index returns empty array', async () => {
+      const cache = new MemoryCacheAdapter();
+      const keys = await cache.getByTag('nonexistent');
+      expect(keys).toEqual([]);
+    });
+
+    test('invalidateTags with empty array does nothing', async () => {
+      const cache = new MemoryCacheAdapter();
+      await cache.set('safe', 'value');
+
+      await cache.invalidateTags([]);
+
+      expect(await cache.get('safe')).toBe('value');
+    });
+
+    test('getStats on empty cache returns zeros', () => {
+      const cache = new MemoryCacheAdapter();
+      const stats = cache.getStats();
+      expect(stats.size).toBe(0);
+      expect(stats.tags).toBe(0);
+    });
+
+    test('keys() on empty cache returns empty array', async () => {
+      const cache = new MemoryCacheAdapter();
+      const keys = await cache.keys();
+      expect(keys).toEqual([]);
+    });
+
+    test('updating entry with different tags cleans up old tag index', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('item', 'v1', { tags: ['old-tag'] });
+      expect(await cache.getByTag('old-tag')).toContain('item');
+
+      await cache.set('item', 'v2', { tags: ['new-tag'] });
+      expect(await cache.getByTag('old-tag')).toEqual([]);
+      expect(await cache.getByTag('new-tag')).toContain('item');
+    });
+
+    test('clear removes all entries and tags', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('a', 1, { tags: ['t1'] });
+      await cache.set('b', 2, { tags: ['t2'] });
+
+      await cache.clear();
+
+      expect(cache.getStats().size).toBe(0);
+      expect(cache.getStats().tags).toBe(0);
+      expect(await cache.getByTag('t1')).toEqual([]);
+    });
+
+    test('delete non-existent key returns false', async () => {
+      const cache = new MemoryCacheAdapter();
+      expect(await cache.delete('ghost')).toBe(false);
+    });
+
+    test('set without options uses no tags and no TTL', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('plain', 'value');
+
+      expect(await cache.get('plain')).toBe('value');
+      // Should persist indefinitely (no TTL)
+      expect(await cache.has('plain')).toBe(true);
+    });
+
+    test('negative TTL is treated as expired', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('neg-ttl', 'value', { ttl: -1 });
+
+      // Negative TTL * 1000 = negative, age > negative is true
+      // Actually depends on implementation - let's verify
+      const result = await cache.get('neg-ttl');
+      // age (>0) > -1000 should be true, so expired
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('Stats after operations', () => {
+    test('stats reflect current state after adds and deletes', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('a', 1, { tags: ['t1'] });
+      await cache.set('b', 2, { tags: ['t1', 't2'] });
+      expect(cache.getStats()).toEqual({ size: 2, tags: 2 });
+
+      await cache.delete('a');
+      // 'b' still has t1 and t2, so both tag entries remain
+      expect(cache.getStats()).toEqual({ size: 1, tags: 2 });
+
+      await cache.delete('b');
+      // All entries and tags gone
+      expect(cache.getStats()).toEqual({ size: 0, tags: 0 });
+    });
+
+    test('stats after tag invalidation', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('a', 1, { tags: ['shared'] });
+      await cache.set('b', 2, { tags: ['shared'] });
+      await cache.set('c', 3, { tags: ['other'] });
+
+      await cache.invalidateTag('shared');
+
+      expect(cache.getStats().size).toBe(1);
+      expect(cache.getStats().tags).toBe(1); // only 'other' remains
+    });
+
+    test('stats after clear', async () => {
+      const cache = new MemoryCacheAdapter();
+
+      await cache.set('a', 1, { tags: ['t1'] });
+      await cache.set('b', 2, { tags: ['t2'] });
+
+      await cache.clear();
+      expect(cache.getStats()).toEqual({ size: 0, tags: 0 });
+    });
+  });
+
+  describe('createCache return type', () => {
+    test('createCache returns MemoryCacheAdapter', () => {
+      const cache = createCache();
+      expect(cache).toBeInstanceOf(MemoryCacheAdapter);
+    });
+
+    test('createTaggedCache returns MemoryCacheAdapter', () => {
+      const cache = createTaggedCache();
+      expect(cache).toBeInstanceOf(MemoryCacheAdapter);
+    });
+
+    test('createCache with options passes them through', async () => {
+      const cache = createCache({ maxSize: 1 }) as MemoryCacheAdapter;
+
+      await cache.set('a', 1);
+      await cache.set('b', 2);
+
+      expect(cache.getStats().size).toBe(1);
+    });
+
+    test('createTaggedCache with defaultTtl', async () => {
+      const cache = createTaggedCache({ defaultTtl: 1 });
+
+      await cache.set('expire', 'val');
+      expect(await cache.get('expire')).toBe('val');
+
+      await new Promise(r => setTimeout(r, 1100));
+      expect(await cache.get('expire')).toBeUndefined();
+    });
+  });
+
+  describe('isTaggedCache edge cases', () => {
+    test('returns false for object with only some TaggedCache methods', () => {
+      const partial = {
+        get: async () => undefined,
+        set: async () => {},
+        delete: async () => false,
+        has: async () => false,
+        clear: async () => {},
+        invalidateTag: async () => {}, // has this
+        // missing invalidateTags and getByTag
+      };
+      expect(isTaggedCache(partial as any)).toBe(false);
+    });
+
+    test('returns false for object with non-function tagged methods', () => {
+      const fake = {
+        get: async () => undefined,
+        set: async () => {},
+        delete: async () => false,
+        has: async () => false,
+        clear: async () => {},
+        invalidateTag: 'not-a-function',
+        invalidateTags: 'not-a-function',
+        getByTag: 'not-a-function',
+      };
+      expect(isTaggedCache(fake as any)).toBe(false);
+    });
+  });
+
+  describe('wrapCacheAdapter edge cases', () => {
+    test('wrapped adapter preserves async behavior', async () => {
+      const store = new Map<string, unknown>();
+
+      const adapter = wrapCacheAdapter({
+        get: async <T>(key: string) => {
+          await new Promise(r => setTimeout(r, 5));
+          return store.get(key) as T | undefined;
+        },
+        set: async <T>(key: string, value: T) => {
+          await new Promise(r => setTimeout(r, 5));
+          store.set(key, value);
+        },
+        delete: async (key: string) => {
+          await new Promise(r => setTimeout(r, 5));
+          return store.delete(key);
+        },
+        has: async (key: string) => {
+          await new Promise(r => setTimeout(r, 5));
+          return store.has(key);
+        },
+        clear: async () => {
+          await new Promise(r => setTimeout(r, 5));
+          store.clear();
+        },
+      });
+
+      await adapter.set('key', 'value');
+      expect(await adapter.get('key')).toBe('value');
+      expect(await adapter.has('key')).toBe(true);
+      expect(await adapter.delete('key')).toBe(true);
+      expect(await adapter.has('key')).toBe(false);
+    });
+
+    test('wrapped adapter passes options through', async () => {
+      let receivedOptions: any = null;
+
+      const adapter = wrapCacheAdapter({
+        get: async () => undefined,
+        set: async (_key: string, _value: unknown, opts?: any) => {
+          receivedOptions = opts;
+        },
+        delete: async () => false,
+        has: async () => false,
+        clear: async () => {},
+      });
+
+      await adapter.set('key', 'value', { ttl: 60, tags: ['test'] });
+      expect(receivedOptions).toEqual({ ttl: 60, tags: ['test'] });
+    });
+  });
+
   describe('Concurrent operations', () => {
     test('handles concurrent set operations', async () => {
       const cache = new MemoryCacheAdapter();

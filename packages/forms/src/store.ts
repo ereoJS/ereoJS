@@ -1,4 +1,4 @@
-import { Signal, signal, computed, batch } from '@ereo/state';
+import { Signal, signal, batch } from '@ereo/state';
 import type {
   FormConfig,
   FormStoreInterface,
@@ -329,42 +329,48 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
   setErrors<P extends FormPath<T>>(path: P, errors: string[]): void;
   setErrors(path: string, errors: string[]): void;
   setErrors(path: string, errors: string[]): void {
-    this.getErrors(path).set(errors);
-    // Also update error map with 'manual' source (unless caller is engine which uses setErrorsWithSource)
-    const mapSig = this._errorMapSignals.get(path);
-    if (mapSig) {
-      const current = mapSig.get();
-      mapSig.set({ ...current, manual: errors });
-    }
-    this._updateIsValid();
-    this._notifySubscribers();
+    batch(() => {
+      this.getErrors(path).set(errors);
+      // Also update error map with 'manual' source (unless caller is engine which uses setErrorsWithSource)
+      const mapSig = this._errorMapSignals.get(path);
+      if (mapSig) {
+        const current = mapSig.get();
+        mapSig.set({ ...current, manual: errors });
+      }
+      this._updateIsValid();
+      this._notifySubscribers();
+    });
   }
 
   clearErrors<P extends FormPath<T>>(path?: P): void;
   clearErrors(path?: string): void;
   clearErrors(path?: string): void {
-    if (path) {
-      const sig = this._errorSignals.get(path);
-      if (sig) sig.set([]);
-      const mapSig = this._errorMapSignals.get(path);
-      if (mapSig) mapSig.set(this._emptyErrorMap());
-    } else {
-      for (const sig of this._errorSignals.values()) {
-        sig.set([]);
+    batch(() => {
+      if (path) {
+        const sig = this._errorSignals.get(path);
+        if (sig) sig.set([]);
+        const mapSig = this._errorMapSignals.get(path);
+        if (mapSig) mapSig.set(this._emptyErrorMap());
+      } else {
+        for (const sig of this._errorSignals.values()) {
+          sig.set([]);
+        }
+        for (const sig of this._errorMapSignals.values()) {
+          sig.set(this._emptyErrorMap());
+        }
+        this._formErrors.set([]);
       }
-      for (const sig of this._errorMapSignals.values()) {
-        sig.set(this._emptyErrorMap());
-      }
-      this._formErrors.set([]);
-    }
-    this._updateIsValid();
-    this._notifySubscribers();
+      this._updateIsValid();
+      this._notifySubscribers();
+    });
   }
 
   setFormErrors(errors: string[]): void {
-    this._formErrors.set(errors);
-    this._updateIsValid();
-    this._notifySubscribers();
+    batch(() => {
+      this._formErrors.set(errors);
+      this._updateIsValid();
+      this._notifySubscribers();
+    });
   }
 
   // ─── Error Map (Error Source Tracking) ──────────────────────────────
@@ -387,24 +393,28 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
   setErrorsWithSource<P extends FormPath<T>>(path: P, errors: string[], source: ErrorSource): void;
   setErrorsWithSource(path: string, errors: string[], source: ErrorSource): void;
   setErrorsWithSource(path: string, errors: string[], source: ErrorSource): void {
-    const mapSig = this.getErrorMap(path);
-    const current = mapSig.get();
-    const updated = { ...current, [source]: errors };
-    mapSig.set(updated);
-    // Rebuild flat error signal from all sources
-    this._rebuildFlatErrors(path, updated);
+    batch(() => {
+      const mapSig = this.getErrorMap(path);
+      const current = mapSig.get();
+      const updated = { ...current, [source]: errors };
+      mapSig.set(updated);
+      // Rebuild flat error signal from all sources
+      this._rebuildFlatErrors(path, updated);
+    });
   }
 
   clearErrorsBySource<P extends FormPath<T>>(path: P, source: ErrorSource): void;
   clearErrorsBySource(path: string, source: ErrorSource): void;
   clearErrorsBySource(path: string, source: ErrorSource): void {
-    const mapSig = this._errorMapSignals.get(path);
-    if (!mapSig) return;
-    const current = mapSig.get();
-    if (current[source].length === 0) return;
-    const updated = { ...current, [source]: [] };
-    mapSig.set(updated);
-    this._rebuildFlatErrors(path, updated);
+    batch(() => {
+      const mapSig = this._errorMapSignals.get(path);
+      if (!mapSig) return;
+      const current = mapSig.get();
+      if (current[source].length === 0) return;
+      const updated = { ...current, [source]: [] };
+      mapSig.set(updated);
+      this._rebuildFlatErrors(path, updated);
+    });
   }
 
   private _rebuildFlatErrors(path: string, errorMap: Record<ErrorSource, string[]>): void {
@@ -824,7 +834,12 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     this._watchers.clear();
     this._fieldRefs.clear();
     this._fieldOptions.clear();
+    // Note: _signals is NOT cleared — external code may hold signal references
+    // that should remain functional after dispose (signals are independent primitives)
+    this._errorSignals.clear();
     this._errorMapSignals.clear();
+    this._touchedSet.clear();
+    this._dirtySet.clear();
     if (this._submitAbort) {
       this._submitAbort.abort();
       this._submitAbort = null;
@@ -888,14 +903,22 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     const set = this._watchers.get(path);
     if (set) {
       for (const cb of [...set]) {
-        cb(value, path);
+        try {
+          cb(value, path);
+        } catch (e) {
+          console.error('FormStore watcher error:', e);
+        }
       }
     }
   }
 
   private _notifySubscribers(): void {
     for (const cb of [...this._subscribers]) {
-      cb();
+      try {
+        cb();
+      } catch (e) {
+        console.error('FormStore subscriber error:', e);
+      }
     }
   }
 }

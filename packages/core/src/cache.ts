@@ -296,8 +296,13 @@ export class MemoryCacheAdapter implements TaggedCache {
    * Check if an entry is expired.
    */
   private isExpired(entry: MemoryCacheEntry): boolean {
-    if (!entry.ttl) {
+    if (entry.ttl === undefined || entry.ttl === null) {
       return false;
+    }
+
+    // TTL of 0 means expire immediately
+    if (entry.ttl === 0) {
+      return true;
     }
 
     const age = Date.now() - entry.createdAt;

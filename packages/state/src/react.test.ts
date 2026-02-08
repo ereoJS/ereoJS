@@ -614,3 +614,326 @@ describe('React integration edge cases', () => {
     expect(simulateUseStoreKey(store, 'count')).toBe(50);
   });
 });
+
+// ===========================================================================
+// Section 8 - NaN/Object.is compliance in React hooks
+// ===========================================================================
+
+describe('NaN and Object.is compliance for hooks', () => {
+  test('useSignal with NaN value does not spuriously update', () => {
+    const s = signal(NaN);
+    const val = simulateUseSignal(s);
+    expect(val).toBeNaN();
+
+    // NaN -> NaN should not trigger subscriber
+    let callCount = 0;
+    const unsub = s.subscribe(() => callCount++);
+    s.set(NaN);
+    expect(callCount).toBe(0);
+    unsub();
+  });
+
+  test('useSignal with NaN transition tracks correctly', () => {
+    const s = signal<number>(0);
+    const values: number[] = [];
+    const unsub = s.subscribe(() => {
+      values.push(s.get());
+    });
+
+    s.set(NaN);
+    s.set(NaN); // should not fire again
+    s.set(42);
+
+    expect(values.length).toBe(2); // 0->NaN, NaN->42
+    expect(values[1]).toBe(42);
+    unsub();
+  });
+
+  test('useStoreKey with NaN store value', () => {
+    const store = createStore({ val: NaN as number });
+    expect(simulateUseStoreKey(store, 'val')).toBeNaN();
+
+    let callCount = 0;
+    store.get('val').subscribe(() => callCount++);
+    store.set('val', NaN);
+    expect(callCount).toBe(0); // NaN -> NaN, no notification
+  });
+});
+
+// ===========================================================================
+// Section 9 - Advanced subscribe contract tests
+// ===========================================================================
+
+describe('advanced subscribe contract', () => {
+  test('getSnapshot returns consistent value during subscribe callback', () => {
+    const s = signal(0);
+    const snapshots: number[] = [];
+
+    s.subscribe(() => {
+      // During notification, get() should return the new value
+      snapshots.push(s.get());
+    });
+
+    s.set(1);
+    s.set(2);
+    s.set(3);
+
+    expect(snapshots).toEqual([1, 2, 3]);
+  });
+
+  test('subscribe + set inside batch provides consistent snapshots', () => {
+    const s = signal(0);
+    const snapshots: number[] = [];
+
+    s.subscribe(() => {
+      snapshots.push(s.get());
+    });
+
+    batch(() => {
+      s.set(1);
+      s.set(2);
+      s.set(3);
+    });
+
+    // After batch, subscriber fires once with the final value
+    expect(snapshots).toEqual([3]);
+  });
+
+  test('store subscribe detects all key changes in batch', () => {
+    const store = createStore({ a: 0, b: 0, c: 0 });
+    let changeCount = 0;
+
+    const unsubs: (() => void)[] = [];
+    for (const [, sig] of store.entries()) {
+      unsubs.push(sig.subscribe(() => changeCount++));
+    }
+
+    batch(() => {
+      store.set('a', 1);
+      store.set('b', 2);
+      store.set('c', 3);
+    });
+
+    // Each signal fires once after batch
+    expect(changeCount).toBe(3);
+
+    unsubs.forEach((u) => u());
+  });
+
+  test('multiple subscribe/unsubscribe cycles do not leak', () => {
+    const s = signal(0);
+
+    for (let cycle = 0; cycle < 100; cycle++) {
+      const unsub = s.subscribe(() => {});
+      unsub();
+    }
+
+    // After all cycles, a new subscriber should work fine
+    const values: number[] = [];
+    const unsub = s.subscribe((v) => values.push(v));
+    s.set(1);
+    expect(values).toEqual([1]);
+    unsub();
+  });
+
+  test('subscriber error in store signal does not break other store keys', () => {
+    const store = createStore({ a: 0, b: 0 });
+    const bValues: number[] = [];
+    const origError = console.error;
+    const errors: unknown[] = [];
+    console.error = (...args: unknown[]) => errors.push(args[1]);
+
+    store.get('a').subscribe(() => { throw new Error('a crash'); });
+    store.get('b').subscribe((v) => bValues.push(v));
+
+    store.set('a', 1);
+    store.set('b', 2);
+
+    expect(bValues).toEqual([2]);
+    expect(errors.length).toBe(1);
+
+    console.error = origError;
+  });
+
+  test('subscriber error in batch does not prevent other signal notifications', () => {
+    const a = signal(0);
+    const b = signal(0);
+    const bValues: number[] = [];
+    const origError = console.error;
+    const errors: unknown[] = [];
+    console.error = (...args: unknown[]) => errors.push(args[1]);
+
+    a.subscribe(() => { throw new Error('crash'); });
+    b.subscribe((v) => bValues.push(v));
+
+    batch(() => {
+      a.set(1);
+      b.set(2);
+    });
+
+    expect(bValues).toEqual([2]);
+    expect(errors.length).toBe(1);
+
+    console.error = origError;
+  });
+});
+
+// ===========================================================================
+// Section 10 - useStore advanced scenarios
+// ===========================================================================
+
+describe('useStore advanced scenarios', () => {
+  test('useStore snapshot is structurally equal after no changes', () => {
+    const store = createStore({ x: 1, y: 2 });
+    const snap1 = simulateUseStore(store);
+    const snap2 = simulateUseStore(store);
+
+    expect(snap1).toEqual(snap2);
+    // Each call to getSnapshot() creates a new object
+    expect(snap1).not.toBe(snap2);
+  });
+
+  test('useStore reflects all batch changes atomically', () => {
+    const store = createStore({ a: 0, b: 0 });
+
+    batch(() => {
+      store.set('a', 10);
+      store.set('b', 20);
+    });
+
+    const snap = simulateUseStore(store);
+    expect(snap).toEqual({ a: 10, b: 20 });
+  });
+
+  test('useStoreKey for non-existent key returns undefined', () => {
+    const store = createStore({} as Record<string, number>);
+    // Non-existent key returns undefined signal
+    const sig = store.get('missing' as any);
+    expect(sig).toBeUndefined();
+  });
+
+  test('useStore with single key store', () => {
+    const store = createStore({ only: 42 });
+    expect(simulateUseStore(store)).toEqual({ only: 42 });
+
+    store.set('only', 100);
+    expect(simulateUseStore(store)).toEqual({ only: 100 });
+  });
+
+  test('useStore with mixed types', () => {
+    const store = createStore({
+      count: 0,
+      name: 'test',
+      active: true,
+      items: [1, 2, 3],
+      meta: { version: 1 },
+      nullable: null as null | string,
+    });
+
+    const snap = simulateUseStore(store);
+    expect(snap.count).toBe(0);
+    expect(snap.name).toBe('test');
+    expect(snap.active).toBe(true);
+    expect(snap.items).toEqual([1, 2, 3]);
+    expect(snap.meta).toEqual({ version: 1 });
+    expect(snap.nullable).toBe(null);
+  });
+});
+
+// ===========================================================================
+// Section 11 - Signal lifecycle (create -> use -> dispose -> recreate)
+// ===========================================================================
+
+describe('signal lifecycle', () => {
+  test('full lifecycle: create, subscribe, update, dispose, recreate', () => {
+    // Create
+    const s = signal(0);
+
+    // Subscribe
+    const values: number[] = [];
+    const unsub = s.subscribe((v) => values.push(v));
+
+    // Update
+    s.set(1);
+    s.set(2);
+    expect(values).toEqual([1, 2]);
+
+    // Dispose
+    s.dispose();
+    s.set(3);
+    expect(values).toEqual([1, 2]); // subscriber cleared
+
+    // Recreate from scratch
+    const s2 = signal(10);
+    const values2: number[] = [];
+    s2.subscribe((v) => values2.push(v));
+    s2.set(20);
+    expect(values2).toEqual([20]);
+  });
+
+  test('computed lifecycle with multiple dependencies', () => {
+    const a = signal<number>(1);
+    const b = signal<number>(2);
+    const c = computed<number>(() => a.get() + b.get(), [a as Signal<unknown>, b as Signal<unknown>]);
+
+    expect(c.get()).toBe(3);
+
+    const values: number[] = [];
+    c.subscribe((v) => values.push(v));
+
+    a.set(10);
+    b.set(20);
+    expect(c.get()).toBe(30);
+
+    c.dispose();
+    a.set(100);
+    b.set(200);
+    expect(c.get()).toBe(30); // frozen
+
+    // Dependencies still work independently
+    expect(a.get()).toBe(100);
+    expect(b.get()).toBe(200);
+  });
+
+  test('store signal lifecycle with batch', () => {
+    const store = createStore({ x: 0, y: 0 });
+    const changes: string[] = [];
+
+    const unsubX = store.get('x').subscribe((v) => changes.push(`x:${v}`));
+    const unsubY = store.get('y').subscribe((v) => changes.push(`y:${v}`));
+
+    batch(() => {
+      store.set('x', 1);
+      store.set('y', 2);
+    });
+
+    expect(changes).toEqual(['x:1', 'y:2']);
+
+    unsubX();
+    store.set('x', 10); // no notification for x
+    store.set('y', 20);
+    expect(changes).toEqual(['x:1', 'y:2', 'y:20']);
+
+    unsubY();
+  });
+
+  test('map chain lifecycle: dispose at any point', () => {
+    const source = signal(1);
+    const a = source.map((v) => v * 2);
+    const b = a.map((v) => v + 10);
+    const c = b.map((v) => `val:${v}`);
+
+    expect(c.get()).toBe('val:12');
+
+    // Dispose middle
+    a.dispose();
+
+    source.set(5);
+    expect(a.get()).toBe(2); // frozen
+    expect(b.get()).toBe(12); // frozen (a's subscribers cleared)
+    expect(c.get()).toBe('val:12'); // frozen
+
+    // Source still works
+    expect(source.get()).toBe(5);
+  });
+});

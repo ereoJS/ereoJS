@@ -1340,3 +1340,416 @@ describe('EREO_ prefix warnings', () => {
     expect(result.warnings).toHaveLength(2);
   });
 });
+
+// ============================================================================
+// typedEnv proxy
+// ============================================================================
+describe('typedEnv proxy', () => {
+  test('returns env values via proxy', () => {
+    const { typedEnv } = require('./env');
+    initializeEnv({ MY_VAR: 'test-value' });
+    expect(typedEnv.MY_VAR).toBe('test-value');
+  });
+
+  test('returns undefined for Symbol access', () => {
+    const { typedEnv } = require('./env');
+    expect(typedEnv[Symbol.toStringTag]).toBeUndefined();
+    expect(typedEnv[Symbol.toPrimitive]).toBeUndefined();
+    expect(typedEnv[Symbol.iterator]).toBeUndefined();
+  });
+
+  test('returns undefined for unset keys', () => {
+    const { typedEnv } = require('./env');
+    initializeEnv({});
+    expect(typedEnv.NONEXISTENT_KEY_12345).toBeUndefined();
+  });
+});
+
+// ============================================================================
+// requireEnv edge cases
+// ============================================================================
+describe('requireEnv edge cases', () => {
+  test('throws with descriptive message for missing key', () => {
+    initializeEnv({});
+    expect(() => requireEnv('MISSING_DB_URL')).toThrow('Required environment variable not set: MISSING_DB_URL');
+  });
+
+  test('returns value when env is set', () => {
+    initializeEnv({ API_KEY: 'secret123' });
+    expect(requireEnv('API_KEY')).toBe('secret123');
+  });
+
+  test('returns falsy values without throwing', () => {
+    initializeEnv({ EMPTY: '', ZERO: 0, FALSE: false } as any);
+    // Empty string is falsy but not undefined
+    expect(requireEnv('EMPTY')).toBe('');
+    expect(requireEnv('ZERO')).toBe(0);
+    expect(requireEnv('FALSE')).toBe(false);
+  });
+});
+
+// ============================================================================
+// Number transform edge cases
+// ============================================================================
+describe('env.number() transform edge cases', () => {
+  test('transforms negative numbers', () => {
+    const transform = env.number()._schema.transform!;
+    expect(transform('-42')).toBe(-42);
+  });
+
+  test('transforms decimal numbers', () => {
+    const transform = env.number()._schema.transform!;
+    expect(transform('3.14')).toBe(3.14);
+  });
+
+  test('transforms zero', () => {
+    const transform = env.number()._schema.transform!;
+    expect(transform('0')).toBe(0);
+  });
+
+  test('throws on non-numeric string', () => {
+    const transform = env.number()._schema.transform!;
+    expect(() => transform('abc')).toThrow('Invalid number: abc');
+  });
+
+  test('empty string converts to 0 (Number behavior)', () => {
+    const transform = env.number()._schema.transform!;
+    // Number('') === 0, not NaN, so this is valid
+    expect(transform('')).toBe(0);
+  });
+});
+
+// ============================================================================
+// Boolean transform edge cases
+// ============================================================================
+describe('env.boolean() transform edge cases', () => {
+  test('handles all truthy variants', () => {
+    const transform = env.boolean()._schema.transform!;
+    expect(transform('true')).toBe(true);
+    expect(transform('TRUE')).toBe(true);
+    expect(transform('True')).toBe(true);
+    expect(transform('1')).toBe(true);
+    expect(transform('yes')).toBe(true);
+    expect(transform('YES')).toBe(true);
+    expect(transform('on')).toBe(true);
+    expect(transform('ON')).toBe(true);
+  });
+
+  test('handles all falsy variants', () => {
+    const transform = env.boolean()._schema.transform!;
+    expect(transform('false')).toBe(false);
+    expect(transform('FALSE')).toBe(false);
+    expect(transform('0')).toBe(false);
+    expect(transform('no')).toBe(false);
+    expect(transform('off')).toBe(false);
+    expect(transform('')).toBe(false);
+  });
+
+  test('throws on unrecognized value', () => {
+    const transform = env.boolean()._schema.transform!;
+    expect(() => transform('maybe')).toThrow('Invalid boolean: maybe');
+  });
+});
+
+// ============================================================================
+// Array transform edge cases
+// ============================================================================
+describe('env.array() transform edge cases', () => {
+  test('handles empty string', () => {
+    const transform = env.array()._schema.transform!;
+    expect(transform('')).toEqual([]);
+  });
+
+  test('handles whitespace-only string', () => {
+    const transform = env.array()._schema.transform!;
+    expect(transform('   ')).toEqual([]);
+  });
+
+  test('trims whitespace from elements', () => {
+    const transform = env.array()._schema.transform!;
+    expect(transform(' a , b , c ')).toEqual(['a', 'b', 'c']);
+  });
+
+  test('handles single element', () => {
+    const transform = env.array()._schema.transform!;
+    expect(transform('single')).toEqual(['single']);
+  });
+});
+
+// ============================================================================
+// JSON transform edge cases
+// ============================================================================
+describe('env.json() transform edge cases', () => {
+  test('parses object', () => {
+    const transform = env.json()._schema.transform!;
+    expect(transform('{"key": "value"}')).toEqual({ key: 'value' });
+  });
+
+  test('parses array', () => {
+    const transform = env.json()._schema.transform!;
+    expect(transform('[1, 2, 3]')).toEqual([1, 2, 3]);
+  });
+
+  test('parses null', () => {
+    const transform = env.json()._schema.transform!;
+    expect(transform('null')).toBeNull();
+  });
+
+  test('throws on invalid JSON', () => {
+    const transform = env.json()._schema.transform!;
+    expect(() => transform('{invalid}')).toThrow('Invalid JSON');
+  });
+});
+
+// ============================================================================
+// parseEnvFile edge cases
+// ============================================================================
+describe('parseEnvFile edge cases', () => {
+  test('handles empty content', () => {
+    expect(parseEnvFile('')).toEqual({});
+  });
+
+  test('handles only comments', () => {
+    expect(parseEnvFile('# comment 1\n# comment 2')).toEqual({});
+  });
+
+  test('handles lines without = sign', () => {
+    expect(parseEnvFile('NOEQUALSSIGN')).toEqual({});
+  });
+
+  test('handles single-quoted values', () => {
+    const result = parseEnvFile("KEY='single quoted'");
+    expect(result.KEY).toBe('single quoted');
+  });
+
+  test('handles double-quoted values with escape sequences', () => {
+    const result = parseEnvFile('KEY="line1\\nline2\\ttab"');
+    expect(result.KEY).toBe('line1\nline2\ttab');
+  });
+
+  test('handles values with = in them', () => {
+    const result = parseEnvFile('KEY=value=with=equals');
+    expect(result.KEY).toBe('value=with=equals');
+  });
+
+  test('handles mixed content', () => {
+    const content = `
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+
+# App
+APP_NAME="My App"
+APP_SECRET='secret123'
+EMPTY=
+`;
+    const result = parseEnvFile(content);
+    expect(result.DB_HOST).toBe('localhost');
+    expect(result.DB_PORT).toBe('5432');
+    expect(result.APP_NAME).toBe('My App');
+    expect(result.APP_SECRET).toBe('secret123');
+    expect(result.EMPTY).toBe('');
+  });
+});
+
+// ============================================================================
+// Schema builder chaining
+// ============================================================================
+describe('env schema builder chaining', () => {
+  test('chaining required then default switches to optional', () => {
+    const schema = env.string().required().default('fallback');
+    expect(schema._schema.required).toBe(false);
+    expect(schema._schema.default).toBe('fallback');
+  });
+
+  test('chaining default then required switches to required', () => {
+    const schema = env.string().default('fallback').required();
+    expect(schema._schema.required).toBe(true);
+    expect(schema._schema.default).toBeUndefined();
+  });
+
+  test('description does not affect required/default', () => {
+    const schema = env.string().required().description('A required string');
+    expect(schema._schema.required).toBe(true);
+    expect(schema._schema.description).toBe('A required string');
+  });
+
+  test('public flag is set correctly', () => {
+    const schema = env.string().public();
+    expect(schema._schema.public).toBe(true);
+  });
+
+  test('validate function is set correctly', () => {
+    const schema = env.string().validate((v) => v.length > 0 || 'Must not be empty');
+    expect(schema._schema.validate).toBeDefined();
+    expect(schema._schema.validate!('hello')).toBe(true);
+    expect(schema._schema.validate!('')).toBe('Must not be empty');
+  });
+});
+
+// ============================================================================
+// generateEnvTypes
+// ============================================================================
+describe('generateEnvTypes output', () => {
+  test('generates valid TypeScript for mixed schema', () => {
+    const schema: EnvConfig = {
+      DB_URL: env.string().required(),
+      PORT: env.number().default(3000),
+      DEBUG: env.boolean(),
+      FEATURES: env.array().default([]),
+      CONFIG: env.json(),
+    };
+
+    const output = generateEnvTypes(schema);
+
+    expect(output).toContain("declare module '@ereo/core'");
+    expect(output).toContain('interface EnvTypes');
+    expect(output).toContain('DB_URL: string;');
+    expect(output).toContain('PORT: number;');
+    expect(output).toContain('DEBUG?: boolean;');
+    expect(output).toContain('FEATURES: string[];');
+    expect(output).toContain("CONFIG?: Record<string, unknown>;");
+    expect(output).toContain('export {};');
+  });
+
+  test('generates optional for non-required without default', () => {
+    const schema: EnvConfig = {
+      OPTIONAL: env.string(),
+    };
+    const output = generateEnvTypes(schema);
+    expect(output).toContain('OPTIONAL?: string;');
+  });
+
+  test('generates required for required fields', () => {
+    const schema: EnvConfig = {
+      REQUIRED: env.string().required(),
+    };
+    const output = generateEnvTypes(schema);
+    expect(output).toContain('REQUIRED: string;');
+    expect(output).not.toContain('REQUIRED?');
+  });
+});
+
+// ============================================================================
+// Port validation edge cases
+// ============================================================================
+describe('env.port() edge cases', () => {
+  test('validates port 1 (minimum)', () => {
+    const schema: EnvConfig = { PORT: env.port() };
+    const result = validateEnv(schema, { PORT: '1' });
+    expect(result.valid).toBe(true);
+    expect(result.env.PORT).toBe(1);
+  });
+
+  test('validates port 65535 (maximum)', () => {
+    const schema: EnvConfig = { PORT: env.port() };
+    const result = validateEnv(schema, { PORT: '65535' });
+    expect(result.valid).toBe(true);
+    expect(result.env.PORT).toBe(65535);
+  });
+
+  test('rejects port 0', () => {
+    const schema: EnvConfig = { PORT: env.port() };
+    const result = validateEnv(schema, { PORT: '0' });
+    expect(result.valid).toBe(false);
+  });
+
+  test('rejects port 65536', () => {
+    const schema: EnvConfig = { PORT: env.port() };
+    const result = validateEnv(schema, { PORT: '65536' });
+    expect(result.valid).toBe(false);
+  });
+
+  test('rejects fractional port', () => {
+    const schema: EnvConfig = { PORT: env.port() };
+    const result = validateEnv(schema, { PORT: '3.14' });
+    expect(result.valid).toBe(false);
+  });
+});
+
+// ============================================================================
+// URL validation edge cases
+// ============================================================================
+describe('env.url() edge cases', () => {
+  test('accepts valid HTTP URL', () => {
+    const schema: EnvConfig = { URL: env.url() };
+    const result = validateEnv(schema, { URL: 'http://example.com' });
+    expect(result.valid).toBe(true);
+  });
+
+  test('accepts HTTPS URL with path', () => {
+    const schema: EnvConfig = { URL: env.url() };
+    const result = validateEnv(schema, { URL: 'https://example.com/api/v1?key=val' });
+    expect(result.valid).toBe(true);
+  });
+
+  test('rejects invalid URL', () => {
+    const schema: EnvConfig = { URL: env.url() };
+    const result = validateEnv(schema, { URL: 'not-a-url' });
+    expect(result.valid).toBe(false);
+  });
+});
+
+// ============================================================================
+// Enum validation
+// ============================================================================
+describe('env.enum() edge cases', () => {
+  test('accepts valid enum value', () => {
+    const schema: EnvConfig = { ENV: env.enum(['dev', 'staging', 'prod'] as const) };
+    const result = validateEnv(schema, { ENV: 'staging' });
+    expect(result.valid).toBe(true);
+    expect(result.env.ENV).toBe('staging');
+  });
+
+  test('rejects invalid enum value', () => {
+    const schema: EnvConfig = { ENV: env.enum(['dev', 'staging', 'prod'] as const) };
+    const result = validateEnv(schema, { ENV: 'local' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Must be one of');
+  });
+});
+
+// ============================================================================
+// getPublicEnv
+// ============================================================================
+describe('getPublicEnv', () => {
+  test('returns only public env vars', () => {
+    initializeEnv({
+      PUBLIC_KEY: 'visible',
+      SECRET_KEY: 'hidden',
+    });
+
+    const schema: EnvConfig = {
+      PUBLIC_KEY: env.string().public(),
+      SECRET_KEY: env.string(),
+    };
+
+    const publicVars = getPublicEnv(schema);
+    expect(publicVars.PUBLIC_KEY).toBe('visible');
+    expect(publicVars.SECRET_KEY).toBeUndefined();
+  });
+
+  test('returns empty object when no public vars defined', () => {
+    initializeEnv({ SECRET: 'hidden' });
+    const schema: EnvConfig = {
+      SECRET: env.string(),
+    };
+    const publicVars = getPublicEnv(schema);
+    expect(Object.keys(publicVars)).toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// getAllEnv
+// ============================================================================
+describe('getAllEnv', () => {
+  test('returns copy of all env vars', () => {
+    initializeEnv({ A: '1', B: '2' });
+    const all = getAllEnv();
+    expect(all).toEqual({ A: '1', B: '2' });
+
+    // Should be a copy, not a reference
+    (all as any).C = '3';
+    expect(getAllEnv()).toEqual({ A: '1', B: '2' });
+  });
+});

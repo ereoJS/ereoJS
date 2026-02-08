@@ -593,7 +593,8 @@ export interface EnvTypes {}
  * const dbUrl = typedEnv.DATABASE_URL; // TypeScript knows this is string
  */
 export const typedEnv = new Proxy({} as EnvTypes, {
-  get(_target, key: string) {
+  get(_target, key: string | symbol) {
+    if (typeof key === 'symbol') return undefined;
     return getEnv(key);
   },
 });

@@ -46,7 +46,12 @@ export class RequestContext implements AppContext {
         const name = pair.slice(0, eqIndex).trim();
         const value = pair.slice(eqIndex + 1).trim();
         if (name) {
-          this.cookieMap.set(name, decodeURIComponent(value));
+          try {
+            this.cookieMap.set(name, decodeURIComponent(value));
+          } catch {
+            // Malformed %-encoding; store raw value
+            this.cookieMap.set(name, value);
+          }
         }
       }
     }

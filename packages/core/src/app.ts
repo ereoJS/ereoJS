@@ -14,6 +14,7 @@ import type {
   RouteMatch,
   MiddlewareHandler,
 } from './types';
+import { NotFoundError } from './types';
 import { createContext, RequestContext } from './context';
 import { PluginRegistry } from './plugin';
 
@@ -224,9 +225,7 @@ export class EreoApp implements Application {
         }
 
         // Otherwise, serialize as JSON
-        return new Response(JSON.stringify(actionData), {
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return this.jsonResponse(actionData);
       }
       return new Response('Method Not Allowed', { status: 405 });
     }
@@ -234,36 +233,60 @@ export class EreoApp implements Application {
     // Handle loaders (GET)
     let loaderData: unknown = null;
     if (module.loader) {
-      loaderData = await module.loader({
+      const result = await module.loader({
         request,
         params: match.params,
         context,
       });
 
       // If loader returns a Response, return it directly
-      if (loaderData instanceof Response) {
-        return loaderData;
+      if (result instanceof Response) {
+        return result;
       }
+
+      // Normalize undefined to null for safe JSON serialization
+      loaderData = result === undefined ? null : result;
     }
 
     // If this is a data request (e.g., client-side navigation)
     if (request.headers.get('Accept')?.includes('application/json')) {
-      return new Response(JSON.stringify(loaderData), {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return this.jsonResponse(loaderData);
     }
 
     // For full page requests, we need the renderer
     // This will be handled by @ereo/server with React rendering
-    return new Response(JSON.stringify({ loaderData, params: match.params }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return this.jsonResponse({ loaderData, params: match.params });
+  }
+
+  /**
+   * Safely serialize data as a JSON response.
+   */
+  private jsonResponse(data: unknown, status = 200): Response {
+    try {
+      return new Response(JSON.stringify(data), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Failed to serialize response data' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
   }
 
   /**
    * Handle errors.
    */
   private handleError(error: unknown, context: RequestContext): Response {
+    // Handle NotFoundError specially - return 404
+    if (error instanceof NotFoundError) {
+      return this.jsonResponse({ error: 'Not Found', data: error.data }, 404);
+    }
+
     const isDev = this.config.server?.development;
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     const stack = error instanceof Error ? error.stack : undefined;
@@ -271,15 +294,9 @@ export class EreoApp implements Application {
     console.error('Request error:', error);
 
     if (isDev) {
-      return new Response(
-        JSON.stringify({
-          error: message,
-          stack: stack?.split('\n'),
-        }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
+      return this.jsonResponse(
+        { error: message, stack: stack?.split('\n') },
+        500
       );
     }
 
