@@ -2617,17 +2617,10 @@ export interface ActionResult<T = unknown> {
   // Component: Navigation (auth-aware)
   // ============================================================================
   const navigation = `
-'use client';
-
-import { useState } from 'react';
-
 ${ts ? `interface NavigationProps {
   user?: { name: string; email: string } | null;
 }\n` : ''}
 export function Navigation({ user }${ts ? ': NavigationProps' : ''}) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4">
@@ -2657,32 +2650,27 @@ export function Navigation({ user }${ts ? ': NavigationProps' : ''}) {
                 <a href="/tasks/new" className="btn btn-primary btn-sm">
                   New Task
                 </a>
-                <div className="relative">
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  >
+                <div className="relative group">
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-700 dark:text-primary-300 font-medium text-sm">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-sm text-gray-700 dark:text-gray-300">{user.name}</span>
                   </button>
-                  {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
-                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                      </div>
-                      <form method="POST" action="/logout">
-                        <button
-                          type="submit"
-                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        >
-                          Sign out
-                        </button>
-                      </form>
+                  <div className="absolute right-0 mt-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150">
+                    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                     </div>
-                  )}
+                    <form method="POST" action="/logout">
+                      <button
+                        type="submit"
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        Sign out
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </>
             ) : (
@@ -2697,51 +2685,27 @@ export function Navigation({ user }${ts ? ': NavigationProps' : ''}) {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Toggle menu"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {menuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-        </div>
-
-        {/* Mobile Navigation */}
-        {menuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+          {/* Mobile */}
+          <div className="md:hidden flex items-center gap-3">
             {user ? (
               <>
-                <a href="/tasks" className="block py-2 text-gray-600 dark:text-gray-300 hover:text-primary-600">
-                  Tasks
-                </a>
-                <a href="/tasks/new" className="block py-2 text-gray-600 dark:text-gray-300 hover:text-primary-600">
-                  New Task
-                </a>
+                <a href="/tasks/new" className="btn btn-primary btn-sm">New</a>
                 <form method="POST" action="/logout">
-                  <button type="submit" className="block py-2 text-red-600 hover:text-red-700">
-                    Sign out
-                  </button>
+                  <button type="submit" className="text-sm text-red-600 hover:text-red-700">Sign out</button>
                 </form>
               </>
             ) : (
               <>
-                <a href="/login" className="block py-2 text-gray-600 dark:text-gray-300 hover:text-primary-600">
+                <a href="/login" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 transition-colors">
                   Sign in
                 </a>
-                <a href="/register" className="block py-2 text-gray-600 dark:text-gray-300 hover:text-primary-600">
+                <a href="/register" className="btn btn-primary btn-sm">
                   Get Started
                 </a>
               </>
             )}
           </div>
-        )}
+        </div>
       </div>
     </nav>
   );
@@ -3089,9 +3053,6 @@ export async function action({ request, context }) {
   // Login Page
   // ============================================================================
   const loginPage = `
-'use client';
-
-import { useState } from 'react';
 import { useAuth } from '@ereo/auth';
 
 export async function loader({ context }${ts ? ': { context: any }' : ''}) {
@@ -3140,8 +3101,6 @@ ${ts ? `interface LoginPageProps {
   };
 }\n` : ''}
 export default function LoginPage({ actionData }${ts ? ': LoginPageProps' : ''}) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -3159,7 +3118,7 @@ export default function LoginPage({ actionData }${ts ? ': LoginPageProps' : ''})
             </div>
           )}
 
-          <form method="POST" onSubmit={() => setIsSubmitting(true)} className="space-y-4">
+          <form method="POST" className="space-y-4">
             <div>
               <label htmlFor="email" className="label">Email</label>
               <input
@@ -3194,10 +3153,9 @@ export default function LoginPage({ actionData }${ts ? ': LoginPageProps' : ''})
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="btn btn-primary w-full py-2.5 disabled:opacity-50"
+              className="btn btn-primary w-full py-2.5"
             >
-              {isSubmitting ? 'Signing in...' : 'Sign in'}
+              Sign in
             </button>
           </form>
 
@@ -3220,9 +3178,6 @@ export default function LoginPage({ actionData }${ts ? ': LoginPageProps' : ''})
   // Register Page
   // ============================================================================
   const registerPage = `
-'use client';
-
-import { useState } from 'react';
 import { useAuth } from '@ereo/auth';
 import { emailExists, createUser, hashPassword } from '~/lib/db';
 
@@ -3288,8 +3243,6 @@ ${ts ? `interface RegisterPageProps {
   };
 }\n` : ''}
 export default function RegisterPage({ actionData }${ts ? ': RegisterPageProps' : ''}) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -3301,7 +3254,7 @@ export default function RegisterPage({ actionData }${ts ? ': RegisterPageProps' 
         </div>
 
         <div className="card">
-          <form method="POST" onSubmit={() => setIsSubmitting(true)} className="space-y-4">
+          <form method="POST" className="space-y-4">
             <div>
               <label htmlFor="name" className="label">Name</label>
               <input
@@ -3369,10 +3322,9 @@ export default function RegisterPage({ actionData }${ts ? ': RegisterPageProps' 
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="btn btn-primary w-full py-2.5 disabled:opacity-50"
+              className="btn btn-primary w-full py-2.5"
             >
-              {isSubmitting ? 'Creating account...' : 'Create account'}
+              Create account
             </button>
           </form>
 
@@ -3434,6 +3386,9 @@ export const config = { ...requireAuth({ redirect: '/login' }) };
 
 export async function loader({ request, context }${ts ? ': { request: Request; context: any }' : ''}) {
   const auth = useAuth(context);
+  if (!auth.isAuthenticated()) {
+    return new Response(null, { status: 302, headers: { Location: '/login' } });
+  }
   const user = auth.getUser()${ts ? '!' : ''};
   const userId = Number(user.id);
 
@@ -3575,9 +3530,6 @@ export default function TasksPage({ loaderData }${ts ? ': TasksPageProps' : ''})
   // New Task Page
   // ============================================================================
   const newTaskPage = `
-'use client';
-
-import { useState } from 'react';
 import { useAuth, requireAuth } from '@ereo/auth';
 import { createTask } from '~/lib/db';
 
@@ -3585,6 +3537,9 @@ export const config = { ...requireAuth({ redirect: '/login' }) };
 
 export async function action({ request, context }${ts ? ': { request: Request; context: any }' : ''}) {
   const auth = useAuth(context);
+  if (!auth.isAuthenticated()) {
+    return new Response(null, { status: 302, headers: { Location: '/login' } });
+  }
   const user = auth.getUser()${ts ? '!' : ''};
   const userId = Number(user.id);
 
@@ -3618,8 +3573,6 @@ ${ts ? `interface NewTaskPageProps {
   };
 }\n` : ''}
 export default function NewTaskPage({ actionData }${ts ? ': NewTaskPageProps' : ''}) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-8">
@@ -3630,7 +3583,7 @@ export default function NewTaskPage({ actionData }${ts ? ': NewTaskPageProps' : 
       </div>
 
       <div className="card">
-        <form method="POST" onSubmit={() => setIsSubmitting(true)} className="space-y-5">
+        <form method="POST" className="space-y-5">
           <div>
             <label htmlFor="title" className="label">Title</label>
             <input
@@ -3676,10 +3629,9 @@ export default function NewTaskPage({ actionData }${ts ? ': NewTaskPageProps' : 
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="btn btn-primary disabled:opacity-50"
+              className="btn btn-primary"
             >
-              {isSubmitting ? 'Creating...' : 'Create Task'}
+              Create Task
             </button>
             <a href="/tasks" className="btn btn-secondary">Cancel</a>
           </div>
@@ -3696,9 +3648,6 @@ export default function NewTaskPage({ actionData }${ts ? ': NewTaskPageProps' : 
   // Task Detail / Edit Page (Dynamic Route)
   // ============================================================================
   const taskDetailPage = `
-'use client';
-
-import { useState } from 'react';
 import { useAuth, requireAuth } from '@ereo/auth';
 import { getTaskById, updateTask, deleteTask } from '~/lib/db';
 
@@ -3706,6 +3655,9 @@ export const config = { ...requireAuth({ redirect: '/login' }) };
 
 export async function loader({ params, context }${ts ? ': { params: { id: string }; context: any }' : ''}) {
   const auth = useAuth(context);
+  if (!auth.isAuthenticated()) {
+    return new Response(null, { status: 302, headers: { Location: '/login' } });
+  }
   const user = auth.getUser()${ts ? '!' : ''};
   const userId = Number(user.id);
 
@@ -3720,6 +3672,9 @@ export async function loader({ params, context }${ts ? ': { params: { id: string
 
 export async function action({ request, params, context }${ts ? ': { request: Request; params: { id: string }; context: any }' : ''}) {
   const auth = useAuth(context);
+  if (!auth.isAuthenticated()) {
+    return new Response(null, { status: 302, headers: { Location: '/login' } });
+  }
   const user = auth.getUser()${ts ? '!' : ''};
   const userId = Number(user.id);
   const taskId = Number(params.id);
@@ -3776,7 +3731,10 @@ export async function action({ request, params, context }${ts ? ': { request: Re
     return { success: false, errors: { form: 'Task not found' } };
   }
 
-  return { success: true, message: 'Task updated successfully' };
+  return new Response(null, {
+    status: 302,
+    headers: { Location: '/tasks' },
+  });
 }
 
 ${ts ? `interface TaskDetailProps {
@@ -3799,8 +3757,6 @@ ${ts ? `interface TaskDetailProps {
 }\n` : ''}
 export default function TaskDetailPage({ loaderData, actionData }${ts ? ': TaskDetailProps' : ''}) {
   const { task } = loaderData;
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
 
   const statusLabels${ts ? ': Record<string, string>' : ''} = {
     todo: 'To Do',
@@ -3827,13 +3783,6 @@ export default function TaskDetailPage({ loaderData, actionData }${ts ? ': TaskD
         </form>
       </div>
 
-      {/* Success message */}
-      {actionData?.success && actionData.message && (
-        <div className="mb-6 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <p className="text-sm text-green-700 dark:text-green-300">{actionData.message}</p>
-        </div>
-      )}
-
       {actionData?.errors?.form && (
         <div className="mb-6 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <p className="text-sm text-red-700 dark:text-red-300">{actionData.errors.form}</p>
@@ -3841,7 +3790,7 @@ export default function TaskDetailPage({ loaderData, actionData }${ts ? ': TaskD
       )}
 
       <div className="card">
-        <form method="POST" onSubmit={() => setIsSubmitting(true)} className="space-y-5">
+        <form method="POST" className="space-y-5">
           <div>
             <label htmlFor="title" className="label">Title</label>
             <input
@@ -3898,51 +3847,31 @@ export default function TaskDetailPage({ loaderData, actionData }${ts ? ': TaskD
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn btn-primary disabled:opacity-50"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
-              </button>
-              <a href="/tasks" className="btn btn-secondary">Cancel</a>
-            </div>
-
+          <div className="flex items-center gap-3 pt-2">
             <button
-              type="button"
-              onClick={() => setShowDelete(true)}
-              className="btn btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 btn-sm"
+              type="submit"
+              className="btn btn-primary"
             >
-              Delete
+              Save Changes
             </button>
+            <a href="/tasks" className="btn btn-secondary">Cancel</a>
           </div>
         </form>
       </div>
 
-      {/* Delete Confirmation */}
-      {showDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="card max-w-sm w-full">
-            <h2 className="text-lg font-bold mb-2">Delete this task?</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              This action cannot be undone. The task "{task.title}" will be permanently removed.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setShowDelete(false)} className="btn btn-secondary btn-sm">
-                Cancel
-              </button>
-              <form method="POST">
-                <input type="hidden" name="_intent" value="delete" />
-                <button type="submit" className="btn btn-danger btn-sm">
-                  Delete Task
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete section - pure form, no client JS needed */}
+      <div className="mt-6 card border-red-200 dark:border-red-800">
+        <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Permanently delete this task. This action cannot be undone.
+        </p>
+        <form method="POST">
+          <input type="hidden" name="_intent" value="delete" />
+          <button type="submit" className="btn btn-danger btn-sm">
+            Delete Task
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
