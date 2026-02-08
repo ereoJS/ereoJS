@@ -7,6 +7,33 @@
 import type { AuthProvider, User, Session } from '../auth';
 
 // ============================================================================
+// Utilities
+// ============================================================================
+
+const DEFAULT_TIMEOUT = 10_000;
+
+/** Fetch with an AbortController-based timeout */
+async function fetchWithTimeout(
+  url: string | URL,
+  init: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`OAuth request to ${url} timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ============================================================================
 // Type Definitions
 // ============================================================================
 
@@ -36,6 +63,8 @@ export interface OAuthConfig {
   tokenUrl?: string;
   /** User info URL */
   userInfoUrl?: string;
+  /** Timeout in milliseconds for OAuth HTTP requests (default: 10000) */
+  timeout?: number;
 }
 
 /** GitHub OAuth configuration */
@@ -125,6 +154,7 @@ export function credentials(config: CredentialsConfig): AuthProvider {
  * ```
  */
 export function github(config: GitHubConfig): AuthProvider {
+  const oauthFetch = (url: string | URL, init?: RequestInit) => fetchWithTimeout(url, init, config.timeout);
   const baseUrl = config.enterprise?.baseUrl || 'https://github.com';
   const apiBaseUrl = config.enterprise?.baseUrl
     ? `${config.enterprise.baseUrl}/api/v3`
@@ -150,7 +180,7 @@ export function github(config: GitHubConfig): AuthProvider {
       const code = credentials.code as string;
       if (!code) return null;
 
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await oauthFetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -168,7 +198,7 @@ export function github(config: GitHubConfig): AuthProvider {
       if (!tokenData.access_token) return null;
 
       // Get user info
-      const userResponse = await fetch(userInfoUrl, {
+      const userResponse = await oauthFetch(userInfoUrl, {
         headers: {
           'Authorization': `token ${tokenData.access_token}`,
           'User-Agent': 'EreoJS-Auth',
@@ -181,7 +211,7 @@ export function github(config: GitHubConfig): AuthProvider {
       // Get user email if not public
       let email = user.email as string | null;
       if (!email) {
-        const emailsResponse = await fetch(`${apiBaseUrl}/user/emails`, {
+        const emailsResponse = await oauthFetch(`${apiBaseUrl}/user/emails`, {
           headers: {
             'Authorization': `token ${tokenData.access_token}`,
             'User-Agent': 'EreoJS-Auth',
@@ -215,7 +245,7 @@ export function github(config: GitHubConfig): AuthProvider {
     async handleCallback(params) {
       const { code, redirectUri } = params;
 
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await oauthFetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -233,7 +263,7 @@ export function github(config: GitHubConfig): AuthProvider {
       if (!tokenData.access_token) return null;
 
       // Get user info
-      const userResponse = await fetch(userInfoUrl, {
+      const userResponse = await oauthFetch(userInfoUrl, {
         headers: {
           'Authorization': `token ${tokenData.access_token}`,
           'User-Agent': 'EreoJS-Auth',
@@ -246,7 +276,7 @@ export function github(config: GitHubConfig): AuthProvider {
       // Get user email if not public
       let email = user.email as string | null;
       if (!email) {
-        const emailsResponse = await fetch(`${apiBaseUrl}/user/emails`, {
+        const emailsResponse = await oauthFetch(`${apiBaseUrl}/user/emails`, {
           headers: {
             'Authorization': `token ${tokenData.access_token}`,
             'User-Agent': 'EreoJS-Auth',
@@ -285,6 +315,7 @@ export function github(config: GitHubConfig): AuthProvider {
  * ```
  */
 export function google(config: GoogleConfig): AuthProvider {
+  const oauthFetch = (url: string | URL, init?: RequestInit) => fetchWithTimeout(url, init, config.timeout);
   const authorizationUrl = config.authorizationUrl || 'https://accounts.google.com/o/oauth2/v2/auth';
   const tokenUrl = config.tokenUrl || 'https://oauth2.googleapis.com/token';
   const userInfoUrl = config.userInfoUrl || 'https://www.googleapis.com/oauth2/v2/userinfo';
@@ -306,7 +337,7 @@ export function google(config: GoogleConfig): AuthProvider {
       if (!code) return null;
 
       // Exchange code for tokens
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await oauthFetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -324,7 +355,7 @@ export function google(config: GoogleConfig): AuthProvider {
       if (!tokenData.access_token) return null;
 
       // Get user info
-      const userResponse = await fetch(
+      const userResponse = await oauthFetch(
         `${userInfoUrl}?access_token=${tokenData.access_token}`
       );
 
@@ -365,7 +396,7 @@ export function google(config: GoogleConfig): AuthProvider {
     async handleCallback(params) {
       const { code, redirectUri } = params;
 
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await oauthFetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -383,7 +414,7 @@ export function google(config: GoogleConfig): AuthProvider {
       if (!tokenData.access_token) return null;
 
       // Get user info
-      const userResponse = await fetch(
+      const userResponse = await oauthFetch(
         `${userInfoUrl}?access_token=${tokenData.access_token}`
       );
 
@@ -421,6 +452,7 @@ export function google(config: GoogleConfig): AuthProvider {
  * ```
  */
 export function discord(config: DiscordConfig): AuthProvider {
+  const oauthFetch = (url: string | URL, init?: RequestInit) => fetchWithTimeout(url, init, config.timeout);
   const authorizationUrl = config.authorizationUrl || 'https://discord.com/api/oauth2/authorize';
   const tokenUrl = config.tokenUrl || 'https://discord.com/api/oauth2/token';
   const userInfoUrl = config.userInfoUrl || 'https://discord.com/api/users/@me';
@@ -441,7 +473,7 @@ export function discord(config: DiscordConfig): AuthProvider {
       const code = credentials.code as string;
       if (!code) return null;
 
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await oauthFetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -459,7 +491,7 @@ export function discord(config: DiscordConfig): AuthProvider {
       if (!tokenData.access_token) return null;
 
       // Get user info
-      const userResponse = await fetch(userInfoUrl, {
+      const userResponse = await oauthFetch(userInfoUrl, {
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,
         },
@@ -469,7 +501,7 @@ export function discord(config: DiscordConfig): AuthProvider {
 
       // Check guild membership if configured
       if (config.guildId) {
-        const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+        const guildsResponse = await oauthFetch('https://discord.com/api/users/@me/guilds', {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
           },
@@ -506,7 +538,7 @@ export function discord(config: DiscordConfig): AuthProvider {
     async handleCallback(params) {
       const { code, redirectUri } = params;
 
-      const tokenResponse = await fetch(tokenUrl, {
+      const tokenResponse = await oauthFetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -524,7 +556,7 @@ export function discord(config: DiscordConfig): AuthProvider {
       if (!tokenData.access_token) return null;
 
       // Get user info
-      const userResponse = await fetch(userInfoUrl, {
+      const userResponse = await oauthFetch(userInfoUrl, {
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,
         },
@@ -534,7 +566,7 @@ export function discord(config: DiscordConfig): AuthProvider {
 
       // Check guild membership if configured
       if (config.guildId) {
-        const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+        const guildsResponse = await oauthFetch('https://discord.com/api/users/@me/guilds', {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
           },
@@ -585,6 +617,7 @@ export function discord(config: DiscordConfig): AuthProvider {
  * ```
  */
 export function oauth(config: GenericOAuthConfig): AuthProvider {
+  const oauthFetch = (url: string | URL, init?: RequestInit) => fetchWithTimeout(url, init, config.timeout);
   const scope = config.scope || [];
 
   return {
@@ -602,7 +635,7 @@ export function oauth(config: GenericOAuthConfig): AuthProvider {
       const code = credentials.code as string;
       if (!code || !config.tokenUrl) return null;
 
-      const tokenResponse = await fetch(config.tokenUrl, {
+      const tokenResponse = await oauthFetch(config.tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -625,7 +658,7 @@ export function oauth(config: GenericOAuthConfig): AuthProvider {
         return null;
       }
 
-      const userResponse = await fetch(userInfoUrl, {
+      const userResponse = await oauthFetch(userInfoUrl, {
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,
         },
@@ -672,7 +705,7 @@ export function oauth(config: GenericOAuthConfig): AuthProvider {
         throw new Error(`Token URL not configured for provider: ${config.id}`);
       }
 
-      const tokenResponse = await fetch(config.tokenUrl, {
+      const tokenResponse = await oauthFetch(config.tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -695,7 +728,7 @@ export function oauth(config: GenericOAuthConfig): AuthProvider {
         return null;
       }
 
-      const userResponse = await fetch(userInfoUrl, {
+      const userResponse = await oauthFetch(userInfoUrl, {
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,
         },

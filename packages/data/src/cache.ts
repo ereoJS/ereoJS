@@ -38,7 +38,15 @@ export interface CacheStorage {
 }
 
 /**
- * In-memory cache implementation.
+ * Options for MemoryCache.
+ */
+export interface MemoryCacheOptions {
+  /** Maximum number of entries (default: Infinity) */
+  maxEntries?: number;
+}
+
+/**
+ * In-memory cache implementation with optional LRU eviction.
  * Implements the CacheStorage interface with full entry metadata support.
  *
  * For the unified CacheAdapter interface, use createDataCacheAdapter() or
@@ -47,6 +55,11 @@ export interface CacheStorage {
 export class MemoryCache implements CacheStorage {
   private cache = new Map<string, CacheEntry>();
   private tagIndex = new Map<string, Set<string>>();
+  private readonly maxEntries: number;
+
+  constructor(options?: MemoryCacheOptions) {
+    this.maxEntries = options?.maxEntries ?? Infinity;
+  }
 
   // ============================================================================
   // CacheStorage Interface
@@ -70,6 +83,12 @@ export class MemoryCache implements CacheStorage {
       return null;
     }
 
+    // Promote to end of Map for LRU ordering
+    if (this.maxEntries !== Infinity) {
+      this.cache.delete(key);
+      this.cache.set(key, entry);
+    }
+
     return entry as CacheEntry<T>;
   }
 
@@ -80,6 +99,12 @@ export class MemoryCache implements CacheStorage {
     // Remove existing entry first (to update tags properly)
     if (this.cache.has(key)) {
       await this.delete(key);
+    }
+
+    // Evict LRU entries if at capacity
+    while (this.cache.size >= this.maxEntries && this.cache.size > 0) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest !== undefined) await this.delete(oldest);
     }
 
     this.cache.set(key, entry as CacheEntry);
@@ -248,8 +273,8 @@ export class MemoryCache implements CacheStorage {
  * Create a CacheAdapter-compatible wrapper around a new MemoryCache.
  * Use this when you need a pure CacheAdapter without legacy methods.
  */
-export function createDataCacheAdapter(): CacheAdapter & TaggedCache {
-  const memoryCache = new MemoryCache();
+export function createDataCacheAdapter(options?: MemoryCacheOptions): CacheAdapter & TaggedCache {
+  const memoryCache = new MemoryCache(options);
   return memoryCache.asCacheAdapter();
 }
 
@@ -261,9 +286,9 @@ let globalCache: CacheStorage | null = null;
 /**
  * Get or create the global cache instance.
  */
-export function getCache(): CacheStorage {
+export function getCache(options?: MemoryCacheOptions): CacheStorage {
   if (!globalCache) {
-    globalCache = new MemoryCache();
+    globalCache = new MemoryCache(options);
   }
   return globalCache;
 }

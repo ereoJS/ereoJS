@@ -13,6 +13,8 @@ export class Signal<T> {
   private _subscribers: Set<Subscriber<T>> = new Set();
   /** Stable reference for batch deduplication */
   private readonly _boundFire: () => void;
+  /** Cleanup functions for upstream subscriptions (from map/computed) */
+  _disposers: (() => void)[] = [];
 
   constructor(initialValue: T) {
     this._value = initialValue;
@@ -45,9 +47,19 @@ export class Signal<T> {
 
   /** Create computed signal from this signal */
   map<U>(fn: (value: T) => U): Signal<U> {
-    const computed = new Signal(fn(this._value));
-    this.subscribe((v) => computed.set(fn(v)));
-    return computed;
+    const mapped = new Signal(fn(this._value));
+    const unsub = this.subscribe((v) => mapped.set(fn(v)));
+    mapped._disposers.push(unsub);
+    return mapped;
+  }
+
+  /** Dispose this signal: unsubscribe from upstream sources and clear subscribers */
+  dispose(): void {
+    for (const disposer of this._disposers) {
+      disposer();
+    }
+    this._disposers = [];
+    this._subscribers.clear();
   }
 
   private _notify(): void {
@@ -76,17 +88,18 @@ export function signal<T>(initialValue: T): Signal<T> {
 
 /** Create a computed signal */
 export function computed<T>(fn: () => T, deps: Signal<unknown>[]): Signal<T> {
-  const computed = new Signal(fn());
+  const c = new Signal(fn());
 
   const update = (): void => {
-    computed.set(fn());
+    c.set(fn());
   };
 
   for (const dep of deps) {
-    dep.subscribe(update);
+    const unsub = dep.subscribe(update);
+    c._disposers.push(unsub);
   }
 
-  return computed;
+  return c;
 }
 
 /** Atom (alias for signal) */

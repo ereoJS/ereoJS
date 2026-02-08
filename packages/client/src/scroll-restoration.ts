@@ -34,6 +34,7 @@ export interface ScrollRestorationProps {
 
 // In-memory scroll position store (used as fallback when sessionStorage unavailable)
 const memoryStore = new Map<string, { x: number; y: number }>();
+const MAX_SCROLL_ENTRIES = 100;
 
 /**
  * Get scroll position from storage.
@@ -70,6 +71,12 @@ function saveScrollPosition(
     }
   }
   memoryStore.set(key, position);
+
+  // Evict oldest entry if over limit
+  if (memoryStore.size > MAX_SCROLL_ENTRIES) {
+    const oldest = memoryStore.keys().next().value;
+    if (oldest !== undefined) memoryStore.delete(oldest);
+  }
 }
 
 /**

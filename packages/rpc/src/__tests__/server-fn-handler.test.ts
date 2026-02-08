@@ -26,7 +26,7 @@ function makeRequest(
   const url = `http://localhost${SERVER_FN_BASE}/${encodeURIComponent(fnId)}`;
   return new Request(url, {
     method,
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1', ...headers },
     body: method !== 'GET' ? JSON.stringify({ input }) : undefined,
   });
 }
@@ -77,7 +77,7 @@ describe('createServerFnHandler', () => {
       const handler = createServerFnHandler();
       const request = new Request(`http://localhost${SERVER_FN_BASE}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1' },
         body: JSON.stringify({ input: null }),
       });
       const response = await handler(request);
@@ -194,7 +194,7 @@ describe('createServerFnHandler', () => {
 
       const request = new Request(`http://localhost${SERVER_FN_BASE}/willFail`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1' },
         body: 'not json{{{',
       });
 
@@ -415,7 +415,7 @@ describe('createServerFnHandler', () => {
       // Should match custom path
       const customReq = new Request('http://localhost/api/fn/customPath', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1' },
         body: JSON.stringify({ input: null }),
       });
       const customResponse = await handler(customReq);
@@ -456,7 +456,7 @@ describe('createServerFnHandler', () => {
         `http://localhost${SERVER_FN_BASE}/${encodeURIComponent('my/namespaced.fn')}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1' },
           body: JSON.stringify({ input: null }),
         }
       );

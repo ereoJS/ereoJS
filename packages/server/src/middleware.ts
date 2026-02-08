@@ -267,15 +267,17 @@ export function compress(): MiddlewareHandler {
         contentType.includes('application/javascript')) &&
       acceptEncoding.includes('gzip');
 
-    if (!shouldCompress) {
+    if (!shouldCompress || !response.body) {
       return response;
     }
 
-    // Bun handles compression automatically with Response body
     const headers = new Headers(response.headers);
     headers.set('Content-Encoding', 'gzip');
+    headers.delete('Content-Length');
 
-    return new Response(Bun.gzipSync(await response.arrayBuffer()), {
+    const compressed = response.body.pipeThrough(new CompressionStream('gzip'));
+
+    return new Response(compressed, {
       status: response.status,
       statusText: response.statusText,
       headers,

@@ -20,7 +20,11 @@ export type ContextProvider<TContext = any> = (request: Request) => TContext | P
 let globalContextProvider: ContextProvider | null = null;
 
 /**
- * Set the global context provider that will be used by both RPC and loaders
+ * Set the global context provider that will be used by both RPC and loaders.
+ *
+ * **Important:** The provider must be a stateless factory function that creates
+ * a fresh context object for each request. Do not return shared/mutable objects
+ * across requests, as this can lead to cross-request data leakage.
  *
  * Usage in your app setup:
  *   import { setContextProvider } from '@ereo/rpc';
@@ -49,13 +53,34 @@ export function clearContextProvider(): void {
   globalContextProvider = null;
 }
 
+/** Last context reference for dev-mode same-reference detection */
+let _lastContextRef: WeakRef<object> | null = null;
+
 /**
  * Create context from a request using the global provider
  * Falls back to an empty object if no provider is set
  */
 export async function createSharedContext(request: Request): Promise<any> {
   if (globalContextProvider) {
-    return globalContextProvider(request);
+    const ctx = await globalContextProvider(request);
+
+    // Dev-mode: warn if the provider returns the same object reference
+    if (
+      typeof ctx === 'object' &&
+      ctx !== null &&
+      typeof process !== 'undefined' &&
+      process.env?.NODE_ENV !== 'production'
+    ) {
+      if (_lastContextRef && _lastContextRef.deref() === ctx) {
+        console.warn(
+          '[@ereo/rpc] Context provider returned the same object reference for consecutive calls. ' +
+            'This may cause cross-request data leakage. Providers should return a fresh object per request.'
+        );
+      }
+      _lastContextRef = new WeakRef(ctx);
+    }
+
+    return ctx;
   }
   return {};
 }

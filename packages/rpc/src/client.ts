@@ -100,7 +100,7 @@ export function createClient<T extends Router<RouterDef>>(
   const connectionQueue: Array<{ resolve: () => void; reject: (err: Error) => void }> = [];
 
   function getHeaders(): Record<string, string> {
-    const base = { 'Content-Type': 'application/json' };
+    const base: Record<string, string> = { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1' };
     const custom = typeof options.headers === 'function'
       ? options.headers()
       : options.headers;

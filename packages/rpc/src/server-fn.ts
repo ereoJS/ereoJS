@@ -58,6 +58,8 @@ export interface ServerFnOptions<TInput, TOutput> {
   middleware?: ServerFnMiddleware[];
   /** The function implementation */
   handler: (input: TInput, ctx: ServerFnContext) => Promise<TOutput> | TOutput;
+  /** Skip defaultMiddleware (marks this function as publicly accessible) */
+  allowPublic?: boolean;
 }
 
 /** A callable server function with metadata */
@@ -84,6 +86,7 @@ export interface RegisteredServerFn {
   handler: (input: unknown, ctx: ServerFnContext) => Promise<unknown>;
   middleware: ServerFnMiddleware[];
   inputSchema?: Schema<unknown>;
+  allowPublic?: boolean;
 }
 
 // =============================================================================
@@ -173,7 +176,7 @@ function createClientProxy<TInput, TOutput>(id: string): ServerFn<TInput, TOutpu
   const fn = async (input: TInput): Promise<TOutput> => {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Ereo-RPC': '1' },
       body: JSON.stringify({ input }),
     });
 
@@ -253,6 +256,7 @@ export function createServerFn<TInput, TOutput>(
   let handler: (input: TInput, ctx: ServerFnContext) => Promise<TOutput> | TOutput;
   let middleware: ServerFnMiddleware[] = [];
   let inputSchema: Schema<TInput> | undefined;
+  let allowPublic: boolean | undefined;
 
   if (typeof idOrOptions === 'string') {
     id = idOrOptions;
@@ -262,6 +266,7 @@ export function createServerFn<TInput, TOutput>(
     handler = idOrOptions.handler;
     middleware = idOrOptions.middleware ?? [];
     inputSchema = idOrOptions.input;
+    allowPublic = idOrOptions.allowPublic;
   }
 
   if (isServer) {
@@ -271,6 +276,7 @@ export function createServerFn<TInput, TOutput>(
       handler: handler as (input: unknown, ctx: ServerFnContext) => Promise<unknown>,
       middleware,
       inputSchema: inputSchema as Schema<unknown> | undefined,
+      allowPublic,
     });
 
     const fn = async (input: TInput): Promise<TOutput> => {

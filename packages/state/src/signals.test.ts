@@ -367,6 +367,67 @@ describe('Signal edge cases', () => {
   });
 });
 
+describe('Signal dispose', () => {
+  test('dispose() stops mapped signal from updating', () => {
+    const s = signal(10);
+    const doubled = s.map((v) => v * 2);
+    expect(doubled.get()).toBe(20);
+
+    doubled.dispose();
+    s.set(20);
+    // Should still hold the old value since it's disconnected
+    expect(doubled.get()).toBe(20);
+  });
+
+  test('dispose() stops computed signal from updating', () => {
+    const a = signal<number>(1);
+    const b = signal<number>(2);
+    const sum = computed<number>(() => a.get() + b.get(), [a as Signal<unknown>, b as Signal<unknown>]);
+    expect(sum.get()).toBe(3);
+
+    sum.dispose();
+    a.set(10);
+    b.set(20);
+    expect(sum.get()).toBe(3);
+  });
+
+  test('chained map().map().dispose() cleans up correctly', () => {
+    const s = signal(2);
+    const doubled = s.map((v) => v * 2);
+    const quadrupled = doubled.map((v) => v * 2);
+    expect(quadrupled.get()).toBe(8);
+
+    quadrupled.dispose();
+    s.set(5);
+    // quadrupled disconnected from doubled
+    expect(quadrupled.get()).toBe(8);
+    // doubled is still connected to s
+    expect(doubled.get()).toBe(10);
+  });
+
+  test('dispose() is idempotent', () => {
+    const s = signal(10);
+    const doubled = s.map((v) => v * 2);
+
+    doubled.dispose();
+    doubled.dispose(); // second call should not throw
+
+    s.set(20);
+    expect(doubled.get()).toBe(20);
+  });
+
+  test('dispose() clears downstream subscribers', () => {
+    const s = signal(1);
+    const mapped = s.map((v) => v * 3);
+    let called = false;
+    mapped.subscribe(() => { called = true; });
+
+    mapped.dispose();
+    mapped.set(99); // direct set after dispose — subscribers cleared
+    expect(called).toBe(false);
+  });
+});
+
 describe('Store edge cases', () => {
   test('entries returns all signal entries', () => {
     const store = new Store({ a: 1, b: 'hello' });

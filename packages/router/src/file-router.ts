@@ -13,6 +13,11 @@ import { buildRouteTree, RouteTree } from './route-tree';
 import { createMatcher, RouteMatcher } from './matcher';
 import { parseRouteConfig, mergeRouteConfigs } from './route-config';
 
+/** Normalize Windows backslashes to forward slashes for URL paths */
+function toUrlPath(p: string): string {
+  return p.split('\\').join('/');
+}
+
 /**
  * Default router options.
  */
@@ -88,7 +93,7 @@ export class FileRouter {
 
       for (const entry of entries) {
         const fullPath = join(dir, entry.name);
-        const relativePath = join(base, entry.name);
+        const relativePath = toUrlPath(join(base, entry.name));
 
         if (entry.isDirectory()) {
           // Recurse into subdirectory
@@ -172,7 +177,7 @@ export class FileRouter {
             await this.discoverRoutes();
           } else {
             // File changed
-            const routeId = '/' + filename.replace(/\.(tsx?|jsx?)$/, '');
+            const routeId = '/' + toUrlPath(filename).replace(/\.(tsx?|jsx?)$/, '');
             const node = this.tree?.findById(routeId);
 
             if (node) {
@@ -185,7 +190,7 @@ export class FileRouter {
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           // File deleted
-          const routeId = '/' + filename.replace(/\.(tsx?|jsx?)$/, '');
+          const routeId = '/' + toUrlPath(filename).replace(/\.(tsx?|jsx?)$/, '');
           this.tree?.removeById(routeId);
           this.routes = this.tree?.toRoutes() || [];
           this.matcher = createMatcher(this.routes);

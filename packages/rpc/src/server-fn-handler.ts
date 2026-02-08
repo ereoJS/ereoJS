@@ -38,6 +38,10 @@ export interface ServerFnHandlerOptions {
   onError?: (error: unknown, fnId: string) => void;
   /** Context provider — creates app context from the request */
   createContext?: (request: Request) => unknown | Promise<unknown>;
+  /** Disable CSRF header check (not recommended) */
+  disableCsrfProtection?: boolean;
+  /** Default middleware prepended to all server functions unless allowPublic is true */
+  defaultMiddleware?: ServerFnMiddleware[];
 }
 
 export type ServerFnRequestHandler = (
@@ -63,6 +67,8 @@ export function createServerFnHandler(
     middleware: globalMiddleware = [],
     onError,
     createContext,
+    disableCsrfProtection = false,
+    defaultMiddleware = [],
   } = options;
 
   const prefix = basePath.endsWith('/') ? basePath : basePath + '/';
@@ -80,6 +86,14 @@ export function createServerFnHandler(
       return jsonResponse(
         { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Server functions only accept POST requests' } },
         405
+      );
+    }
+
+    // CSRF protection: require X-Ereo-RPC header on all POST requests
+    if (!disableCsrfProtection && !request.headers.get('X-Ereo-RPC')) {
+      return jsonResponse(
+        { ok: false, error: { code: 'CSRF_ERROR', message: 'Missing X-Ereo-RPC header' } },
+        403
       );
     }
 
@@ -142,8 +156,9 @@ export function createServerFnHandler(
         }
       }
 
-      // Build middleware chain: global middleware + function-specific middleware
-      const allMiddleware = [...globalMiddleware, ...fn.middleware];
+      // Build middleware chain: global middleware + default middleware (unless allowPublic) + function-specific middleware
+      const fnDefaultMiddleware = fn.allowPublic ? [] : defaultMiddleware;
+      const allMiddleware = [...globalMiddleware, ...fnDefaultMiddleware, ...fn.middleware];
 
       const runChain = async (index: number): Promise<unknown> => {
         if (index < allMiddleware.length) {
