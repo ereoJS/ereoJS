@@ -56,6 +56,7 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
   if (result.success) {
     printBuildReport(result);
     console.log('\n  \x1b[32m✓\x1b[0m Build completed successfully\n');
+    process.exit(0);
   } else {
     console.error('\n  \x1b[31m✗\x1b[0m Build failed\n');
     if (result.errors) {
