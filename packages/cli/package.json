@@ -35,13 +35,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ereo/bundler": "workspace:*",
     "@ereo/core": "workspace:*",
     "@ereo/router": "workspace:*",
     "@ereo/server": "workspace:*",
     "@ereo/trace": "workspace:*"
   },
   "devDependencies": {
-    "@ereo/bundler": "workspace:*",
     "@types/bun": "^1.1.0",
     "typescript": "^5.4.0"
   }

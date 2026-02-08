@@ -274,6 +274,7 @@ describe('@ereo/server - BunServer', () => {
       const response = await fetch('http://localhost:4575/action', {
         method: 'POST',
         body: JSON.stringify({ data: 'test' }),
+        headers: { 'Accept': 'application/json' },
       });
 
       expect(response.status).toBe(200);

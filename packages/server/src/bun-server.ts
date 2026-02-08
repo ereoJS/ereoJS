@@ -448,11 +448,38 @@ export class BunServer {
           return this.applyRouteHeaders(result, routeHeaders);
         }
 
-        const actionResponse = new Response(JSON.stringify(result), {
-          headers: { 'Content-Type': 'application/json' },
-        });
+        // Fetch/AJAX requests get JSON
+        if (request.headers.get('Accept')?.includes('application/json')) {
+          const actionResponse = new Response(JSON.stringify(result), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+          const routeHeaders = this.buildRouteHeaders(match);
+          return this.applyRouteHeaders(actionResponse, routeHeaders);
+        }
+
+        // Traditional form submission — re-render the page with actionData
+        const loaderArgs = { request, params: match.params, context };
+        const loaderPromises: Promise<unknown>[] = [];
+        loaderPromises.push(
+          module.loader ? Promise.resolve(module.loader(loaderArgs)) : Promise.resolve(null)
+        );
+        for (const layout of layouts) {
+          loaderPromises.push(
+            layout.module?.loader ? Promise.resolve(layout.module.loader(loaderArgs)) : Promise.resolve(null)
+          );
+        }
+        const loaderResults = await Promise.all(loaderPromises);
+        const loaderData = loaderResults[0];
+        if (loaderData instanceof Response) return loaderData;
+        const layoutLoaderData = new Map<string, unknown>();
+        for (let i = 0; i < layouts.length; i++) {
+          const layoutData = loaderResults[i + 1];
+          if (layoutData instanceof Response) return layoutData;
+          if (layoutData !== null) layoutLoaderData.set(layouts[i].id, layoutData);
+        }
         const routeHeaders = this.buildRouteHeaders(match);
-        return this.applyRouteHeaders(actionResponse, routeHeaders);
+        const htmlResponse = await this.renderPage(request, match, context, loaderData, layoutLoaderData, result);
+        return this.applyRouteHeaders(htmlResponse, routeHeaders);
       }
       return new Response('Method Not Allowed', { status: 405 });
     }
@@ -554,7 +581,8 @@ export class BunServer {
     match: MatchResult,
     context: RequestContext,
     loaderData: unknown,
-    layoutLoaderData: Map<string, unknown> = new Map()
+    layoutLoaderData: Map<string, unknown> = new Map(),
+    actionData?: unknown
   ): Promise<Response> {
     const module = match.route.module;
     if (!module?.default) {
@@ -587,6 +615,7 @@ export class BunServer {
     let element: ReactElement = createElement(PageComponent, {
       loaderData,
       params: match.params,
+      ...(actionData !== undefined ? { actionData } : {}),
     });
 
     // Compose with layouts from innermost to outermost

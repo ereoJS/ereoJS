@@ -264,18 +264,22 @@ async function generateMinimalProject(
       '@ereo/client': EREO_VERSION,
       '@ereo/data': EREO_VERSION,
       '@ereo/cli': EREO_VERSION,
+      '@ereo/runtime-bun': EREO_VERSION,
       ...(trace ? { '@ereo/trace': EREO_VERSION } : {}),
       react: '^18.2.0',
       'react-dom': '^18.2.0',
     },
-    devDependencies: typescript
-      ? {
-          '@types/bun': '^1.1.0',
-          '@types/react': '^18.2.0',
-          '@types/react-dom': '^18.2.0',
-          typescript: '^5.4.0',
-        }
-      : {},
+    devDependencies: {
+      '@ereo/bundler': EREO_VERSION,
+      ...(typescript
+        ? {
+            '@types/bun': '^1.1.0',
+            '@types/react': '^18.2.0',
+            '@types/react-dom': '^18.2.0',
+            typescript: '^5.4.0',
+          }
+        : {}),
+    },
   };
 
   await Bun.write(join(projectDir, 'package.json'), JSON.stringify(packageJson, null, 2));
