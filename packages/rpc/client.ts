@@ -6,7 +6,8 @@
 
 // Client
 export { createClient } from './src/client';
-export type { RPCClientOptions, RPCClientError } from './src/client';
+export { RPCClientError } from './src/client';
+export type { RPCClientOptions } from './src/client';
 
 // Hooks
 export { useQuery, useMutation, useSubscription } from './src/hooks';

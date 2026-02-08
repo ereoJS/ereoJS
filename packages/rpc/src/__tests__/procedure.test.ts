@@ -212,9 +212,25 @@ describe('procedure builder', () => {
       expect(proc._type).toBe('query');
     });
 
+    test('standalone query with schema works', () => {
+      const schema = { parse: (d: unknown) => d as { id: string } };
+      const proc = query(schema, ({ input }) => ({ found: input.id }));
+
+      expect(proc._type).toBe('query');
+      expect(proc.inputSchema).toBe(schema);
+    });
+
     test('standalone mutation function works', () => {
       const proc = mutation(() => ({ success: true }));
       expect(proc._type).toBe('mutation');
+    });
+
+    test('standalone mutation with schema works', () => {
+      const schema = { parse: (d: unknown) => d as { name: string } };
+      const proc = mutation(schema, ({ input }) => ({ created: input.name }));
+
+      expect(proc._type).toBe('mutation');
+      expect(proc.inputSchema).toBe(schema);
     });
 
     test('standalone subscription function works', () => {
@@ -222,6 +238,16 @@ describe('procedure builder', () => {
         yield 1;
       });
       expect(proc._type).toBe('subscription');
+    });
+
+    test('standalone subscription with schema works', () => {
+      const schema = { parse: (d: unknown) => d as { channel: string } };
+      const proc = subscription(schema, async function* ({ input }) {
+        yield { channel: input.channel };
+      });
+
+      expect(proc._type).toBe('subscription');
+      expect(proc.inputSchema).toBe(schema);
     });
   });
 });

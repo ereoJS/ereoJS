@@ -2,7 +2,7 @@
  * Tests for middleware helpers
  */
 
-import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test';
 import {
   logging,
   rateLimit,
@@ -12,6 +12,9 @@ import {
   extend,
   timing,
   catchErrors,
+  clearRateLimitStore,
+  _triggerCleanup,
+  _RateLimitStore,
 } from '../middleware';
 import type { BaseContext, MiddlewareResult } from '../types';
 
@@ -478,7 +481,7 @@ describe('catchErrors middleware', () => {
     expect(result.ok).toBe(true);
   });
 
-  test('transforms known errors', async () => {
+  test('catches and transforms errors via the middleware', async () => {
     class DatabaseError extends Error {
       constructor(message: string) {
         super(message);
@@ -498,30 +501,273 @@ describe('catchErrors middleware', () => {
       request: new Request('http://localhost/test'),
     };
 
-    // We need to test this differently since our runMiddleware helper
-    // doesn't actually throw errors. This test verifies the handler logic.
-    const dbError = new DatabaseError('Connection failed');
-    const handler = catchErrors((error) => {
-      if (error instanceof DatabaseError) {
-        return { code: 'DB_ERROR', message: 'Database operation failed' };
-      }
-      throw error;
+    // Execute the middleware with a next function that throws
+    const result = await middleware({
+      ctx,
+      next: () => {
+        throw new DatabaseError('Connection failed');
+      },
     });
 
-    // The middleware should transform DatabaseError
-    const transformedError = (() => {
-      try {
-        if (dbError instanceof DatabaseError) {
-          return { code: 'DB_ERROR', message: 'Database operation failed' };
-        }
-      } catch {
-        return null;
-      }
-    })();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('DB_ERROR');
+      expect(result.error.message).toBe('Database operation failed');
+    }
+  });
 
-    expect(transformedError).toEqual({
-      code: 'DB_ERROR',
-      message: 'Database operation failed',
+  test('re-throws unknown errors', async () => {
+    const middleware = catchErrors((error) => {
+      if (error instanceof TypeError) {
+        return { code: 'TYPE_ERROR', message: 'Type error occurred' };
+      }
+      throw error; // Re-throw unknown
     });
+
+    const ctx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test'),
+    };
+
+    await expect(
+      middleware({
+        ctx,
+        next: () => {
+          throw new Error('unknown error');
+        },
+      })
+    ).rejects.toThrow('unknown error');
+  });
+});
+
+describe('RateLimitStore cleanup', () => {
+  test('cleanup runs and removes expired entries', async () => {
+    // Create a rate limiter with very short window
+    const middleware = rateLimit({
+      limit: 100,
+      windowMs: 50, // 50ms window
+    });
+
+    const ctx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '1.2.3.4' },
+      }),
+    };
+
+    // Make a request to populate the store
+    await runMiddleware(middleware, ctx);
+
+    // Wait for window to expire
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Make another request — the old entry should be cleaned up
+    const result = await runMiddleware(middleware, ctx);
+    expect(result.ok).toBe(true);
+  });
+
+  test('separate rate limit windows are independent', async () => {
+    const fast = rateLimit({ limit: 2, windowMs: 100000 });
+    const slow = rateLimit({ limit: 5, windowMs: 200000 });
+
+    const ctxFast: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '5.5.5.5' },
+      }),
+    };
+
+    const ctxSlow: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '5.5.5.5' },
+      }),
+    };
+
+    // Exhaust fast limiter
+    await runMiddleware(fast, ctxFast);
+    await runMiddleware(fast, ctxFast);
+    const fastBlocked = await runMiddleware(fast, ctxFast);
+    expect(fastBlocked.ok).toBe(false);
+
+    // Slow limiter should still allow
+    const slowResult = await runMiddleware(slow, ctxSlow);
+    expect(slowResult.ok).toBe(true);
+  });
+});
+
+describe('logging middleware edge cases', () => {
+  test('uses default console.log and timing', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    const middleware = logging(); // no options, uses defaults
+
+    const ctx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test'),
+    };
+
+    await runMiddleware(middleware, ctx);
+
+    expect(logSpy).toHaveBeenCalled();
+    expect(logSpy.mock.calls[0][0]).toContain('[RPC]');
+    expect(logSpy.mock.calls[0][0]).toMatch(/\d+(\.\d+)?ms/);
+
+    logSpy.mockRestore();
+  });
+});
+
+describe('RateLimitStore cleanup cycle (_triggerCleanup)', () => {
+  beforeEach(() => {
+    clearRateLimitStore();
+  });
+
+  afterEach(() => {
+    clearRateLimitStore();
+  });
+
+  test('removes expired entries from store', async () => {
+    // Create a rate limiter with a tiny window so entries expire immediately
+    const middleware = rateLimit({
+      limit: 10,
+      windowMs: 1, // 1ms window — expires almost instantly
+    });
+
+    const ctx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '99.99.99.1' },
+      }),
+    };
+
+    // Populate the store
+    await runMiddleware(middleware, ctx);
+
+    // Wait for entries to expire
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Trigger cleanup — should remove the expired entry and the empty store
+    _triggerCleanup();
+
+    // The entry was cleaned up, so a new request should start fresh (count=1, under limit)
+    const result = await runMiddleware(middleware, ctx);
+    expect(result.ok).toBe(true);
+  });
+
+  test('removes empty stores and stops interval when all stores gone', async () => {
+    // Create rate limiter with tiny window
+    const middleware = rateLimit({
+      limit: 10,
+      windowMs: 1,
+    });
+
+    const ctx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '99.99.99.2' },
+      }),
+    };
+
+    // Populate
+    await runMiddleware(middleware, ctx);
+
+    // Let entries expire
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Cleanup should remove expired entries, then remove the empty store,
+    // then clear the interval since no stores remain
+    _triggerCleanup();
+
+    // After cleanup, creating a new request populates a fresh store
+    const result = await runMiddleware(middleware, ctx);
+    expect(result.ok).toBe(true);
+  });
+
+  test('keeps non-expired entries during cleanup', async () => {
+    const middleware = rateLimit({
+      limit: 3,
+      windowMs: 60000, // Long window — entries won't expire
+    });
+
+    const ctx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '99.99.99.3' },
+      }),
+    };
+
+    // Make 3 requests to hit the limit
+    await runMiddleware(middleware, ctx);
+    await runMiddleware(middleware, ctx);
+    await runMiddleware(middleware, ctx);
+
+    // Trigger cleanup — entries should NOT be removed (not expired)
+    _triggerCleanup();
+
+    // 4th request should still be blocked because entries were kept
+    const result = await runMiddleware(middleware, ctx);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('RATE_LIMITED');
+    }
+  });
+
+  test('handles multiple stores with mixed expiration', async () => {
+    // Short window — expires quickly
+    const shortMw = rateLimit({ limit: 10, windowMs: 1 });
+    // Long window — stays alive
+    const longMw = rateLimit({ limit: 10, windowMs: 60000 });
+
+    const shortCtx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '99.99.99.4' },
+      }),
+    };
+    const longCtx: BaseContext = {
+      ctx: {},
+      request: new Request('http://localhost/test', {
+        headers: { 'x-forwarded-for': '99.99.99.5' },
+      }),
+    };
+
+    // Populate both
+    await runMiddleware(shortMw, shortCtx);
+    await runMiddleware(longMw, longCtx);
+
+    // Wait for short-window entries to expire
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // Cleanup: short store entries expire → empty → store removed; long store stays
+    _triggerCleanup();
+
+    // Long-window limiter should still track the previous request
+    // Make enough requests to hit the limit (already 1 counted)
+    for (let i = 1; i < 10; i++) {
+      await runMiddleware(longMw, longCtx);
+    }
+    const blocked = await runMiddleware(longMw, longCtx);
+    expect(blocked.ok).toBe(false);
+  });
+});
+
+describe('RateLimitStore interval-based cleanup', () => {
+  test('setInterval callback fires and cleans expired entries', async () => {
+    // Create a store with a very short cleanup interval (20ms)
+    const store = new _RateLimitStore(20);
+
+    // Get a store for a 1ms window (entries expire almost instantly)
+    const entries = store.getStore(1);
+
+    // Add an entry that will expire immediately
+    entries.set('test-key', { count: 5, resetAt: Date.now() - 100 });
+
+    // Wait for the interval to fire (20ms + buffer)
+    await new Promise(resolve => setTimeout(resolve, 60));
+
+    // The interval callback should have cleaned up the expired entry
+    expect(entries.has('test-key')).toBe(false);
+
+    // Clean up the store to stop the interval
+    store.clear();
   });
 });

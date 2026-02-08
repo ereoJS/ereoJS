@@ -170,7 +170,8 @@ export const SERVER_FN_BASE = '/_server-fn';
 // Client Proxy
 // =============================================================================
 
-function createClientProxy<TInput, TOutput>(id: string): ServerFn<TInput, TOutput> {
+/** @internal Exported for testing only */
+export function _createClientProxy<TInput, TOutput>(id: string): ServerFn<TInput, TOutput> {
   const url = `${SERVER_FN_BASE}/${encodeURIComponent(id)}`;
 
   const fn = async (input: TInput): Promise<TOutput> => {
@@ -319,5 +320,5 @@ export function createServerFn<TInput, TOutput>(
   }
 
   // Client: return a proxy that POSTs to the server
-  return createClientProxy<TInput, TOutput>(id);
+  return _createClientProxy<TInput, TOutput>(id);
 }

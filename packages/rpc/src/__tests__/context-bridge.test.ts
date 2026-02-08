@@ -2,7 +2,7 @@
  * Tests for context bridge between RPC and loaders/actions
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, spyOn } from 'bun:test';
 import {
   setContextProvider,
   getContextProvider,
@@ -169,6 +169,88 @@ describe('Context Bridge', () => {
       });
 
       expect(result.ok).toBe(true);
+    });
+  });
+
+  describe('same-reference warning', () => {
+    test('warns when provider returns the same object reference twice', async () => {
+      const warnSpy = spyOn(console, 'warn').mockImplementation(() => {});
+
+      const sharedObject = { user: 'test', data: {} };
+      setContextProvider(async () => sharedObject);
+
+      // First call — stores reference
+      await createSharedContext(new Request('http://localhost'));
+
+      // Second call — same reference should trigger warning
+      await createSharedContext(new Request('http://localhost'));
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('same object reference')
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    test('does not warn when provider returns different objects', async () => {
+      const warnSpy = spyOn(console, 'warn').mockImplementation(() => {});
+
+      setContextProvider(async () => ({ user: 'test' }));
+
+      await createSharedContext(new Request('http://localhost'));
+      await createSharedContext(new Request('http://localhost'));
+
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('useSharedContext', () => {
+    test('returns null when window is not available', () => {
+      const { useSharedContext } = require('../context-bridge');
+      // In non-browser env (Bun), window is not defined by default
+      const originalWindow = (globalThis as any).window;
+      delete (globalThis as any).window;
+
+      const result = useSharedContext();
+      expect(result).toBeNull();
+
+      if (originalWindow) {
+        (globalThis as any).window = originalWindow;
+      }
+    });
+
+    test('returns shared context from window when available', () => {
+      const { useSharedContext } = require('../context-bridge');
+      const originalWindow = (globalThis as any).window;
+      (globalThis as any).window = {
+        __EREO_SHARED_CONTEXT__: { user: { id: '1' }, theme: 'dark' },
+      };
+
+      const result = useSharedContext();
+      expect(result).toEqual({ user: { id: '1' }, theme: 'dark' });
+
+      if (originalWindow) {
+        (globalThis as any).window = originalWindow;
+      } else {
+        delete (globalThis as any).window;
+      }
+    });
+
+    test('returns null when window exists but context is not set', () => {
+      const { useSharedContext } = require('../context-bridge');
+      const originalWindow = (globalThis as any).window;
+      (globalThis as any).window = {};
+
+      const result = useSharedContext();
+      expect(result).toBeNull();
+
+      if (originalWindow) {
+        (globalThis as any).window = originalWindow;
+      } else {
+        delete (globalThis as any).window;
+      }
     });
   });
 });

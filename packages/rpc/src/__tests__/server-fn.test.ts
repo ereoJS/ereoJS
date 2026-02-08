@@ -2,7 +2,7 @@
  * Tests for server function core: createServerFn, registry, ServerFnError
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import {
   createServerFn,
   ServerFnError,
@@ -12,6 +12,7 @@ import {
   unregisterServerFn,
   clearServerFnRegistry,
   SERVER_FN_BASE,
+  _createClientProxy,
   type ServerFnContext,
   type ServerFnMiddleware,
 } from '../server-fn';
@@ -297,5 +298,199 @@ describe('createServerFn', () => {
 describe('SERVER_FN_BASE', () => {
   test('has expected value', () => {
     expect(SERVER_FN_BASE).toBe('/_server-fn');
+  });
+});
+
+// =============================================================================
+// ServerFn properties
+// =============================================================================
+
+describe('ServerFn properties', () => {
+  test('_id is readonly', () => {
+    const fn = createServerFn('readonlyId', async () => 'ok');
+    expect(fn._id).toBe('readonlyId');
+    // Cannot reassign — the property descriptor has writable: false
+    expect(() => { (fn as any)._id = 'changed'; }).toThrow();
+  });
+
+  test('_url is readonly', () => {
+    const fn = createServerFn('readonlyUrl', async () => 'ok');
+    expect(fn._url).toBe(`${SERVER_FN_BASE}/readonlyUrl`);
+    expect(() => { (fn as any)._url = '/changed'; }).toThrow();
+  });
+
+  test('allowPublic is passed to registry', () => {
+    createServerFn({
+      id: 'publicFn',
+      allowPublic: true,
+      handler: async () => 'public',
+    });
+
+    const registered = getServerFn('publicFn');
+    expect(registered).toBeDefined();
+    expect(registered!.allowPublic).toBe(true);
+  });
+});
+
+// =============================================================================
+// Server-side direct execution edge cases
+// =============================================================================
+
+describe('server-side direct execution', () => {
+  test('executes without middleware or schema', async () => {
+    const fn = createServerFn('directSimple', async (x: number) => x * 3);
+    const result = await fn(7);
+    expect(result).toBe(21);
+  });
+
+  test('validates input on direct server call', async () => {
+    const schema = {
+      parse(data: unknown) {
+        if (typeof data !== 'number') throw new Error('must be number');
+        return data as number;
+      },
+    };
+
+    const fn = createServerFn({
+      id: 'validateDirect',
+      input: schema,
+      handler: async (n: number) => n + 1,
+    });
+
+    // Valid
+    expect(await fn(5)).toBe(6);
+
+    // Invalid
+    await expect(fn('not a number' as any)).rejects.toThrow('must be number');
+  });
+
+  test('runs middleware chain on direct server call', async () => {
+    const order: string[] = [];
+
+    const mw: ServerFnMiddleware = async (_ctx, next) => {
+      order.push('mw');
+      return next();
+    };
+
+    const fn = createServerFn({
+      id: 'mwDirect',
+      middleware: [mw],
+      handler: async () => {
+        order.push('handler');
+        return 'done';
+      },
+    });
+
+    await fn(undefined as void);
+    expect(order).toEqual(['mw', 'handler']);
+  });
+
+  test('provides minimal context on direct call', async () => {
+    let receivedCtx: ServerFnContext | null = null;
+
+    const fn = createServerFn('ctxDirect', async (_input: void, ctx) => {
+      receivedCtx = ctx;
+      return 'ok';
+    });
+
+    await fn(undefined as void);
+
+    expect(receivedCtx).not.toBeNull();
+    expect(receivedCtx!.request).toBeInstanceOf(Request);
+    expect(receivedCtx!.request.url).toContain('_server-fn/ctxDirect');
+    expect(receivedCtx!.responseHeaders).toBeInstanceOf(Headers);
+    expect(receivedCtx!.appContext).toEqual({});
+  });
+});
+
+// =============================================================================
+// Client Proxy (_createClientProxy) — tests the browser-side code path
+// =============================================================================
+
+describe('_createClientProxy', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  test('has correct _id and _url properties', () => {
+    const fn = _createClientProxy('myFunc');
+    expect(fn._id).toBe('myFunc');
+    expect(fn._url).toBe(`${SERVER_FN_BASE}/myFunc`);
+  });
+
+  test('_id and _url are readonly', () => {
+    const fn = _createClientProxy('readonlyProxy');
+    expect(() => { (fn as any)._id = 'changed'; }).toThrow();
+    expect(() => { (fn as any)._url = '/changed'; }).toThrow();
+  });
+
+  test('encodes special characters in URL', () => {
+    const fn = _createClientProxy('my/special fn');
+    expect(fn._url).toBe(`${SERVER_FN_BASE}/${encodeURIComponent('my/special fn')}`);
+  });
+
+  test('POSTs input to server and returns data on success', async () => {
+    globalThis.fetch = mock(async (url: any, init: any) => {
+      expect(url).toBe(`${SERVER_FN_BASE}/fetchTest`);
+      expect(init.method).toBe('POST');
+      expect(init.headers['Content-Type']).toBe('application/json');
+      expect(init.headers['X-Ereo-RPC']).toBe('1');
+
+      const body = JSON.parse(init.body);
+      expect(body.input).toEqual({ name: 'Alice' });
+
+      return new Response(JSON.stringify({ ok: true, data: { greeting: 'Hello, Alice!' } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }) as any;
+
+    const fn = _createClientProxy<{ name: string }, { greeting: string }>('fetchTest');
+    const result = await fn({ name: 'Alice' });
+    expect(result).toEqual({ greeting: 'Hello, Alice!' });
+  });
+
+  test('throws ServerFnError on error response', async () => {
+    globalThis.fetch = mock(async () => {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: { code: 'NOT_FOUND', message: 'User not found', details: { id: '999' } },
+        }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }) as any;
+
+    const fn = _createClientProxy<string, unknown>('errorTest');
+
+    try {
+      await fn('999');
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ServerFnError);
+      const sfErr = err as ServerFnError;
+      expect(sfErr.code).toBe('NOT_FOUND');
+      expect(sfErr.message).toBe('User not found');
+      expect(sfErr.statusCode).toBe(404);
+      expect(sfErr.details).toEqual({ id: '999' });
+    }
+  });
+
+  test('sends void input as undefined', async () => {
+    let receivedBody: any;
+
+    globalThis.fetch = mock(async (_url: any, init: any) => {
+      receivedBody = JSON.parse(init.body);
+      return new Response(JSON.stringify({ ok: true, data: 42 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }) as any;
+
+    const fn = _createClientProxy<void, number>('voidInput');
+    await fn(undefined as void);
+    expect(receivedBody.input).toBeUndefined();
   });
 });

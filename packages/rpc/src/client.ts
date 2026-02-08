@@ -279,11 +279,6 @@ export function createClient<T extends Router<RouterDef>>(
   }
 
   function handleServerMessage(msg: WSServerMessage) {
-    // Handle pong response (no id field)
-    if (msg.type === 'pong') {
-      return;
-    }
-
     const sub = subscriptions.get(msg.id);
     if (!sub) return;
 
@@ -431,36 +426,43 @@ async function handleHttpResponse(response: Response, path: string[]): Promise<u
   try {
     result = await response.json();
   } catch {
-    const error = new Error(`RPC call to ${path.join('.')} returned invalid JSON (status ${response.status})`) as RPCClientError;
-    error.name = 'RPCClientError';
-    error.code = 'PARSE_ERROR';
-    error.path = path.join('.');
-    throw error;
+    throw new RPCClientError(
+      `RPC call to ${path.join('.')} returned invalid JSON (status ${response.status})`,
+      'PARSE_ERROR',
+      path.join('.')
+    );
   }
 
   if (!result || !('ok' in result)) {
-    const error = new Error(`RPC call to ${path.join('.')} returned unexpected response format`) as RPCClientError;
-    error.name = 'RPCClientError';
-    error.code = 'INVALID_RESPONSE';
-    error.path = path.join('.');
-    throw error;
+    throw new RPCClientError(
+      `RPC call to ${path.join('.')} returned unexpected response format`,
+      'INVALID_RESPONSE',
+      path.join('.')
+    );
   }
 
   if (!result.ok) {
-    const errMsg = result.error?.message || 'Unknown RPC error';
-    const error = new Error(errMsg) as RPCClientError;
-    error.name = 'RPCClientError';
-    error.code = result.error?.code || 'UNKNOWN';
-    error.path = path.join('.');
-    error.details = result.error?.details;
-    throw error;
+    throw new RPCClientError(
+      result.error?.message || 'Unknown RPC error',
+      result.error?.code || 'UNKNOWN',
+      path.join('.'),
+      result.error?.details
+    );
   }
 
   return result.data;
 }
 
-export interface RPCClientError extends Error {
-  code: string;
-  path: string;
-  details?: unknown;
+export class RPCClientError extends Error {
+  public readonly code: string;
+  public readonly path: string;
+  public readonly details?: unknown;
+
+  constructor(message: string, code: string, path: string, details?: unknown) {
+    super(message);
+    this.name = 'RPCClientError';
+    this.code = code;
+    this.path = path;
+    this.details = details;
+  }
 }

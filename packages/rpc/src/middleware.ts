@@ -18,7 +18,11 @@ interface RateLimitEntry {
 class RateLimitStore {
   private stores = new Map<string, Map<string, RateLimitEntry>>();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly CLEANUP_INTERVAL_MS = 60000; // Cleanup every minute
+  private readonly CLEANUP_INTERVAL_MS: number;
+
+  constructor(cleanupIntervalMs = 60000) {
+    this.CLEANUP_INTERVAL_MS = cleanupIntervalMs;
+  }
 
   getStore(windowMs: number): Map<string, RateLimitEntry> {
     const key = String(windowMs);
@@ -34,27 +38,32 @@ class RateLimitStore {
   private scheduleCleanup() {
     if (this.cleanupInterval) return;
 
-    this.cleanupInterval = setInterval(() => {
-      const now = Date.now();
-      for (const [windowMsStr, store] of this.stores) {
-        const windowMs = parseInt(windowMsStr, 10);
-        for (const [key, entry] of store) {
-          if (entry.resetAt < now) {
-            store.delete(key);
-          }
-        }
-        // Clean up empty stores
-        if (store.size === 0) {
-          this.stores.delete(windowMsStr);
-        }
-      }
+    this.cleanupInterval = setInterval(
+      () => this.runCleanupCycle(),
+      this.CLEANUP_INTERVAL_MS
+    );
+  }
 
-      // Stop cleanup if no stores remain
-      if (this.stores.size === 0 && this.cleanupInterval) {
-        clearInterval(this.cleanupInterval);
-        this.cleanupInterval = null;
+  /** Run one cleanup cycle — removes expired entries and empty stores */
+  runCleanupCycle() {
+    const now = Date.now();
+    for (const [windowMsStr, store] of this.stores) {
+      for (const [key, entry] of store) {
+        if (entry.resetAt < now) {
+          store.delete(key);
+        }
       }
-    }, this.CLEANUP_INTERVAL_MS);
+      // Clean up empty stores
+      if (store.size === 0) {
+        this.stores.delete(windowMsStr);
+      }
+    }
+
+    // Stop cleanup if no stores remain
+    if (this.stores.size === 0 && this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 
   // For testing purposes
@@ -168,6 +177,16 @@ export function rateLimit(options: RateLimitOptions): MiddlewareFn<BaseContext, 
 export function clearRateLimitStore(): void {
   globalRateLimitStore.clear();
 }
+
+/**
+ * Trigger one cleanup cycle on the global rate limit store. Useful for testing.
+ */
+export function _triggerCleanup(): void {
+  globalRateLimitStore.runCleanupCycle();
+}
+
+/** @internal Exported for testing the interval-based cleanup path */
+export { RateLimitStore as _RateLimitStore };
 
 // =============================================================================
 // Auth Middleware Helpers

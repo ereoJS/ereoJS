@@ -270,19 +270,32 @@ async function handleSubscribe(
         for await (const value of generator) {
           if (controller.signal.aborted) break;
 
-          const msg: WSServerMessage = { type: 'data', id, data: value };
-          ws.send(JSON.stringify(msg));
+          try {
+            const msg: WSServerMessage = { type: 'data', id, data: value };
+            ws.send(JSON.stringify(msg));
+          } catch {
+            // WebSocket closed between abort check and send — treat as aborted
+            break;
+          }
         }
 
         // Generator completed normally
         if (!controller.signal.aborted) {
-          const msg: WSServerMessage = { type: 'complete', id };
-          ws.send(JSON.stringify(msg));
+          try {
+            const msg: WSServerMessage = { type: 'complete', id };
+            ws.send(JSON.stringify(msg));
+          } catch {
+            // WebSocket closed — nothing to do
+          }
         }
       } catch (error) {
         if (!controller.signal.aborted) {
           const errorMsg = error instanceof Error ? error.message : 'Subscription error';
-          sendError(ws, id, 'SUBSCRIPTION_ERROR', errorMsg);
+          try {
+            sendError(ws, id, 'SUBSCRIPTION_ERROR', errorMsg);
+          } catch {
+            // WebSocket closed — cannot send error
+          }
         }
       } finally {
         ws.data.subscriptions.delete(id);
@@ -310,8 +323,12 @@ function handleUnsubscribe(ws: BunServerWebSocket<WSConnectionData>, id: string)
  * Send error message to WebSocket client
  */
 function sendError(ws: BunServerWebSocket<WSConnectionData>, id: string, code: string, message: string) {
-  const msg: WSServerMessage = { type: 'error', id, error: { code, message } };
-  ws.send(JSON.stringify(msg));
+  try {
+    const msg: WSServerMessage = { type: 'error', id, error: { code, message } };
+    ws.send(JSON.stringify(msg));
+  } catch {
+    // WebSocket closed — cannot send error
+  }
 }
 
 /**

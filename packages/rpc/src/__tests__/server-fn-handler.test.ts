@@ -601,4 +601,301 @@ describe('createServerFnHandler', () => {
       expect(body.data).toBe('value');
     });
   });
+
+  // ===========================================================================
+  // CSRF Protection
+  // ===========================================================================
+
+  describe('CSRF protection', () => {
+    test('rejects requests without X-Ereo-RPC header', async () => {
+      createServerFn('csrfTest', async () => 'secret');
+      const handler = createServerFnHandler();
+
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/csrfTest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: null }),
+      });
+
+      const response = await handler(request);
+      expect(response!.status).toBe(403);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('CSRF_ERROR');
+      expect(body.error.message).toContain('X-Ereo-RPC');
+    });
+
+    test('allows requests when CSRF protection is disabled', async () => {
+      createServerFn('noCsrf', async () => 'open');
+      const handler = createServerFnHandler({ disableCsrfProtection: true });
+
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/noCsrf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: null }),
+      });
+
+      const response = await handler(request);
+      expect(response!.status).toBe(200);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // Non-JSON Content Type
+  // ===========================================================================
+
+  describe('non-JSON content type', () => {
+    test('handles request with non-JSON content type', async () => {
+      createServerFn('noBody', async () => 'ok');
+      const handler = createServerFnHandler();
+
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/noBody`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain', 'X-Ereo-RPC': '1' },
+        body: 'some text',
+      });
+
+      const response = await handler(request);
+      expect(response!.status).toBe(200);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(true);
+      expect(body.data).toBe('ok');
+    });
+
+    test('handles request with no content type', async () => {
+      createServerFn('noContentType', async () => 'ok');
+      const handler = createServerFnHandler();
+
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/noContentType`, {
+        method: 'POST',
+        headers: { 'X-Ereo-RPC': '1' },
+      });
+
+      const response = await handler(request);
+      expect(response!.status).toBe(200);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // ZodError thrown from handler (not input validation)
+  // ===========================================================================
+
+  describe('ZodError from handler', () => {
+    test('handles ZodError thrown inside handler body', async () => {
+      createServerFn('zodThrow', async () => {
+        const err: any = new Error('Nested validation failed');
+        err.name = 'ZodError';
+        err.issues = [
+          { path: ['nested', 'field'], message: 'Invalid', code: 'invalid_type' },
+        ];
+        throw err;
+      });
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRequest('zodThrow'));
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+      expect(body.error.details.issues).toBeArray();
+      expect(body.error.details.issues[0].path).toEqual(['nested', 'field']);
+    });
+
+    test('handles error with issues array (Zod-like)', async () => {
+      createServerFn('zodLike', async () => {
+        const err: any = new Error('Issues array');
+        err.issues = [{ path: ['a'], message: 'msg', code: 'c' }];
+        throw err;
+      });
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRequest('zodLike'));
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  // ===========================================================================
+  // defaultMiddleware + allowPublic
+  // ===========================================================================
+
+  describe('defaultMiddleware and allowPublic', () => {
+    test('runs defaultMiddleware on normal functions', async () => {
+      const order: string[] = [];
+
+      const defaultMw: ServerFnMiddleware = async (_ctx, next) => {
+        order.push('default');
+        return next();
+      };
+
+      createServerFn({
+        id: 'normalFn',
+        handler: async () => {
+          order.push('handler');
+          return 'done';
+        },
+      });
+
+      const handler = createServerFnHandler({
+        defaultMiddleware: [defaultMw],
+      });
+
+      await handler(makeRequest('normalFn'));
+      expect(order).toEqual(['default', 'handler']);
+    });
+
+    test('skips defaultMiddleware when allowPublic is true', async () => {
+      const order: string[] = [];
+
+      const defaultMw: ServerFnMiddleware = async (_ctx, next) => {
+        order.push('default');
+        return next();
+      };
+
+      createServerFn({
+        id: 'publicFn',
+        allowPublic: true,
+        handler: async () => {
+          order.push('handler');
+          return 'done';
+        },
+      });
+
+      const handler = createServerFnHandler({
+        defaultMiddleware: [defaultMw],
+      });
+
+      await handler(makeRequest('publicFn'));
+      expect(order).toEqual(['handler']);
+    });
+
+    test('global + default + function middleware chain order', async () => {
+      const order: string[] = [];
+
+      const globalMw: ServerFnMiddleware = async (_ctx, next) => {
+        order.push('global');
+        return next();
+      };
+
+      const defaultMw: ServerFnMiddleware = async (_ctx, next) => {
+        order.push('default');
+        return next();
+      };
+
+      const fnMw: ServerFnMiddleware = async (_ctx, next) => {
+        order.push('fn');
+        return next();
+      };
+
+      createServerFn({
+        id: 'chainedFn',
+        middleware: [fnMw],
+        handler: async () => {
+          order.push('handler');
+          return 'done';
+        },
+      });
+
+      const handler = createServerFnHandler({
+        middleware: [globalMw],
+        defaultMiddleware: [defaultMw],
+      });
+
+      await handler(makeRequest('chainedFn'));
+      expect(order).toEqual(['global', 'default', 'fn', 'handler']);
+    });
+  });
+
+  // ===========================================================================
+  // appContext passthrough
+  // ===========================================================================
+
+  describe('appContext passthrough', () => {
+    test('passes appContext when no createContext is provided', async () => {
+      let receivedContext: unknown;
+
+      createServerFn('ctxPassthrough', async (_input: void, ctx) => {
+        receivedContext = ctx.appContext;
+        return 'ok';
+      });
+
+      const handler = createServerFnHandler();
+      await handler(makeRequest('ctxPassthrough'), { fromServer: true });
+
+      expect(receivedContext).toEqual({ fromServer: true });
+    });
+
+    test('uses empty object when no appContext and no createContext', async () => {
+      let receivedContext: unknown;
+
+      createServerFn('noCtx', async (_input: void, ctx) => {
+        receivedContext = ctx.appContext;
+        return 'ok';
+      });
+
+      const handler = createServerFnHandler();
+      await handler(makeRequest('noCtx'));
+
+      expect(receivedContext).toEqual({});
+    });
+  });
+
+  // ===========================================================================
+  // extractValidationDetails edge cases
+  // ===========================================================================
+
+  describe('validation detail extraction', () => {
+    test('extracts message from generic Error in validation', async () => {
+      const schema = {
+        parse(_data: unknown) {
+          throw new Error('plain error');
+        },
+      };
+
+      createServerFn({
+        id: 'plainErr',
+        input: schema,
+        handler: async () => 'ok',
+      });
+
+      const handler = createServerFnHandler();
+      const response = await handler(makeRequest('plainErr', 'test'));
+
+      const body = await response!.json();
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+      expect(body.error.details.message).toBe('plain error');
+    });
+
+    test('extracts generic message from non-Error throw in validation', async () => {
+      const schema = {
+        parse(_data: unknown) {
+          throw 'string error';
+        },
+      };
+
+      createServerFn({
+        id: 'strErr',
+        input: schema,
+        handler: async () => 'ok',
+      });
+
+      const handler = createServerFnHandler();
+      const response = await handler(makeRequest('strErr', 'test'));
+
+      const body = await response!.json();
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+      expect(body.error.details.message).toBe('Validation failed');
+    });
+  });
 });
