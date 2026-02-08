@@ -183,5 +183,5 @@ function SignupForm() {
 
 - [@ereo/state -- Signals](/api/state/signals)
 - [@ereo/client -- Form (simple)](/api/client/form)
-- [Forms Guide](/guides/forms)
+- [Forms Guide](/guides/forms-basic)
 - [TypeScript Types](/api/forms/types)

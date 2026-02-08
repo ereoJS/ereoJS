@@ -280,5 +280,5 @@ export default function ContactForm() {
 ## Related
 
 - [Actions](/api/data/actions)
-- [Forms Guide](/guides/forms)
+- [Forms Guide](/guides/forms-basic)
 - [Error Handling](/guides/error-handling)

@@ -826,6 +826,6 @@ import {
 
 ## Related
 
-- [@ereo/db](/api/db) - Core database abstractions
+- [@ereo/db](/api/db/) - Core database abstractions
 - [@ereo/db-surrealdb](/api/db/surrealdb) - SurrealDB adapter
 - [Drizzle ORM Documentation](https://orm.drizzle.team)

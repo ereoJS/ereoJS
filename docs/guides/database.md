@@ -91,7 +91,7 @@ export const action = createAction({
 ```
 
 For full details, see the API docs:
-- [@ereo/db](/api/db) — Core abstractions (adapters, deduplication, pooling, retry utilities)
+- [@ereo/db](/api/db/) — Core abstractions (adapters, deduplication, pooling, retry utilities)
 - [@ereo/db-drizzle](/api/db/drizzle) — Drizzle adapter with 8 supported drivers
 - [@ereo/db-surrealdb](/api/db/surrealdb) — SurrealDB adapter
 
@@ -488,7 +488,7 @@ export const loader = createLoader(async ({ params }) => {
 
 ## Related
 
-- [@ereo/db](/api/db) — Core database abstractions
+- [@ereo/db](/api/db/) — Core database abstractions
 - [@ereo/db-drizzle](/api/db/drizzle) — Drizzle ORM adapter (recommended)
 - [@ereo/db-surrealdb](/api/db/surrealdb) — SurrealDB adapter
 - [Caching](/concepts/caching) — Cache strategies for database queries

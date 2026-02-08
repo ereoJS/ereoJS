@@ -151,11 +151,11 @@ const adapter = createDrizzleAdapter({
 createDatabasePlugin(adapter);
 ```
 
-Full migration guide: https://ereo.dev/docs/database/migration
+Full migration guide: https://ereojs.github.io/ereoJS/guides/database
 
 ## Documentation
 
-For complete documentation, see [EreoJS Database Plugin Docs](https://ereo.dev/docs/api/plugins/db).
+For complete documentation, see [EreoJS Database Plugin Docs](https://ereojs.github.io/ereoJS/api/db/).
 
 ## Part of EreoJS
 

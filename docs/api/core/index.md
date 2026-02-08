@@ -473,7 +473,7 @@ export default function HomePage({ loaderData }: { loaderData: { posts: Post[] }
 
 ## Related
 
-- [@ereo/router](/api/router) - File-based routing
-- [@ereo/server](/api/server) - Server utilities
-- [@ereo/client](/api/client) - Client runtime
-- [@ereo/bundler](/api/bundler) - Build system
+- [@ereo/router](/api/router/file-router) - File-based routing
+- [@ereo/server](/api/server/bun-server) - Server utilities
+- [@ereo/client](/api/client/) - Client runtime
+- [@ereo/bundler](/api/bundler/) - Build system

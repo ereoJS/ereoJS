@@ -129,7 +129,7 @@ my-app/
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/getting-started](https://ereo.dev/docs/getting-started)
+For full documentation, visit [https://ereojs.github.io/ereoJS/getting-started/](https://ereojs.github.io/ereoJS/getting-started/)
 
 ## Part of EreoJS
 

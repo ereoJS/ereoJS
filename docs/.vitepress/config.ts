@@ -4,7 +4,7 @@ export default defineConfig({
   title: 'Ereo',
   description: 'A React fullstack framework built on Bun',
   base: '/ereoJS/',
-  ignoreDeadLinks: true,
+  ignoreDeadLinks: [/^https?:\/\/localhost/],
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],

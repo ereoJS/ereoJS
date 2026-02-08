@@ -28,7 +28,7 @@ export default function ContactForm() {
 - Schema validation (Zod, Valibot, Standard Schema)
 - Error source tracking (sync, async, server, manual)
 
-See the [Forms guide](/guides/forms) for a complete comparison.
+See the [Forms guide](/guides/forms-basic) for a complete comparison.
 
 ## How do I handle file uploads?
 

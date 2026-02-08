@@ -18,7 +18,7 @@ You know React and want to build fullstack applications. This path takes you fro
 - [Rendering Modes](/concepts/rendering-modes) --- SSR, SSG, and when to use each
 
 ### Step 3: Build Real Features
-- [Forms Guide](/guides/forms) --- Client and server form handling
+- [Forms Guide](/guides/forms-basic) --- Client and server form handling
 - [Styling Guide](/guides/styling) --- CSS, Tailwind, CSS Modules
 - [Error Handling](/guides/error-handling) --- Error boundaries and fallbacks
 
@@ -50,7 +50,7 @@ You come from Express, Koa, or another backend framework and want to add a moder
 ### Step 4: Add React Rendering
 - [Rendering Modes](/concepts/rendering-modes) --- SSR, SSG, streaming
 - [Islands](/concepts/islands) --- Add interactivity without shipping a full SPA
-- [Forms Guide](/guides/forms) --- Server-side validation with client-side feedback
+- [Forms Guide](/guides/forms-basic) --- Server-side validation with client-side feedback
 
 ### Step 5: Deploy
 - [Deployment Overview](/ecosystem/deployment/) --- Choose your platform
@@ -79,7 +79,7 @@ You want to learn everything EreoJS offers from end to end.
 - [State Management](/concepts/state-management) --- Signals and stores
 
 ### Step 3: Guides
-- [Forms](/guides/forms) --- Simple and advanced form handling
+- [Forms](/guides/forms-basic) --- Simple and advanced form handling
 - [Authentication](/guides/authentication) --- Login, sessions, OAuth
 - [Database](/guides/database) --- Data access patterns
 - [Testing](/guides/testing) --- Test your routes and components

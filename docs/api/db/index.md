@@ -1149,5 +1149,5 @@ export default function UsersPage({ loaderData }) {
 
 - [@ereo/db-drizzle](/api/db/drizzle) - Drizzle ORM adapter
 - [@ereo/db-surrealdb](/api/db/surrealdb) - SurrealDB adapter
-- [@ereo/data](/api/data) - Data loading and caching
+- [@ereo/data](/api/data/) - Data loading and caching
 - [Database Guide](/guides/database)

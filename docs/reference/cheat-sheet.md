@@ -261,7 +261,7 @@ railway up
 | Data Loading | [/concepts/data-loading](/concepts/data-loading) |
 | Islands | [/concepts/islands](/concepts/islands) |
 | Caching | [/concepts/caching](/concepts/caching) |
-| Forms | [/guides/forms](/guides/forms) |
+| Forms | [/guides/forms](/guides/forms-basic) |
 | Middleware | [/concepts/middleware](/concepts/middleware) |
 | Config | [/reference/config-reference](/reference/config-reference) |
 | CLI | [/reference/cli-reference](/reference/cli-reference) |

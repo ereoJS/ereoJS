@@ -556,6 +556,6 @@ function LikeButton({ postId, initialLikes }) {
 - [Data Loading Concepts](/concepts/data-loading) — Overview of all approaches
 - [Loaders](/api/data/loaders) — Data fetching
 - [defineRoute Builder](/api/data/define-route) — Builder pattern
-- [Forms Guide](/guides/forms) — Form handling patterns
+- [Forms Guide](/guides/forms-basic) — Form handling patterns
 - [useActionData](/api/client/hooks#useactiondata) — Client hook
 - [Form Component](/api/client/form) — Enhanced form component

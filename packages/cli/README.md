@@ -158,7 +158,7 @@ ereo db:seed
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/cli](https://ereo.dev/docs/cli)
+For full documentation, visit [https://ereojs.github.io/ereoJS/api/cli/](https://ereojs.github.io/ereoJS/api/cli/)
 
 ## Part of EreoJS
 

@@ -415,7 +415,7 @@ export default function HomePage() {
         <h1><span className="gradient-text">EreoJS</span></h1>
         <p>A React fullstack framework built on Bun. Fast server-side rendering, file-based routing, and islands architecture.</p>
         <div className="btn-group">
-          <a href="https://ereo.dev/docs" className="cta-btn cta-btn-primary">Get Started</a>
+          <a href="https://ereojs.github.io/ereoJS/" className="cta-btn cta-btn-primary">Get Started</a>
           <a href="https://github.com/ereoJS/ereoJS" className="cta-btn cta-btn-secondary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
             GitHub
@@ -489,7 +489,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="site-footer">
-        <p>Built with EreoJS &mdash; <a href="https://ereo.dev/docs">Docs</a> &middot; <a href="https://github.com/ereoJS/ereoJS">GitHub</a></p>
+        <p>Built with EreoJS &mdash; <a href="https://ereojs.github.io/ereoJS/">Docs</a> &middot; <a href="https://github.com/ereoJS/ereoJS">GitHub</a></p>
       </footer>
     </>
   );
@@ -1150,7 +1150,7 @@ export function Footer() {
             <a href="https://github.com/ereoJS/ereoJS" target="_blank" rel="noopener" className="hover:text-primary-600">
               GitHub
             </a>
-            <a href="https://ereo.dev/docs" target="_blank" rel="noopener" className="hover:text-primary-600">
+            <a href="https://ereojs.github.io/ereoJS/" target="_blank" rel="noopener" className="hover:text-primary-600">
               Documentation
             </a>
             <span>&copy; {currentYear}</span>
@@ -1331,7 +1331,7 @@ export default function HomePage({ loaderData }${ts ? ': HomePageProps' : ''}) {
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap gap-4 justify-center mt-10 opacity-0 animate-slide-up delay-400">
-            <a href="https://ereo.dev/docs" className="btn btn-primary text-base px-6 py-3">
+            <a href="https://ereojs.github.io/ereoJS/" className="btn btn-primary text-base px-6 py-3">
               Get Started
             </a>
             <a href="/blog" className="btn btn-secondary text-base px-6 py-3">
@@ -1507,7 +1507,7 @@ export async function action({ request }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-4 justify-center">
-          <a href="https://ereo.dev/docs" className="btn btn-primary text-base px-6 py-3">Documentation</a>
+          <a href="https://ereojs.github.io/ereoJS/" className="btn btn-primary text-base px-6 py-3">Documentation</a>
           <a href="https://github.com/ereoJS/ereoJS" target="_blank" rel="noopener" className="btn btn-secondary text-base px-6 py-3">GitHub</a>
         </div>
       </section>
@@ -1926,7 +1926,7 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-wrap gap-4">
               <a
-                href="https://ereo.dev/docs"
+                href="https://ereojs.github.io/ereoJS/"
                 target="_blank"
                 rel="noopener"
                 className="btn btn-primary"
@@ -2136,7 +2136,7 @@ For production, alias \`@ereo/trace\` to \`@ereo/trace/noop\` in your bundler fo
 
 ` : ''}## Learn More
 
-- [EreoJS Documentation](https://ereo.dev/docs)
+- [EreoJS Documentation](https://ereojs.github.io/ereoJS/)
 - [Bun Documentation](https://bun.sh/docs)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 `;
@@ -2730,7 +2730,7 @@ export function Footer() {
             <span>Built with EreoJS</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-500">
-            <a href="https://ereo.dev/docs" target="_blank" rel="noopener" className="hover:text-primary-600 transition-colors">
+            <a href="https://ereojs.github.io/ereoJS/" target="_blank" rel="noopener" className="hover:text-primary-600 transition-colors">
               Docs
             </a>
             <a href="https://github.com/ereoJS/ereoJS" target="_blank" rel="noopener" className="hover:text-primary-600 transition-colors">
@@ -4154,7 +4154,7 @@ This project includes \`@ereo/trace\` for full-stack observability.
 
 ` : ''}## Learn More
 
-- [EreoJS Documentation](https://ereo.dev/docs)
+- [EreoJS Documentation](https://ereojs.github.io/ereoJS/)
 - [Bun Documentation](https://bun.sh/docs)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 `;

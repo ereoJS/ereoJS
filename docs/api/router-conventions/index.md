@@ -137,7 +137,7 @@ The following file patterns and conventions are NOT handled by `@ereo/router-con
 - **Route Groups** (`(marketing)/`) - Organizational folders that don't affect URL structure
 - **Parallel Routes** (`@analytics/`) - Multiple pages rendered simultaneously in the same layout
 
-See the [@ereo/router documentation](/api/router) for details on these features.
+See the [@ereo/router documentation](/api/router/file-router) for details on these features.
 
 ## Convention Detection Rules
 

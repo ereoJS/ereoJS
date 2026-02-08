@@ -33,7 +33,7 @@
   "files": [
     "dist"
   ],
-  "homepage": "https://ereo.dev",
+  "homepage": "https://ereojs.github.io/ereoJS",
   "license": "MIT",
   "peerDependenciesMeta": {
     "@ereo/client": {

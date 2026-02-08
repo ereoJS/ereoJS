@@ -61,13 +61,13 @@ A comprehensive overview of everything EreoJS provides.
 
 | Feature | Description | Learn More |
 |---------|-------------|------------|
-| `<Form>` component | Progressive enhancement for HTML forms | [Forms](/guides/forms) |
-| `@ereo/forms` library | Full-featured form management | [Forms](/guides/forms) |
-| 20+ validators | Built-in validation rules | [Forms](/guides/forms#3-add-validation) |
-| Schema validation | Zod, Valibot, Standard Schema support | [Forms](/guides/forms#schema-validation) |
-| Field arrays | Dynamic add/remove/reorder fields | [Forms](/guides/forms#working-with-field-arrays) |
-| Multi-step wizards | Per-step validation with persistence | [Forms](/guides/forms#multi-step-wizards) |
-| Server error mapping | Automatic server-to-field error binding | [Forms](/guides/forms#server-integration) |
+| `<Form>` component | Progressive enhancement for HTML forms | [Forms](/guides/forms-basic) |
+| `@ereo/forms` library | Full-featured form management | [Forms](/guides/forms-basic) |
+| 20+ validators | Built-in validation rules | [Forms](/guides/forms-basic#3-add-validation) |
+| Schema validation | Zod, Valibot, Standard Schema support | [Forms](/guides/forms-basic#schema-validation) |
+| Field arrays | Dynamic add/remove/reorder fields | [Forms](/guides/forms-basic#working-with-field-arrays) |
+| Multi-step wizards | Per-step validation with persistence | [Forms](/guides/forms-basic#multi-step-wizards) |
+| Server error mapping | Automatic server-to-field error binding | [Forms](/guides/forms-basic#server-integration) |
 
 ## State Management
 

@@ -227,7 +227,7 @@ These options are accepted for future compatibility but do not affect the genera
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/deploy-vercel](https://ereo.dev/docs/deploy-vercel)
+For full documentation, visit [https://ereojs.github.io/ereoJS/api/deploy/vercel](https://ereojs.github.io/ereoJS/api/deploy/vercel)
 
 ## Part of EreoJS
 

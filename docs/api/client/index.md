@@ -508,7 +508,7 @@ export function ErrorBoundary() {
 
 ## Related
 
-- [@ereo/core](/api/core) - Core framework types and utilities
-- [@ereo/client-sdk](/api/client-sdk) - Type-safe API client
+- [@ereo/core](/api/core/) - Core framework types and utilities
+- [@ereo/client-sdk](/api/client-sdk/) - Type-safe API client
 - [Data Loading](/api/data/loaders) - Server-side data loading
 - [Actions](/api/data/actions) - Form handling server-side

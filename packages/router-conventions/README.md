@@ -92,7 +92,7 @@ Remove convention suffix from a route path for URL generation.
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/router-conventions](https://ereo.dev/docs/router-conventions)
+For full documentation, visit [https://ereojs.github.io/ereoJS/api/router-conventions/](https://ereojs.github.io/ereoJS/api/router-conventions/)
 
 ## Part of EreoJS
 

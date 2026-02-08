@@ -85,7 +85,7 @@ interface FieldHandle<V> {
 | `touched` | `boolean` | Whether the field has been blurred at least once |
 | `dirty` | `boolean` | Whether the current value differs from the baseline (initial) value |
 | `validating` | `boolean` | Whether async validation is currently in progress |
-| `errorMap` | `Record<ErrorSource, string[]>` | Errors grouped by source: `{ sync: [], async: [], schema: [], server: [], manual: [] }`. Use this to display server errors differently from client-side errors (see [Error Sources](/guides/forms#error-sources)). |
+| `errorMap` | `Record<ErrorSource, string[]>` | Errors grouped by source: `{ sync: [], async: [], schema: [], server: [], manual: [] }`. Use this to display server errors differently from client-side errors (see [Error Sources](/guides/forms-basic#error-sources)). |
 | `setValue` | `(v: V) => void` | Programmatically set the field value |
 | `setError` | `(errs: string[]) => void` | Manually set validation errors |
 | `clearErrors` | `() => void` | Clear all errors for this field |

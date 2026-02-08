@@ -37,7 +37,7 @@
 const DEPRECATION_WARNING = `
 \x1b[33m⚠ DEPRECATION WARNING:\x1b[0m @ereo/db is deprecated.
 Please migrate to @ereo/db-drizzle for improved database support.
-See: https://ereo.dev/docs/database/migration
+See: https://ereojs.github.io/ereoJS/guides/database
 `;
 
 // Only show warning once and in non-production environments

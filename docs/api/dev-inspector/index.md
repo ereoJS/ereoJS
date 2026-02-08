@@ -777,7 +777,7 @@ const app = createApp({ plugins })
 
 ## Related Packages
 
-- [@ereo/core](/api/core) - Core framework
-- [@ereo/data](/api/data) - Data loading and pipeline metrics
-- [@ereo/client](/api/client) - Client-side islands hydration
+- [@ereo/core](/api/core/) - Core framework
+- [@ereo/data](/api/data/) - Data loading and pipeline metrics
+- [@ereo/client](/api/client/) - Client-side islands hydration
 - [@ereo/cache](/api/core/cache) - Caching system

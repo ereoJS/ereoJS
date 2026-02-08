@@ -440,4 +440,4 @@ Migrating from Remix to EreoJS is straightforward:
 4. Convert interactive components to islands
 5. Update imports from `@remix-run/*` to `@ereo/*`
 
-See the [migration guide](/getting-started/migrating) for details.
+See the [migration guide](/migration/) for details.

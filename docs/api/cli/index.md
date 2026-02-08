@@ -276,7 +276,7 @@ Debug categories:
 
 ## Related
 
-- [create-ereo](/api/create-ereo) - Project scaffolding tool
+- [create-ereo](/api/create-ereo/) - Project scaffolding tool
 - [Configuration](/api/core/create-app) - App configuration
 - [Plugins](/api/core/plugins) - Plugin system
 - [Database Commands](/api/cli/db) - Database migration and seeding

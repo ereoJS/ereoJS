@@ -8,6 +8,7 @@ EreoJS includes example applications demonstrating different features and patter
 |---------|-------------|----------|
 | [Minimal](/examples/minimal) | Simplest possible app | Routing, layouts, loaders |
 | [Blog](/examples/blog) | Complete blog app | Tailwind, dynamic routes, caching |
+| Tasks | Full-stack CRUD app | Auth, SQLite, Tailwind, CRUD |
 
 ## Quick Start
 
@@ -25,18 +26,30 @@ bun install
 bun run dev
 ```
 
+To scaffold the tasks app as a new project:
+
+```bash
+bunx create-ereo@latest my-tasks --template tasks
+cd my-tasks
+bun run dev
+```
+
 ## Feature Coverage
 
-| Feature | Minimal | Blog |
-|---------|:-------:|:----:|
-| File-based routing | Yes | Yes |
-| Layouts | Yes | Yes |
-| Data loaders | Yes | Yes |
-| TypeScript | Yes | Yes |
-| Dynamic routes | - | Yes |
-| Tailwind CSS | - | Yes |
-| Caching | - | Yes |
-| Dark mode | - | Yes |
+| Feature | Minimal | Blog | Tasks |
+|---------|:-------:|:----:|:-----:|
+| File-based routing | Yes | Yes | Yes |
+| Layouts | Yes | Yes | Yes |
+| Data loaders | Yes | Yes | Yes |
+| TypeScript | Yes | Yes | Yes |
+| Dynamic routes | - | Yes | Yes |
+| Tailwind CSS | - | Yes | Yes |
+| Caching | - | Yes | - |
+| Dark mode | - | Yes | Yes |
+| Authentication | - | - | Yes |
+| SQLite database | - | - | Yes |
+| CRUD operations | - | - | Yes |
+| Form actions | - | - | Yes |
 
 ## Project Structure
 

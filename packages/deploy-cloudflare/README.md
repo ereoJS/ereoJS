@@ -176,7 +176,7 @@ For full Cloudflare configuration, manually edit the generated wrangler.toml or 
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/deploy-cloudflare](https://ereo.dev/docs/deploy-cloudflare)
+For full documentation, visit [https://ereojs.github.io/ereoJS/api/deploy/cloudflare](https://ereojs.github.io/ereoJS/api/deploy/cloudflare)
 
 ## Part of EreoJS
 

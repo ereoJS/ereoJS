@@ -39,7 +39,7 @@ export const loader = createLoader(async ({ params }) => {
 | `tags` | string[] | Tags for invalidation |
 | `private` | boolean | Prevent CDN caching (user-specific content) |
 
-> **Note:** For ISR-style periodic revalidation, use the `revalidate` option on the route's `PrerenderConfig` instead (see the [Rendering Modes](/docs/core-concepts/rendering) guide).
+> **Note:** For ISR-style periodic revalidation, use the `revalidate` option on the route's `PrerenderConfig` instead (see the [Rendering Modes](/concepts/rendering-modes) guide).
 
 ### Dynamic Cache Tags
 

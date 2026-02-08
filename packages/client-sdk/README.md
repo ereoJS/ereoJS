@@ -227,7 +227,7 @@ import type {
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/client-sdk](https://ereo.dev/docs/client-sdk)
+For full documentation, visit [https://ereojs.github.io/ereoJS/api/client-sdk/](https://ereojs.github.io/ereoJS/api/client-sdk/)
 
 ## Part of EreoJS
 

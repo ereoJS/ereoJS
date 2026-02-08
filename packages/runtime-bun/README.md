@@ -126,7 +126,7 @@ const db = await getDatabase('./app.db');
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/runtime-bun](https://ereo.dev/docs/runtime-bun)
+For full documentation, visit [https://ereojs.github.io/ereoJS/api/runtime-bun/](https://ereojs.github.io/ereoJS/api/runtime-bun/)
 
 ## Part of EreoJS
 

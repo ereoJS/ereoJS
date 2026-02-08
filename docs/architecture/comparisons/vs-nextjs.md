@@ -397,4 +397,4 @@ Both have excellent TypeScript support. Main differences:
 
 ## Migration Path
 
-See the [migration guide](/getting-started/migrating) for detailed instructions on migrating from Next.js to EreoJS.
+See the [migration guide](/migration/) for detailed instructions on migrating from Next.js to EreoJS.

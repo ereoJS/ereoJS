@@ -1064,4 +1064,4 @@ try {
 - [Actions Reference](/api/data/actions)
 - [Cache Reference](/api/data/cache)
 - [Revalidation Reference](/api/data/revalidation)
-- [Streaming Guide](/guides/streaming)
+- [Streaming Guide](/architecture/streaming-deep-dive)

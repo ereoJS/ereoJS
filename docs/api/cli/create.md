@@ -18,7 +18,7 @@ bunx create-ereo@latest <project-name> [options]
 
 | Option | Alias | Description | Default |
 |--------|-------|-------------|---------|
-| `--template` | `-t` | Template to use (minimal, default, tailwind) | `tailwind` |
+| `--template` | `-t` | Template to use (minimal, default, tailwind, tasks) | `tailwind` |
 | `--typescript` | | Enable TypeScript | `true` |
 | `--no-typescript` | | Use JavaScript instead | |
 
@@ -64,6 +64,24 @@ Includes only:
 - Index page
 - Basic configuration
 - Minimal dependencies
+
+### tasks
+
+Full-stack CRUD app with authentication and SQLite database:
+
+```bash
+bun ereo create my-app --template tasks
+```
+
+Includes:
+- Email/password authentication with JWT sessions
+- User registration, login, and logout
+- Task CRUD with priorities and statuses
+- SQLite database with WAL mode
+- Auth-aware navigation
+- Tailwind CSS with dark mode
+- Error boundaries and 404 page
+- Docker support with SQLite volume
 
 ## Examples
 
@@ -356,7 +374,7 @@ For full scaffolding with git and auto-install, use `bunx create-ereo@latest`.
 
 ## Related
 
-- [create-ereo](/api/create-ereo) - Standalone scaffolding tool
+- [create-ereo](/api/create-ereo/) - Standalone scaffolding tool
 - [dev](/api/cli/dev) - Development server
 - [build](/api/cli/build) - Production build
 - [deploy](/api/cli/deploy) - Deployment

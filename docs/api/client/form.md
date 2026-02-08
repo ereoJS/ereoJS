@@ -557,7 +557,7 @@ function SearchInput() {
 
 ## Related
 
-- [Forms Guide](/guides/forms)
+- [Forms Guide](/guides/forms-basic)
 - [Actions](/api/data/actions)
 - [useActionData](/api/client/hooks#useactiondata)
 - [useNavigation](/api/client/hooks#usenavigation)

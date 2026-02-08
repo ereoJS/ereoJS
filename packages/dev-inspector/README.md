@@ -211,7 +211,7 @@ The Route Inspector exposes:
 
 ## Documentation
 
-For full documentation, visit [https://ereo.dev/docs/dev-inspector](https://ereo.dev/docs/dev-inspector)
+For full documentation, visit [https://ereojs.github.io/ereoJS/api/dev-inspector/](https://ereojs.github.io/ereoJS/api/dev-inspector/)
 
 ## Part of EreoJS
 

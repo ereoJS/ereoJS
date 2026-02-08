@@ -79,28 +79,49 @@ Bare-bones template for starting from scratch:
 bunx create-ereo@latest my-app --template minimal
 ```
 
+### tasks
+
+Full-stack CRUD application with authentication and a SQLite database:
+
+- Email/password authentication with JWT sessions
+- User registration and login
+- Task CRUD (create, read, update, delete)
+- Task priorities (low, medium, high) and statuses (todo, in progress, done)
+- SQLite database with WAL mode and migrations
+- Auth-aware navigation
+- Tailwind CSS with dark mode
+- Error boundaries and 404 page
+- Docker support with SQLite volume mount
+
+```bash
+bunx create-ereo@latest my-app --template tasks
+```
+
 ## Template Comparison
 
-| Feature | minimal | default / tailwind |
-|---------|---------|-------------------|
-| Root Layout | ✅ | ✅ |
-| Index Page | ✅ | ✅ |
-| TypeScript Config | ✅ | ✅ |
-| Dockerfile | ✅ | ✅ |
-| Blog (dynamic routes) | ❌ | ✅ |
-| Contact Form (action) | ❌ | ✅ |
-| About Page | ❌ | ✅ |
-| Error Boundary (`_error.tsx`) | ❌ | ✅ |
-| 404 Page (`_404.tsx`) | ❌ | ✅ |
-| Navigation Component | ❌ | ✅ |
-| Footer Component | ❌ | ✅ |
-| Counter Island (`'use client'`) | ❌ | ✅ |
-| Tailwind CSS | ❌ | ✅ |
-| Dark Mode | ❌ | ✅ |
-| Path Aliases (`~/`) | ❌ | ✅ |
-| `.env.example` | ❌ | ✅ |
-| Mock Data Helpers | ❌ | ✅ |
-| Type Definitions | ❌ | ✅ |
+| Feature | minimal | default / tailwind | tasks |
+|---------|---------|-------------------|-------|
+| Root Layout | ✅ | ✅ | ✅ |
+| Index Page | ✅ | ✅ | ✅ |
+| TypeScript Config | ✅ | ✅ | ✅ |
+| Dockerfile | ✅ | ✅ | ✅ |
+| Blog (dynamic routes) | ❌ | ✅ | ❌ |
+| Contact Form (action) | ❌ | ✅ | ❌ |
+| About Page | ❌ | ✅ | ❌ |
+| Error Boundary (`_error.tsx`) | ❌ | ✅ | ✅ |
+| 404 Page (`_404.tsx`) | ❌ | ✅ | ✅ |
+| Navigation Component | ❌ | ✅ | ✅ |
+| Footer Component | ❌ | ✅ | ✅ |
+| Counter Island (`'use client'`) | ❌ | ✅ | ❌ |
+| Tailwind CSS | ❌ | ✅ | ✅ |
+| Dark Mode | ❌ | ✅ | ✅ |
+| Path Aliases (`~/`) | ❌ | ✅ | ✅ |
+| `.env.example` | ❌ | ✅ | ✅ |
+| Mock Data Helpers | ❌ | ✅ | ❌ |
+| Type Definitions | ❌ | ✅ | ✅ |
+| Authentication (JWT) | ❌ | ❌ | ✅ |
+| SQLite Database | ❌ | ❌ | ✅ |
+| CRUD Operations | ❌ | ❌ | ✅ |
 
 ## Examples
 
@@ -126,6 +147,13 @@ bunx create-ereo@latest my-app --no-typescript
 ```bash
 # Minimal template, skip install (install later manually)
 bunx create-ereo@latest my-app --template minimal --no-install
+```
+
+### Full-Stack Tasks App
+
+```bash
+# Tasks template with auth + SQLite
+bunx create-ereo@latest my-app --template tasks
 ```
 
 ### Skip Git Initialization
@@ -188,6 +216,47 @@ my-app/
 ├── .dockerignore             # Docker ignore patterns
 ├── package.json              # Dependencies and scripts
 └── .gitignore                # Git ignore patterns
+```
+
+### Tasks Template
+
+```
+my-app/
+├── app/
+│   ├── components/
+│   │   ├── Footer.tsx          # Footer component
+│   │   ├── Navigation.tsx      # Auth-aware navigation ('use client')
+│   │   └── TaskCard.tsx        # Task card with status/priority badges
+│   ├── lib/
+│   │   ├── db.ts               # SQLite database, migrations, queries
+│   │   └── types.ts            # TypeScript type definitions
+│   ├── routes/
+│   │   ├── _layout.tsx         # Root layout (html, head, body)
+│   │   ├── _error.tsx          # Global error boundary
+│   │   ├── _404.tsx            # Custom 404 page
+│   │   ├── index.tsx           # Landing page
+│   │   ├── (auth)/
+│   │   │   ├── login.tsx       # Login form with credentials
+│   │   │   ├── register.tsx    # Registration form
+│   │   │   └── logout.tsx      # Logout action route
+│   │   └── tasks/
+│   │       ├── index.tsx       # Task list with filters
+│   │       ├── new.tsx         # Create new task form
+│   │       └── [id].tsx        # Task detail / edit page
+│   └── styles.css              # Global Tailwind styles
+├── data/                       # SQLite database directory
+│   └── .gitkeep
+├── public/                     # Static assets
+├── ereo.config.ts              # EreoJS + auth plugin configuration
+├── tailwind.config.js          # Tailwind CSS configuration
+├── tsconfig.json               # TypeScript configuration
+├── Dockerfile                  # Multi-stage Docker image with SQLite volume
+├── .dockerignore               # Docker ignore patterns
+├── package.json                # Dependencies and scripts
+├── .env.example                # Environment variables template
+├── .env                        # Local development defaults
+├── .gitignore                  # Git ignore patterns
+└── README.md                   # Project documentation
 ```
 
 ## Generated Configuration
@@ -361,6 +430,7 @@ Ensure you're using a valid template name:
 bunx create-ereo@latest my-app --template minimal
 bunx create-ereo@latest my-app --template default
 bunx create-ereo@latest my-app --template tailwind
+bunx create-ereo@latest my-app --template tasks
 ```
 
 ## Exit Codes
