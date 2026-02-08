@@ -34,22 +34,17 @@ bun run dev
 Choose from multiple starter templates:
 
 ```bash
-# Minimal template - bare essentials
-bunx create-ereo@latest my-app --template minimal
-
-# Default template - standard setup
-bunx create-ereo@latest my-app --template default
-
 # Tailwind template - full-featured with Tailwind CSS (default)
 bunx create-ereo@latest my-app --template tailwind
+
+# Tasks template - full-stack CRUD app with auth + SQLite
+bunx create-ereo@latest my-app --template tasks
+
+# Minimal template - bare essentials
+bunx create-ereo@latest my-app --template minimal
 ```
 
 ### Template Contents
-
-**Minimal:**
-- Basic project structure
-- Single route
-- TypeScript configuration
 
 **Tailwind (default):**
 - Complete project structure
@@ -62,11 +57,27 @@ bunx create-ereo@latest my-app --template tailwind
 - Tailwind CSS with custom theme
 - TypeScript with path aliases
 
+**Tasks:**
+- Email & password authentication with argon2id hashing
+- SQLite database with WAL mode and automatic migrations
+- Full CRUD operations for tasks (create, read, update, delete)
+- Protected routes with auth middleware
+- Dashboard with task stats and status filters
+- Server-side validation and error handling
+- JWT sessions with secure cookie configuration
+- Docker support with SQLite volume persistence
+- Tailwind CSS with custom component classes
+
+**Minimal:**
+- Basic project structure
+- Single route
+- TypeScript configuration
+
 ## Options
 
 | Option | Alias | Description |
 |--------|-------|-------------|
-| `--template` | `-t` | Template to use (minimal, default, tailwind) |
+| `--template` | `-t` | Template to use (minimal, default, tailwind, tasks) |
 | `--no-typescript` | | Use JavaScript instead of TypeScript |
 | `--no-git` | | Skip git initialization |
 | `--no-install` | | Skip package installation |
