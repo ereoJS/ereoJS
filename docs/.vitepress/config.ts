@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Ereo',
   description: 'A React fullstack framework built on Bun',
+  base: '/ereoJS/',
   ignoreDeadLinks: true,
 
   head: [
