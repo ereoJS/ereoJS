@@ -665,8 +665,8 @@ class SchemaBuilderImpl<T> implements SchemaBuilder<T> {
         | { success: true; data: T }
         | { success: false; error: ValidationError } => {
         try {
-          const result = schemaBuilder().build().parse(data);
-          return { success: true, data: result as T };
+          const parsed = new SchemaBuilderImpl<T>(fields).build().parse(data);
+          return { success: true, data: parsed };
         } catch (error) {
           return {
             success: false,

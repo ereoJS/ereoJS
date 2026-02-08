@@ -1062,8 +1062,10 @@ export function defineRoute<Path extends string>(
           const text = await request.text();
           const rawBody = JSON.parse(text);
           body = state.actionBodySchema ? state.actionBodySchema.parse(rawBody) : rawBody;
-        } catch {
-          body = {} as ActionBody;
+        } catch (parseError) {
+          throw new Error(
+            `Failed to parse action request body: ${parseError instanceof Error ? parseError.message : 'Unknown content type or invalid body'}`
+          );
         }
       }
 

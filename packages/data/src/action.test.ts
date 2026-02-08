@@ -1096,6 +1096,16 @@ describe('@ereo/data - Action', () => {
       expect((result as any).matrix[0][1]).toBe('b');
       expect((result as any).matrix[1][0]).toBe('c');
     });
+
+    test('creates intermediate objects for nested array notation path', () => {
+      const formData = new FormData();
+      formData.append('data.items[]', 'one');
+      formData.append('data.items[]', 'two');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).data.items).toEqual(['one', 'two']);
+    });
   });
 
   describe('typedAction with validate that passes', () => {
@@ -1214,6 +1224,39 @@ describe('@ereo/data - Action', () => {
 
       expect(({} as any).isAdmin).toBeUndefined();
       expect((result as any).validField).toBe('safe');
+    });
+
+    test('__proto__ with array notation [] is rejected via setNestedValueDirect', () => {
+      const formData = new FormData();
+      formData.append('__proto__[]', 'malicious');
+      formData.set('safe', 'value');
+
+      const result = formDataToObject(formData);
+
+      expect(({} as any)[0]).toBeUndefined();
+      expect((result as any).safe).toBe('value');
+      // __proto__ should not have been set as own property
+      expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(false);
+    });
+
+    test('constructor with array notation [] is rejected via setNestedValueDirect', () => {
+      const formData = new FormData();
+      formData.append('constructor[]', 'malicious');
+      formData.set('name', 'test');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).name).toBe('test');
+    });
+
+    test('prototype with array notation [] is rejected via setNestedValueDirect', () => {
+      const formData = new FormData();
+      formData.append('prototype[]', 'malicious');
+      formData.set('safe', 'ok');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).safe).toBe('ok');
     });
   });
 

@@ -447,6 +447,14 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
  */
 function setNestedValueDirect(obj: Record<string, unknown>, path: string, value: unknown): void {
   const segments = parsePath(path);
+
+  // Guard against prototype pollution
+  for (const seg of segments) {
+    if (typeof seg === 'string' && (seg === '__proto__' || seg === 'constructor' || seg === 'prototype')) {
+      return;
+    }
+  }
+
   let current: Record<string, unknown> = obj;
 
   for (let i = 0; i < segments.length - 1; i++) {
