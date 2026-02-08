@@ -158,28 +158,20 @@ function parseArgs(args: string[]): {
 /**
  * Generate an optimized multi-stage Dockerfile for production.
  */
-function generateDockerfile(typescript: boolean): string {
-  const tsconfigCopy = typescript
-    ? `COPY --from=builder --chown=ereo:ereo /app/tsconfig.json  ./\n`
-    : '';
-
-  return `# syntax=docker/dockerfile:1
-
-# ---- Stage 1: Install production dependencies ----
-FROM oven/bun:1-slim AS deps
-WORKDIR /app
-COPY package.json bun.lockb* ./
-RUN --mount=type=cache,target=/root/.bun/install/cache \\
-    bun install --frozen-lockfile --production --ignore-scripts
-
-# ---- Stage 2: Install all deps + build ----
+function generateDockerfile(_typescript: boolean): string {
+  return `# ---- Stage 1: Install all deps + build ----
 FROM oven/bun:1-slim AS builder
 WORKDIR /app
 COPY package.json bun.lockb* ./
-RUN --mount=type=cache,target=/root/.bun/install/cache \\
-    bun install --frozen-lockfile --ignore-scripts
+RUN bun install --ignore-scripts
 COPY . .
 RUN bun run build
+
+# ---- Stage 2: Production dependencies only ----
+FROM oven/bun:1-slim AS deps
+WORKDIR /app
+COPY package.json bun.lockb* ./
+RUN bun install --production --ignore-scripts
 
 # ---- Stage 3: Production image ----
 FROM oven/bun:1-slim AS runner
@@ -191,20 +183,20 @@ ENV NODE_ENV=production
 RUN groupadd --system --gid 1001 ereo && \\
     useradd --system --uid 1001 --gid ereo --no-create-home ereo
 
-# Copy only what's needed to run
-COPY --from=deps    --chown=ereo:ereo /app/node_modules ./node_modules
-COPY --from=builder --chown=ereo:ereo /app/.ereo        ./.ereo
-COPY --from=builder --chown=ereo:ereo /app/package.json  ./
-COPY --from=builder --chown=ereo:ereo /app/ereo.config.* ./
-${tsconfigCopy}COPY --from=builder --chown=ereo:ereo /app/app           ./app
-COPY --from=builder --chown=ereo:ereo /app/public        ./public
+# Copy production node_modules
+COPY --from=deps --chown=ereo:ereo /app/node_modules ./node_modules
+
+# Copy build output and runtime files
+COPY --from=builder --chown=ereo:ereo /app/.ereo   ./.ereo
+COPY --from=builder --chown=ereo:ereo /app/app     ./app
+COPY --from=builder --chown=ereo:ereo /app/public  ./public
+COPY --from=builder --chown=ereo:ereo /app/package.json   ./
+COPY --from=builder --chown=ereo:ereo /app/ereo.config.*  ./
+COPY --from=builder --chown=ereo:ereo /app/tsconfig.*     ./
 
 USER ereo
 
 EXPOSE 3000
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
-  CMD bun -e "fetch('http://localhost:3000').then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"
 
 CMD ["bun", "run", "start"]
 `;
