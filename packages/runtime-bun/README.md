@@ -130,7 +130,7 @@ For full documentation, visit [https://ereo.dev/docs/runtime-bun](https://ereo.d
 
 ## Part of EreoJS
 
-This package is part of the [EreoJS monorepo](https://github.com/anthropics/ereo-js).
+This package is part of the [EreoJS monorepo](https://github.com/ereoJS/ereoJS).
 
 ## License
 

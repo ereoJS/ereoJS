@@ -215,5 +215,5 @@ export function meta({ data }) {
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/ereo-framework/ereo/issues)
+- [GitHub Issues](https://github.com/ereoJS/ereoJS/issues)
 - [Discord Community](https://discord.gg/ereo)

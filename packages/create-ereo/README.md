@@ -133,7 +133,7 @@ For full documentation, visit [https://ereo.dev/docs/getting-started](https://er
 
 ## Part of EreoJS
 
-This package is part of the [EreoJS monorepo](https://github.com/anthropics/ereo-js).
+This package is part of the [EreoJS monorepo](https://github.com/ereoJS/ereoJS).
 
 ## License
 

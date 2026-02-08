@@ -98,7 +98,7 @@ bun dev
 The complete dashboard example is available in the repository:
 
 ```bash
-git clone https://github.com/ereo-framework/ereo
+git clone https://github.com/ereoJS/ereoJS
 cd ereo/packages/examples/dashboard
 bun install
 bun dev

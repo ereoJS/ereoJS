@@ -130,9 +130,9 @@ When the quick fixes above do not resolve your issue, try these diagnostic techn
 
 If none of the solutions above resolve your issue, reach out to the community:
 
-- **[GitHub Issues](https://github.com/ereo-framework/ereo/issues)** -- Search existing issues or file a new bug report. Please include the details listed in the "Report a Bug" section below.
+- **[GitHub Issues](https://github.com/ereoJS/ereoJS/issues)** -- Search existing issues or file a new bug report. Please include the details listed in the "Report a Bug" section below.
 - **[Discord Community](https://discord.gg/ereo)** -- Get help from other EreoJS developers in real time. The `#help` channel is the best place for troubleshooting questions.
-- **[GitHub Discussions](https://github.com/ereo-framework/ereo/discussions)** -- For longer-form questions, ideas, and discussions that do not fit the issue tracker.
+- **[GitHub Discussions](https://github.com/ereoJS/ereoJS/discussions)** -- For longer-form questions, ideas, and discussions that do not fit the issue tracker.
 
 ## Report a Bug
 

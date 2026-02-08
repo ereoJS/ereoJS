@@ -6,11 +6,11 @@
   "homepage": "https://ereo.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ereojs/ereo.git",
+    "url": "https://github.com/ereoJS/ereoJS.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/ereojs/ereo/issues"
+    "url": "https://github.com/ereoJS/ereoJS/issues"
   },
   "type": "module",
   "main": "./dist/index.js",

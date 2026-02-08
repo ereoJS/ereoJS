@@ -11,7 +11,7 @@ hero:
       link: /getting-started/
     - theme: alt
       text: View on GitHub
-      link: https://github.com/ereo-framework/ereo
+      link: https://github.com/ereoJS/ereoJS
 
 features:
   - icon: ⚡

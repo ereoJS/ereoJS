@@ -82,6 +82,6 @@ The `createTypesPlugin()` generates route types during build and dev. On the ver
 
 If you encounter an issue not listed here:
 
-1. Search [existing issues](https://github.com/ereo-framework/ereo/issues) to see if it has been reported
-2. If not, [open a new issue](https://github.com/ereo-framework/ereo/issues/new) with a minimal reproduction
+1. Search [existing issues](https://github.com/ereoJS/ereoJS/issues) to see if it has been reported
+2. If not, [open a new issue](https://github.com/ereoJS/ereoJS/issues/new) with a minimal reproduction
 3. Include your EreoJS version, Bun version, and operating system

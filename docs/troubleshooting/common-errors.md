@@ -281,6 +281,6 @@ export default defineConfig({
 
 If your error is not listed here, try these steps:
 
-1. Search the [GitHub Issues](https://github.com/ereo-framework/ereo/issues)
+1. Search the [GitHub Issues](https://github.com/ereoJS/ereoJS/issues)
 2. Check the [Debugging guide](/troubleshooting/debugging) for tools to investigate further
 3. Ask in the [Discord community](https://discord.gg/ereo)

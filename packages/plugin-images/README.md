@@ -190,7 +190,7 @@ For full documentation, visit the [EreoJS Images Plugin Documentation](https://e
 
 ## Part of EreoJS
 
-This package is part of the [EreoJS](https://github.com/ereojs/ereo) monorepo - a modern full-stack JavaScript framework.
+This package is part of the [EreoJS](https://github.com/ereoJS/ereoJS) monorepo - a modern full-stack JavaScript framework.
 
 ## License
 

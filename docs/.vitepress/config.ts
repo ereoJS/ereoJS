@@ -48,7 +48,7 @@ export default defineConfig({
       {
         text: 'Links',
         items: [
-          { text: 'GitHub', link: 'https://github.com/ereo-framework/ereo' },
+          { text: 'GitHub', link: 'https://github.com/ereoJS/ereoJS' },
           { text: "What's New", link: '/welcome/whats-new' }
         ]
       }
@@ -519,7 +519,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/ereo-framework/ereo' }
+      { icon: 'github', link: 'https://github.com/ereoJS/ereoJS' }
     ],
 
     footer: {
@@ -532,7 +532,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/ereo-framework/ereo/edit/main/docs/:path',
+      pattern: 'https://github.com/ereoJS/ereoJS/edit/main/docs/:path',
       text: 'Edit this page on GitHub'
     }
   }

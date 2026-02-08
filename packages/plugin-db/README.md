@@ -159,7 +159,7 @@ For complete documentation, see [EreoJS Database Plugin Docs](https://ereo.dev/d
 
 ## Part of EreoJS
 
-This package is part of the [EreoJS](https://github.com/ereojs/ereo) monorepo - a modern full-stack JavaScript framework.
+This package is part of the [EreoJS](https://github.com/ereoJS/ereoJS) monorepo - a modern full-stack JavaScript framework.
 
 ## License
 

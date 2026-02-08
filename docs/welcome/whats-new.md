@@ -123,4 +123,4 @@ If you are upgrading across multiple minor versions, check the [Version Upgrade 
 
 ## Contributing
 
-See the [contributing guide](https://github.com/ereo-framework/ereo/blob/main/CONTRIBUTING.md) for how to contribute to EreoJS. Bug reports, feature requests, and pull requests are welcome.
+See the [contributing guide](https://github.com/ereoJS/ereoJS/blob/main/CONTRIBUTING.md) for how to contribute to EreoJS. Bug reports, feature requests, and pull requests are welcome.

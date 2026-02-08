@@ -83,7 +83,7 @@ All tutorial code is available in the repository:
 Clone and run:
 
 ```bash
-git clone https://github.com/ereo-framework/ereo
+git clone https://github.com/ereoJS/ereoJS
 cd ereo/packages/examples/blog
 bun install
 bun dev
@@ -92,5 +92,5 @@ bun dev
 ## Need Help?
 
 - Check the [API Reference](/api/core/create-app) for detailed documentation
-- Visit [GitHub Discussions](https://github.com/ereo-framework/ereo/discussions) for community support
-- Report issues on [GitHub Issues](https://github.com/ereo-framework/ereo/issues)
+- Visit [GitHub Discussions](https://github.com/ereoJS/ereoJS/discussions) for community support
+- Report issues on [GitHub Issues](https://github.com/ereoJS/ereoJS/issues)

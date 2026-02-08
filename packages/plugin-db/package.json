@@ -7,11 +7,11 @@
   "homepage": "https://ereo.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ereojs/ereo.git",
+    "url": "https://github.com/ereoJS/ereoJS.git",
     "directory": "packages/plugin-db"
   },
   "bugs": {
-    "url": "https://github.com/ereojs/ereo/issues"
+    "url": "https://github.com/ereoJS/ereoJS/issues"
   },
   "description": "Database integration plugin for EreoJS framework (DEPRECATED - use @ereo/db and @ereo/db-drizzle)",
   "type": "module",

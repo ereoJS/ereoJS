@@ -88,5 +88,5 @@ Once you are comfortable with the basics, these tutorials build progressively mo
 
 - **[Troubleshooting](/troubleshooting/)** — Solutions for common setup issues, build errors, and runtime problems.
 - **[Debugging](/troubleshooting/debugging)** — Using the dev inspector, reading error messages, and debugging loaders and actions.
-- **[GitHub Issues](https://github.com/ereo-framework/ereo/issues)** — Search existing issues or open a new one for bugs and feature requests.
+- **[GitHub Issues](https://github.com/ereoJS/ereoJS/issues)** — Search existing issues or open a new one for bugs and feature requests.
 - **[Contributing](/contributing/)** — Want to help improve EreoJS? See the contributing guide for how to get started.

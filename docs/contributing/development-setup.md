@@ -11,7 +11,7 @@ How to set up the EreoJS monorepo for local development.
 ## Clone and Install
 
 ```bash
-git clone https://github.com/ereo-framework/ereo.git
+git clone https://github.com/ereoJS/ereoJS.git
 cd ereo
 bun install
 ```

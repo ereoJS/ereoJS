@@ -69,7 +69,7 @@ For full documentation, visit [https://ereojs.dev/docs/server](https://ereojs.de
 
 ## Part of EreoJS
 
-This package is part of the [EreoJS](https://github.com/ereojs/ereo) monorepo - a modern full-stack framework built for Bun.
+This package is part of the [EreoJS](https://github.com/ereoJS/ereoJS) monorepo - a modern full-stack framework built for Bun.
 
 ## License
 

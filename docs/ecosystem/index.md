@@ -77,7 +77,7 @@ Deploy EreoJS to any platform that supports Bun. Each guide covers the platform-
 
 Connect with other EreoJS developers and stay up to date.
 
-- **GitHub** — [github.com/ereojs/ereo](https://github.com/ereojs/ereo) — Source code, issue tracker, and discussions. File bug reports, request features, or contribute pull requests.
+- **GitHub** — [github.com/ereoJS/ereoJS](https://github.com/ereoJS/ereoJS) — Source code, issue tracker, and discussions. File bug reports, request features, or contribute pull requests.
 
 - **Discord** — [discord.gg/ereojs](https://discord.gg/ereojs) — Real-time chat with the community and core team. Get help, share what you are building, and discuss framework development.
 

@@ -16,7 +16,7 @@ Before diving in, familiarize yourself with the project structure and tooling:
 
 Bug fixes, new features, and performance optimizations are always welcome. Here is how to get started:
 
-1. Browse [open issues](https://github.com/ereo-framework/ereo/issues) for tasks that need attention. Issues labeled [`good first issue`](https://github.com/ereo-framework/ereo/issues?q=label%3A%22good+first+issue%22) are specifically selected for newcomers.
+1. Browse [open issues](https://github.com/ereoJS/ereoJS/issues) for tasks that need attention. Issues labeled [`good first issue`](https://github.com/ereoJS/ereoJS/issues?q=label%3A%22good+first+issue%22) are specifically selected for newcomers.
 2. Comment on the issue to let maintainers know you are working on it.
 3. Follow the [development setup guide](/contributing/development-setup) to get a local environment running.
 4. Make your changes on a feature branch and submit a pull request.
@@ -42,7 +42,7 @@ Improving test coverage makes the framework more reliable:
 
 Help other developers succeed with EreoJS:
 
-- Answer questions on [GitHub Discussions](https://github.com/ereo-framework/ereo/discussions) or in the [Discord community](https://discord.gg/ereo).
+- Answer questions on [GitHub Discussions](https://github.com/ereoJS/ereoJS/discussions) or in the [Discord community](https://discord.gg/ereo).
 - Write blog posts or tutorials about building with EreoJS.
 - Create video walkthroughs, screencasts, or conference talks.
 - Share your EreoJS projects to inspire others.
@@ -58,7 +58,7 @@ Extend the EreoJS ecosystem by building plugins:
 
 The typical contribution workflow:
 
-1. **Fork** the [EreoJS repository](https://github.com/ereo-framework/ereo) on GitHub.
+1. **Fork** the [EreoJS repository](https://github.com/ereoJS/ereoJS) on GitHub.
 2. **Clone** your fork locally and install dependencies with `bun install`.
 3. **Create a branch** for your change: `git checkout -b feat/my-feature` or `git checkout -b fix/issue-123`.
 4. **Make your changes** -- write code, add tests, update documentation as needed.
@@ -114,9 +114,9 @@ Each package under `packages/` is independently versioned and published to npm. 
 
 ## Community
 
-- **[GitHub Discussions](https://github.com/ereo-framework/ereo/discussions)** -- The best place for ideas, RFC proposals, and longer-form Q&A.
+- **[GitHub Discussions](https://github.com/ereoJS/ereoJS/discussions)** -- The best place for ideas, RFC proposals, and longer-form Q&A.
 - **[Discord](https://discord.gg/ereo)** -- Real-time chat with other contributors and the core team. Join the `#contributing` channel for development-related discussions.
 
 ## Code of Conduct
 
-All contributors are expected to follow our [Code of Conduct](https://github.com/ereo-framework/ereo/blob/main/CODE_OF_CONDUCT.md). We are committed to providing a welcoming, respectful, and harassment-free experience for everyone. Please report any unacceptable behavior to the maintainers.
+All contributors are expected to follow our [Code of Conduct](https://github.com/ereoJS/ereoJS/blob/main/CODE_OF_CONDUCT.md). We are committed to providing a welcoming, respectful, and harassment-free experience for everyone. Please report any unacceptable behavior to the maintainers.

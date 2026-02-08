@@ -394,6 +394,6 @@ You've built a complete blog application with EreoJS! You've learned:
 
 - [EreoJS Documentation](/)
 - [API Reference](/api/core/create-app)
-- [GitHub Repository](https://github.com/ereo-framework/ereo)
+- [GitHub Repository](https://github.com/ereoJS/ereoJS)
 
 [← Previous: Styling](/tutorials/blog/05-styling) | [Back to Tutorials](/tutorials/)
