@@ -158,7 +158,7 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     batch(() => {
       const sig = this.getSignal(path);
       const oldValue = sig.get();
-      if (oldValue === value) return;
+      if (Object.is(oldValue, value)) return;
 
       sig.set(value);
 
@@ -697,6 +697,8 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
   }
 
   resetTo(values: T): void {
+    // Abort all in-flight validations before resetting to prevent stale error writes
+    this._validationEngine.abortAll();
     batch(() => {
       this._baseline = deepClone(values);
 
@@ -808,6 +810,10 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   getFieldRef(path: string): HTMLElement | null {
     return this._fieldRefs.get(path) ?? null;
+  }
+
+  getFieldRefs(): Map<string, HTMLElement | null> {
+    return this._fieldRefs;
   }
 
   setFieldRef(path: string, el: HTMLElement | null): void {

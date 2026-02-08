@@ -123,13 +123,9 @@ export function positive(msg = 'Must be a positive number'): ValidatorFunction<n
 
 export function custom<T = unknown>(
   fn: (value: T) => string | undefined,
-  msg?: string
+  _msg?: string
 ): ValidatorFunction<T> {
-  return (value) => {
-    const result = fn(value);
-    if (result !== undefined) return result;
-    return undefined;
-  };
+  return (value) => fn(value);
 }
 
 export function async<T = unknown>(

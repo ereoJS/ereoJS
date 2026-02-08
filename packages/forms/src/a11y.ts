@@ -109,9 +109,9 @@ export function focusFirstError(form: FormStoreInterface<any>): void {
   const scrollBehavior = prefersReducedMotion() ? 'auto' as const : 'smooth' as const;
 
   // Try to use form's field refs first for scoped focusing
-  const formStore = form as any;
-  if (formStore._fieldRefs) {
-    for (const [path, el] of formStore._fieldRefs as Map<string, HTMLElement | null>) {
+  const fieldRefs = (form as any).getFieldRefs?.() ?? (form as any)._fieldRefs;
+  if (fieldRefs) {
+    for (const [path, el] of fieldRefs as Map<string, HTMLElement | null>) {
       if (!el) continue;
       const errors = form.getErrors(path).get();
       if (errors.length > 0) {
@@ -146,7 +146,7 @@ export function trapFocus(container: HTMLElement): () => void {
   if (typeof document === 'undefined') return () => {};
 
   const focusableSelector =
-    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable]:not([contenteditable="false"])';
 
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key !== 'Tab') return;

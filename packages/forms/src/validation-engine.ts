@@ -280,7 +280,11 @@ export class ValidationEngine<T extends Record<string, any>> {
 
     // Per-field validation — run validators directly without writing to store individually.
     // We collect all errors and write once at the end to avoid flicker.
+    // Track sync vs async errors separately per field for correct source attribution.
     const fieldPaths = Array.from(this._fieldValidations.keys());
+    const fieldSyncErrors: Record<string, string[]> = {};
+    const fieldAsyncErrors: Record<string, string[]> = {};
+
     await Promise.all(
       fieldPaths.map(async (path) => {
         if (controller.signal.aborted) return;
@@ -290,35 +294,46 @@ export class ValidationEngine<T extends Record<string, any>> {
 
         const value = this._store.getValue(path);
         const context = this._createContext(controller.signal);
-        const errors: string[] = [];
 
         // Partition validators into sync and async
         const syncValidators = validation.validators.filter(v => !v._isAsync);
         const asyncValidators = validation.validators.filter(v => v._isAsync);
 
+        const syncErrors: string[] = [];
+        const asyncErrors: string[] = [];
+
         // Run sync validators first
         for (const validator of syncValidators) {
           if (controller.signal.aborted) break;
           const result = await validator(value, context);
-          if (result) errors.push(result);
+          if (result) syncErrors.push(result);
         }
 
         // Only run async validators if all sync validators passed
-        if (errors.length === 0 && !controller.signal.aborted) {
+        if (syncErrors.length === 0 && !controller.signal.aborted) {
           for (const validator of asyncValidators) {
             if (controller.signal.aborted) break;
             const result = await validator(value, context);
-            if (result) errors.push(result);
+            if (result) asyncErrors.push(result);
           }
         }
 
-        if (errors.length > 0 && !controller.signal.aborted) {
-          if (allErrors[path]) {
-            allErrors[path] = [...allErrors[path], ...errors];
-          } else {
-            allErrors[path] = errors;
+        if (!controller.signal.aborted) {
+          const allFieldErrors = [...syncErrors, ...asyncErrors];
+          if (allFieldErrors.length > 0) {
+            if (allErrors[path]) {
+              allErrors[path] = [...allErrors[path], ...allFieldErrors];
+            } else {
+              allErrors[path] = allFieldErrors;
+            }
+            hasErrors = true;
           }
-          hasErrors = true;
+          if (syncErrors.length > 0) {
+            fieldSyncErrors[path] = syncErrors;
+          }
+          if (asyncErrors.length > 0) {
+            fieldAsyncErrors[path] = asyncErrors;
+          }
         }
       })
     );
@@ -345,35 +360,34 @@ export class ValidationEngine<T extends Record<string, any>> {
         }
       }
 
-      // Write field validator errors with appropriate sources
-      for (const [path, errors] of Object.entries(allErrors)) {
-        // Skip paths already handled by schema
-        const schemaErrors = schemaResult?.errors ?? {};
+      // Write field validator errors with correct source attribution
+      const schemaErrors = schemaResult?.errors ?? {};
+      for (const path of fieldPaths) {
+        const syncErrs = fieldSyncErrors[path];
+        const asyncErrs = fieldAsyncErrors[path];
+        if (!syncErrs && !asyncErrs) continue;
+
         if (schemaErrors[path]) {
-          // Merge: field errors are sync/async, already have schema errors
-          // Determine if they're sync or async based on validators
-          const validation = this._fieldValidations.get(path);
-          const hasAsync = validation?.validators.some(v => v._isAsync);
-          const source = hasAsync && errors.length > 0 ? 'async' : 'sync';
-          const fieldOnlyErrors = errors.filter(e => !schemaErrors[path]?.includes(e));
-          if (fieldOnlyErrors.length > 0) {
-            this._store.setErrorsWithSource(path, fieldOnlyErrors, source);
+          // Filter out errors already covered by schema
+          const schemaSet = new Set(schemaErrors[path]);
+          if (syncErrs) {
+            const unique = syncErrs.filter(e => !schemaSet.has(e));
+            if (unique.length > 0) {
+              this._store.setErrorsWithSource(path, unique, 'sync');
+            }
+          }
+          if (asyncErrs) {
+            const unique = asyncErrs.filter(e => !schemaSet.has(e));
+            if (unique.length > 0) {
+              this._store.setErrorsWithSource(path, unique, 'async');
+            }
           }
         } else {
-          const validation = this._fieldValidations.get(path);
-          if (validation) {
-            const syncValidators = validation.validators.filter(v => !v._isAsync);
-            const asyncValidators = validation.validators.filter(v => v._isAsync);
-            // In validateAll, sync errors gate async. If errors exist and sync validators exist, they're sync.
-            if (syncValidators.length > 0 && errors.length > 0) {
-              this._store.setErrorsWithSource(path, errors, 'sync');
-            } else if (asyncValidators.length > 0 && errors.length > 0) {
-              this._store.setErrorsWithSource(path, errors, 'async');
-            } else {
-              this._store.setErrors(path, errors);
-            }
-          } else {
-            this._store.setErrors(path, errors);
+          if (syncErrs && syncErrs.length > 0) {
+            this._store.setErrorsWithSource(path, syncErrs, 'sync');
+          }
+          if (asyncErrs && asyncErrs.length > 0) {
+            this._store.setErrorsWithSource(path, asyncErrs, 'async');
           }
         }
       }
@@ -489,7 +503,34 @@ export class ValidationEngine<T extends Record<string, any>> {
     }
   }
 
+  abortAll(): void {
+    // Abort all in-flight field validations
+    for (const controller of this._abortControllers.values()) {
+      controller.abort();
+    }
+    this._abortControllers.clear();
+    // Cancel all debounce timers
+    for (const timer of this._debounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this._debounceTimers.clear();
+    // Abort any validateAll in progress
+    if (this._validateAllController) {
+      this._validateAllController.abort();
+      this._validateAllController = null;
+    }
+    // Clear validating state
+    for (const path of this._validatingFields) {
+      const sig = this._validatingSignals.get(path);
+      if (sig) sig.set(false);
+    }
+    this._validatingFields.clear();
+    this._validatingDependents.clear();
+  }
+
   dispose(): void {
+    this.abortAll();
+    // Clear registration maps (abortAll preserves these for re-use)
     for (const timer of this._debounceTimers.values()) {
       clearTimeout(timer);
     }

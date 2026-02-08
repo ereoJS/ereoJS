@@ -23,6 +23,8 @@ function inferInputType(name: string, explicitType?: string): string {
   if (lastSegment.includes('password')) return 'password';
   if (lastSegment.includes('phone') || lastSegment.includes('tel')) return 'tel';
   if (lastSegment.includes('url') || lastSegment.includes('website')) return 'url';
+  // Check 'datetime' before 'date' and 'time' to avoid false matches
+  if (lastSegment.includes('datetime')) return 'datetime-local';
   if (lastSegment.includes('date')) return 'date';
   if (lastSegment.includes('time')) return 'time';
   if (lastSegment.includes('number') || lastSegment.includes('age') || lastSegment.includes('quantity'))
