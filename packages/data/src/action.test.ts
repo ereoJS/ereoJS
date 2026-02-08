@@ -1126,4 +1126,419 @@ describe('@ereo/data - Action', () => {
       expect((result.data as any)?.processed).toBe('John');
     });
   });
+
+  // ===========================================================================
+  // Prototype Pollution Protection
+  // ===========================================================================
+  describe('prototype pollution protection', () => {
+    test('__proto__ field does not pollute Object prototype', () => {
+      const formData = new FormData();
+      formData.set('__proto__.polluted', 'yes');
+
+      const result = formDataToObject(formData);
+
+      // The polluted property should NOT appear on the Object prototype
+      expect(({} as any).polluted).toBeUndefined();
+      // The result should not have __proto__ set as a nested key
+      expect((result as any).__proto__?.polluted).toBeUndefined();
+    });
+
+    test('constructor field does not pollute object', () => {
+      const formData = new FormData();
+      formData.set('constructor.prototype.polluted', 'yes');
+
+      const result = formDataToObject(formData);
+
+      expect(({} as any).polluted).toBeUndefined();
+      expect((result as any).constructor?.prototype?.polluted).toBeUndefined();
+    });
+
+    test('prototype field is rejected', () => {
+      const formData = new FormData();
+      formData.set('prototype.polluted', 'yes');
+
+      const result = formDataToObject(formData);
+
+      expect(({} as any).polluted).toBeUndefined();
+    });
+
+    test('__proto__ as top-level key is silently ignored', () => {
+      const formData = new FormData();
+      formData.set('__proto__', 'malicious');
+      formData.set('safe', 'value');
+
+      const result = formDataToObject(formData);
+
+      // Safe value should still be set
+      expect((result as any).safe).toBe('value');
+      // __proto__ should not have been set as an own property
+      expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(false);
+    });
+
+    test('constructor as top-level key is silently ignored', () => {
+      const formData = new FormData();
+      formData.set('constructor', 'malicious');
+      formData.set('name', 'test');
+
+      const result = formDataToObject(formData);
+
+      expect((result as any).name).toBe('test');
+    });
+
+    test('__proto__ in bracket notation is rejected', () => {
+      const formData = new FormData();
+      formData.set('data[__proto__].polluted', 'yes');
+
+      const result = formDataToObject(formData);
+
+      expect(({} as any).polluted).toBeUndefined();
+    });
+
+    test('nested __proto__ deep in path is rejected', () => {
+      const formData = new FormData();
+      formData.set('a.b.__proto__.c', 'malicious');
+
+      const result = formDataToObject(formData);
+
+      expect(({} as any).c).toBeUndefined();
+    });
+
+    test('multiple pollution attempts are all blocked', () => {
+      const formData = new FormData();
+      formData.set('__proto__.isAdmin', 'true');
+      formData.set('constructor.prototype.isAdmin', 'true');
+      formData.set('prototype.isAdmin', 'true');
+      formData.set('validField', 'safe');
+
+      const result = formDataToObject(formData);
+
+      expect(({} as any).isAdmin).toBeUndefined();
+      expect((result as any).validField).toBe('safe');
+    });
+  });
+
+  // ===========================================================================
+  // createAction shorthand form
+  // ===========================================================================
+  describe('createAction shorthand', () => {
+    test('accepts a plain function and returns it directly', async () => {
+      const handler = async (args: any) => {
+        const formData = await args.request.formData();
+        return { title: formData.get('title') };
+      };
+
+      const actionFn = createAction(handler);
+
+      // Shorthand should return the function directly, not wrap it
+      expect(actionFn).toBe(handler);
+    });
+
+    test('shorthand action can be invoked', async () => {
+      const actionFn = createAction(async (args: any) => {
+        const formData = await args.request.formData();
+        return { value: formData.get('value') };
+      });
+
+      const formData = new FormData();
+      formData.set('value', 'direct');
+
+      const result = await actionFn(createMockArgs(formData));
+      expect(result).toEqual({ value: 'direct' });
+    });
+  });
+
+  // ===========================================================================
+  // parsePath edge cases (additional)
+  // ===========================================================================
+  describe('parsePath additional edge cases', () => {
+    test('handles path with only dots', () => {
+      const formData = new FormData();
+      formData.set('...', 'dots');
+
+      // Should not throw
+      const result = formDataToObject(formData);
+      // The leading dots produce empty segments, so the behavior may vary
+      expect(result).toBeDefined();
+    });
+
+    test('handles path with consecutive brackets', () => {
+      const formData = new FormData();
+      formData.set('items[0][1]', 'nested');
+
+      const result = formDataToObject(formData);
+      expect((result as any).items[0][1]).toBe('nested');
+    });
+
+    test('handles path with trailing dot', () => {
+      const formData = new FormData();
+      formData.set('name.', 'value');
+
+      // Trailing dot means empty segment at end which gets dropped
+      const result = formDataToObject(formData);
+      expect((result as any).name).toBe('value');
+    });
+
+    test('handles path with only bracket notation', () => {
+      const formData = new FormData();
+      formData.set('[0]', 'first');
+
+      const result = formDataToObject(formData);
+      // Key starts with [, so it becomes numeric segment
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ===========================================================================
+  // coerceValue additional edge cases
+  // ===========================================================================
+  describe('coerceValue additional edge cases', () => {
+    test('coerces negative floating point', () => {
+      expect(coerceValue('-3.14')).toBe(-3.14);
+    });
+
+    test('coerces zero as number', () => {
+      expect(coerceValue('0')).toBe(0);
+    });
+
+    test('does not coerce NaN string to number', () => {
+      expect(coerceValue('NaN')).toBe('NaN');
+    });
+
+    test('does not coerce -Infinity to number', () => {
+      expect(coerceValue('-Infinity')).toBe('-Infinity');
+    });
+
+    test('coerces valid JSON array with nested objects', () => {
+      const result = coerceValue('[{"a":1},{"b":2}]');
+      expect(result).toEqual([{ a: 1 }, { b: 2 }]);
+    });
+
+    test('returns string for incomplete JSON object', () => {
+      expect(coerceValue('{incomplete')).toBe('{incomplete');
+    });
+
+    test('returns string for incomplete JSON array', () => {
+      expect(coerceValue('[incomplete')).toBe('[incomplete');
+    });
+
+    test('coerces ISO date with timezone offset', () => {
+      const result = coerceValue('2024-06-15T10:30:00Z');
+      expect(result).toBeInstanceOf(Date);
+    });
+
+    test('returns string for date-like string that is invalid', () => {
+      // 2024-13-45 looks like date format but month 13 and day 45 are invalid
+      const result = coerceValue('2024-13-45');
+      expect(result).toBe('2024-13-45');
+    });
+  });
+
+  // ===========================================================================
+  // formDataToObject with coercion disabled
+  // ===========================================================================
+  describe('formDataToObject coercion options', () => {
+    test('nested objects work without coercion', () => {
+      const formData = new FormData();
+      formData.set('user.name', 'John');
+      formData.set('user.age', '30');
+
+      const result = formDataToObject(formData, { coerce: false });
+
+      expect((result as any).user.name).toBe('John');
+      expect((result as any).user.age).toBe('30'); // stays string
+    });
+
+    test('arrays work without coercion', () => {
+      const formData = new FormData();
+      formData.append('tags[]', 'true');
+      formData.append('tags[]', '42');
+
+      const result = formDataToObject(formData, { coerce: false });
+
+      expect((result as any).tags).toEqual(['true', '42']); // strings, not coerced
+    });
+  });
+
+  // ===========================================================================
+  // data() response helper (XSS-safe serialization)
+  // ===========================================================================
+  describe('data() response helper', () => {
+    test('uses XSS-safe serialization', async () => {
+      const { data: dataHelper } = await import('./action');
+      const response = dataHelper({ html: '<img onerror=alert(1)>' });
+      const body = await response.text();
+
+      expect(body).not.toContain('<');
+      expect(body).not.toContain('>');
+    });
+
+    test('sets default content-type to application/json', async () => {
+      const { data: dataHelper } = await import('./action');
+      const response = dataHelper({ test: true });
+
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
+  });
+
+  // ===========================================================================
+  // typedAction with non-Error throws and no onError handler
+  // ===========================================================================
+  describe('typedAction rethrows without onError', () => {
+    test('rethrows Error when no onError handler is set', async () => {
+      const actionFn = typedAction<{ value: number }>({
+        handler: async () => {
+          throw new Error('Direct error');
+        },
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: 1 }),
+      });
+
+      try {
+        await actionFn({
+          request,
+          params: {},
+          context: createContext(request),
+        });
+        expect(true).toBe(false);
+      } catch (e) {
+        expect(e).toBeInstanceOf(Error);
+        expect((e as Error).message).toBe('Direct error');
+      }
+    });
+
+    test('onError does not catch non-Error throws', async () => {
+      const actionFn = typedAction<{ value: number }>({
+        handler: async () => {
+          throw 42; // not an Error instance
+        },
+        onError: () => ({ recovered: true }),
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: 1 }),
+      });
+
+      try {
+        await actionFn({
+          request,
+          params: {},
+          context: createContext(request),
+        });
+        expect(true).toBe(false);
+      } catch (e) {
+        expect(e).toBe(42);
+      }
+    });
+  });
+
+  // ===========================================================================
+  // jsonAction non-strict mode
+  // ===========================================================================
+  describe('jsonAction non-strict mode', () => {
+    test('accepts FormData in non-strict mode', async () => {
+      const actionFn = jsonAction<{ name: string }>({
+        handler: async ({ body }) => body,
+      });
+
+      const formData = new FormData();
+      formData.set('name', 'John');
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await actionFn({
+        request,
+        params: {},
+        context: createContext(request),
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.name).toBe('John');
+    });
+  });
+
+  // ===========================================================================
+  // validateRequired edge cases
+  // ===========================================================================
+  describe('validateRequired edge cases', () => {
+    test('returns success true with no errors property when all pass', () => {
+      const formData = new FormData();
+      formData.set('name', 'John');
+
+      const result = validateRequired(formData, ['name']);
+
+      expect(result.success).toBe(true);
+      expect(result.errors).toBeUndefined();
+    });
+
+    test('handles empty required fields array', () => {
+      const formData = new FormData();
+
+      const result = validateRequired(formData, []);
+
+      expect(result.success).toBe(true);
+      expect(result.errors).toBeUndefined();
+    });
+
+    test('error messages include the field name', () => {
+      const formData = new FormData();
+
+      const result = validateRequired(formData, ['username']);
+
+      expect(result.success).toBe(false);
+      expect(result.errors?.username?.[0]).toBe('username is required');
+    });
+  });
+
+  // ===========================================================================
+  // schema with multiple errors on different paths
+  // ===========================================================================
+  describe('typedAction schema with multiple errors', () => {
+    test('groups errors by path', async () => {
+      const mockSchema = {
+        safeParse: () => ({
+          success: false as const,
+          error: {
+            errors: [
+              { path: ['name'], message: 'Name is required' },
+              { path: ['name'], message: 'Name must be at least 2 chars' },
+              { path: ['email'], message: 'Email is required' },
+            ],
+          },
+        }),
+      };
+
+      const actionFn = typedAction<{ name: string; email: string }>({
+        schema: mockSchema as any,
+        handler: async ({ body }) => body,
+      });
+
+      const request = new Request('http://localhost/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const result = await actionFn({
+        request,
+        params: {},
+        context: createContext(request),
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.errors?.name).toHaveLength(2);
+      expect(result.errors?.name).toContain('Name is required');
+      expect(result.errors?.name).toContain('Name must be at least 2 chars');
+      expect(result.errors?.email).toHaveLength(1);
+      expect(result.errors?.email).toContain('Email is required');
+    });
+  });
 });

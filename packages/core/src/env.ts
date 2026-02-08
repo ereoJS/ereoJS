@@ -227,7 +227,10 @@ export const env = {
     return createSchemaBuilder<number>({
       type: 'number',
       required: false,
-      transform: (value: string) => parseInt(value, 10),
+      transform: (value: string) => {
+        const num = Number(value);
+        return Number.isNaN(num) ? NaN : num;
+      },
       validate: (value: number) => {
         if (!Number.isInteger(value) || value < 1 || value > 65535) {
           return 'Port must be an integer between 1 and 65535';

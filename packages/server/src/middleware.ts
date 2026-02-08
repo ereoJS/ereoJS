@@ -297,6 +297,7 @@ export interface RateLimitOptions {
 export function rateLimit(options: RateLimitOptions = {}): MiddlewareHandler {
   const { windowMs = 60000, max = 100, keyGenerator } = options;
 
+  const MAX_ENTRIES = 10_000;
   const requests = new Map<string, { count: number; resetTime: number }>();
   let lastCleanup = Date.now();
 
@@ -319,8 +320,8 @@ export function rateLimit(options: RateLimitOptions = {}): MiddlewareHandler {
 
     record.count++;
 
-    // Clean up expired entries deterministically every window period
-    if (now - lastCleanup > windowMs) {
+    // Clean up expired entries deterministically every window period or when map is too large
+    if (now - lastCleanup > windowMs || requests.size > MAX_ENTRIES) {
       lastCleanup = now;
       for (const [k, v] of requests) {
         if (now > v.resetTime) {

@@ -94,7 +94,8 @@ export function computed<T>(fn: () => T, deps: Signal<unknown>[]): Signal<T> {
     c.set(fn());
   };
 
-  for (const dep of deps) {
+  const uniqueDeps = [...new Set(deps)];
+  for (const dep of uniqueDeps) {
     const unsub = dep.subscribe(update);
     c._disposers.push(unsub);
   }
@@ -132,9 +133,15 @@ export function batch<T>(fn: () => T): T {
     if (batchDepth === 0 && batchQueue) {
       const queue = batchQueue;
       batchQueue = null;
+      let firstError: unknown;
       for (const notifier of queue) {
-        notifier();
+        try {
+          notifier();
+        } catch (e) {
+          firstError ??= e;
+        }
       }
+      if (firstError) throw firstError;
     }
   }
 }

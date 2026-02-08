@@ -99,9 +99,9 @@ export function createServerFnHandler(
 
     // Extract function ID from the URL
     const fnId = decodeURIComponent(url.pathname.slice(prefix.length));
-    if (!fnId) {
+    if (!fnId || fnId.includes('..') || fnId.includes('\0')) {
       return jsonResponse(
-        { ok: false, error: { code: 'BAD_REQUEST', message: 'Missing function ID in URL' } },
+        { ok: false, error: { code: 'BAD_REQUEST', message: 'Invalid function ID' } },
         400
       );
     }

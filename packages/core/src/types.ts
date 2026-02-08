@@ -6,6 +6,7 @@
  */
 
 import type { ReactElement, ComponentType } from 'react';
+import type { EnvConfig } from './env';
 
 // ============================================================================
 // Configuration Types
@@ -34,6 +35,8 @@ export interface FrameworkConfig {
   basePath?: string;
   /** Directory containing routes (default: 'app/routes') */
   routesDir?: string;
+  /** Environment variable validation schema */
+  env?: EnvConfig;
 }
 
 // ============================================================================

@@ -142,4 +142,86 @@ describe('@ereo/router - Matcher', () => {
       expect(listMatch?.route.id).toBe('blog-list');
     });
   });
+
+  describe('URL decoding', () => {
+    const routes: Route[] = [
+      { id: 'user', path: '/users/[id]', file: '/routes/users/[id].tsx' },
+      { id: 'file', path: '/files/[...path]', file: '/routes/files/[...path].tsx' },
+    ];
+
+    test('decodes URL-encoded spaces in path segments', () => {
+      const matcher = createMatcher(routes);
+
+      const match = matcher.match('/users/hello%20world');
+      expect(match).not.toBeNull();
+      expect(match?.route.id).toBe('user');
+      expect(match?.params.id).toBe('hello world');
+    });
+
+    test('does not decode %2F (encoded forward slash) to preserve path boundaries', () => {
+      const matcher = createMatcher(routes);
+
+      // %2F should NOT be decoded to '/', so 'hello%2Fworld' stays as one segment
+      const match = matcher.match('/users/hello%2Fworld');
+      expect(match).not.toBeNull();
+      expect(match?.route.id).toBe('user');
+      // The param should contain the literal %2F, not a decoded slash
+      expect(match?.params.id).toBe('hello%2Fworld');
+    });
+
+    test('encoded forward slash in dynamic segment does not split into multiple segments', () => {
+      const matcher = createMatcher(routes);
+
+      // If %2F were decoded, '/users/hello/world' would fail to match /users/[id]
+      // because it would have 3 segments instead of 2.
+      // With decodeURI (not decodeURIComponent), %2F stays encoded and matches as one param.
+      const match = matcher.match('/users/hello%2Fworld');
+      expect(match).not.toBeNull();
+      expect(match?.route.id).toBe('user');
+      // Should NOT be null (which would happen if %2F was decoded to / creating /users/hello/world)
+    });
+
+    test('handles malformed URI sequences gracefully', () => {
+      const matcher = createMatcher(routes);
+
+      // %ZZ is not a valid percent-encoded sequence
+      // decodeURI will throw, but the matcher should catch and use the path as-is
+      const match = matcher.match('/users/%ZZbadencoding');
+      // Should not throw - the matcher catches the error and uses the raw path
+      expect(match).not.toBeNull();
+      expect(match?.route.id).toBe('user');
+      expect(match?.params.id).toBe('%ZZbadencoding');
+    });
+
+    test('handles truncated percent encoding gracefully', () => {
+      const matcher = createMatcher(routes);
+
+      // A lone '%' at the end is a malformed URI
+      const match = matcher.match('/users/trailing%');
+      expect(match).not.toBeNull();
+      expect(match?.route.id).toBe('user');
+      expect(match?.params.id).toBe('trailing%');
+    });
+
+    test('decodes other safe percent-encoded characters normally', () => {
+      const matcher = createMatcher(routes);
+
+      // %C3%A9 is 'é' in UTF-8
+      const match = matcher.match('/users/caf%C3%A9');
+      expect(match).not.toBeNull();
+      expect(match?.route.id).toBe('user');
+      expect(match?.params.id).toBe('café');
+    });
+
+    test('catch-all route with encoded forward slashes treats %2F as literal', () => {
+      const matcher = createMatcher(routes);
+
+      // In catch-all, %2F should NOT create additional path segments
+      const match = matcher.match('/files/dir/name%2Fwith%2Fslashes');
+      expect(match).not.toBeNull();
+      expect(match?.route.id).toBe('file');
+      // The catch-all splits on real '/' only, not on %2F
+      expect(match?.params.path).toEqual(['dir', 'name%2Fwith%2Fslashes']);
+    });
+  });
 });

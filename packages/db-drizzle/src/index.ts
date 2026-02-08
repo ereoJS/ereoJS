@@ -39,7 +39,12 @@
 // Adapter Factory
 // ============================================================================
 
-export { createDrizzleAdapter } from './adapter';
+export {
+  createDrizzleAdapter,
+  validatePragmaConfig,
+  VALID_JOURNAL_MODES,
+  VALID_SYNCHRONOUS,
+} from './adapter';
 
 // ============================================================================
 // Configuration Helpers

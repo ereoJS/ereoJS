@@ -231,12 +231,14 @@ export class FetchError extends Error {
  */
 export function serializeLoaderData(data: unknown): string {
   const json = JSON.stringify(data);
-  // Escape characters that could break out of script tags
+  // Escape characters that could break out of script tags or cause issues in JS contexts
   return json
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026')
-    .replace(/'/g, '\\u0027');
+    .replace(/'/g, '\\u0027')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
 /**

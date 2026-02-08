@@ -188,7 +188,7 @@ export async function hydrateIslands(): Promise<void> {
         const root = hydrateRoot(element, createElement(component, props));
         islandRegistry.markHydrated(islandId);
 
-        // Store composite cleanup: both trigger and root unmount
+        // Update cleanup to also unmount the React root
         islandRegistry.setCleanup(islandId, () => {
           triggerCleanup();
           root.unmount();
@@ -197,7 +197,10 @@ export async function hydrateIslands(): Promise<void> {
       media
     );
 
-    islandRegistry.setCleanup(islandId, triggerCleanup);
+    // Set initial cleanup (before hydration, only need to clean up the trigger)
+    if (!islandRegistry.isHydrated(islandId)) {
+      islandRegistry.setCleanup(islandId, triggerCleanup);
+    }
   }
 }
 

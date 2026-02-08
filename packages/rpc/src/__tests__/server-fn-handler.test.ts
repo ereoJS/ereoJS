@@ -467,4 +467,138 @@ describe('createServerFnHandler', () => {
       expect(body.data).toBe('namespaced');
     });
   });
+
+  // ===========================================================================
+  // Path Traversal Protection
+  // ===========================================================================
+
+  describe('path traversal protection', () => {
+    /**
+     * Helper to build a raw request URL without double-encoding.
+     * This lets us embed already-encoded sequences like %2e%2e in the path.
+     */
+    function makeRawRequest(rawPath: string): Request {
+      return new Request(`http://localhost${SERVER_FN_BASE}/${rawPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1' },
+        body: JSON.stringify({ input: null }),
+      });
+    }
+
+    test('normal function IDs are accepted', async () => {
+      createServerFn('legit-fn', async () => 'ok');
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRequest('legit-fn'));
+      expect(response!.status).toBe(200);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(true);
+      expect(body.data).toBe('ok');
+    });
+
+    test('bare ".." as a path segment is resolved by URL constructor (returns null)', async () => {
+      // When the URL is "/_server-fn/..", the URL constructor resolves
+      // the ".." and the resulting pathname "/" no longer matches the prefix,
+      // so the handler returns null (not a server function route).
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRawRequest('..'));
+      expect(response).toBeNull();
+    });
+
+    test('rejects function IDs containing ".." with encoded slash', async () => {
+      const handler = createServerFnHandler();
+
+      // "..%2Ftest" — URL constructor does NOT resolve %2F as a slash,
+      // so the pathname is "/_server-fn/..%2Ftest". After decodeURIComponent,
+      // fnId becomes "../test" which contains ".." and is rejected.
+      const response = await handler(makeRawRequest('..%2Ftest'));
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('BAD_REQUEST');
+      expect(body.error.message).toBe('Invalid function ID');
+    });
+
+    test('rejects path traversal attempts like "../../../etc/passwd"', async () => {
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRawRequest('..%2F..%2F..%2Fetc%2Fpasswd'));
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('BAD_REQUEST');
+      expect(body.error.message).toBe('Invalid function ID');
+    });
+
+    test('rejects function IDs containing null bytes', async () => {
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRawRequest('someFn%00.json'));
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('BAD_REQUEST');
+      expect(body.error.message).toBe('Invalid function ID');
+    });
+
+    test('rejects empty function IDs', async () => {
+      const handler = createServerFnHandler();
+
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Ereo-RPC': '1' },
+        body: JSON.stringify({ input: null }),
+      });
+
+      const response = await handler(request);
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('BAD_REQUEST');
+      expect(body.error.message).toBe('Invalid function ID');
+    });
+
+    test('rejects URL-encoded traversal (%2e%2e%2f) after decodeURIComponent', async () => {
+      const handler = createServerFnHandler();
+
+      // %2e%2e%2f decodes to "../" — the handler's decodeURIComponent call
+      // should decode this before the ".." check catches it
+      const response = await handler(makeRawRequest('%2e%2e%2f%2e%2e%2fsecret'));
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('BAD_REQUEST');
+      expect(body.error.message).toBe('Invalid function ID');
+    });
+
+    test('rejects ".." embedded in the middle of a function ID', async () => {
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRawRequest('foo..bar'));
+      expect(response!.status).toBe(400);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('BAD_REQUEST');
+    });
+
+    test('allows function IDs with single dots (not traversal)', async () => {
+      createServerFn('config.get', async () => 'value');
+      const handler = createServerFnHandler();
+
+      const response = await handler(makeRequest('config.get'));
+      expect(response!.status).toBe(200);
+
+      const body = await response!.json();
+      expect(body.ok).toBe(true);
+      expect(body.data).toBe('value');
+    });
+  });
 });

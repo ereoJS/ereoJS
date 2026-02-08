@@ -695,3 +695,648 @@ describe('setupEnv', () => {
     process.env.PRECEDENCE_TEST = originalValue;
   });
 });
+
+// ============================================================================
+// Comprehensive edge-case tests for coverage
+// ============================================================================
+
+describe('env.port() edge cases', () => {
+  describe('valid ports', () => {
+    test.each([
+      { input: '1', expected: 1 },
+      { input: '80', expected: 80 },
+      { input: '443', expected: 443 },
+      { input: '3000', expected: 3000 },
+      { input: '8080', expected: 8080 },
+      { input: '65535', expected: 65535 },
+    ])('accepts port $input', ({ input, expected }) => {
+      const schema: EnvConfig = {
+        PORT: env.port(),
+      };
+      const result = validateEnv(schema, { PORT: input });
+      expect(result.valid).toBe(true);
+      expect(result.env.PORT).toBe(expected);
+    });
+  });
+
+  describe('invalid ports', () => {
+    test('rejects port 0', () => {
+      const schema: EnvConfig = { PORT: env.port() };
+      const result = validateEnv(schema, { PORT: '0' });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0].message).toContain('Port must be an integer between 1 and 65535');
+    });
+
+    test('rejects negative port', () => {
+      const schema: EnvConfig = { PORT: env.port() };
+      const result = validateEnv(schema, { PORT: '-1' });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0].message).toContain('Port must be an integer between 1 and 65535');
+    });
+
+    test('rejects port above 65535', () => {
+      const schema: EnvConfig = { PORT: env.port() };
+      const result = validateEnv(schema, { PORT: '65536' });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0].message).toContain('Port must be an integer between 1 and 65535');
+    });
+
+    test('rejects NaN string "abc"', () => {
+      const schema: EnvConfig = { PORT: env.port() };
+      const result = validateEnv(schema, { PORT: 'abc' });
+      expect(result.valid).toBe(false);
+    });
+
+    test('rejects "3000px" (Number() returns NaN for mixed strings)', () => {
+      const schema: EnvConfig = { PORT: env.port() };
+      const result = validateEnv(schema, { PORT: '3000px' });
+      expect(result.valid).toBe(false);
+    });
+
+    test('rejects fractional port "3000.5"', () => {
+      const schema: EnvConfig = { PORT: env.port() };
+      const result = validateEnv(schema, { PORT: '3000.5' });
+      expect(result.valid).toBe(false);
+      expect(result.errors[0].message).toContain('Port must be an integer between 1 and 65535');
+    });
+
+    test('rejects empty string for required port', () => {
+      const schema: EnvConfig = { PORT: env.port().required() };
+      const result = validateEnv(schema, { PORT: '' });
+      expect(result.valid).toBe(false);
+    });
+  });
+
+  test('port with default value uses default when missing', () => {
+    const schema: EnvConfig = {
+      PORT: env.port().default(3000),
+    };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.PORT).toBe(3000);
+  });
+
+  test('port with default value uses default for empty string', () => {
+    const schema: EnvConfig = {
+      PORT: env.port().default(8080),
+    };
+    const result = validateEnv(schema, { PORT: '' });
+    expect(result.valid).toBe(true);
+    expect(result.env.PORT).toBe(8080);
+  });
+});
+
+describe('env.boolean() edge cases', () => {
+  test.each([
+    { input: 'true', expected: true },
+    { input: 'TRUE', expected: true },
+    { input: 'True', expected: true },
+    { input: '1', expected: true },
+    { input: 'yes', expected: true },
+    { input: 'YES', expected: true },
+    { input: 'on', expected: true },
+    { input: 'ON', expected: true },
+  ])('parses "$input" as true', ({ input, expected }) => {
+    const schema: EnvConfig = { DEBUG: env.boolean() };
+    const result = validateEnv(schema, { DEBUG: input });
+    expect(result.valid).toBe(true);
+    expect(result.env.DEBUG).toBe(expected);
+  });
+
+  test.each([
+    { input: 'false', expected: false },
+    { input: 'FALSE', expected: false },
+    { input: 'False', expected: false },
+    { input: '0', expected: false },
+    { input: 'no', expected: false },
+    { input: 'NO', expected: false },
+    { input: 'off', expected: false },
+    { input: 'OFF', expected: false },
+  ])('parses "$input" as false', ({ input, expected }) => {
+    const schema: EnvConfig = { DEBUG: env.boolean() };
+    const result = validateEnv(schema, { DEBUG: input });
+    expect(result.valid).toBe(true);
+    expect(result.env.DEBUG).toBe(expected);
+  });
+
+  test('rejects invalid boolean string "maybe"', () => {
+    const schema: EnvConfig = { DEBUG: env.boolean() };
+    const result = validateEnv(schema, { DEBUG: 'maybe' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Invalid boolean');
+  });
+
+  test('rejects invalid boolean string "2"', () => {
+    const schema: EnvConfig = { DEBUG: env.boolean() };
+    const result = validateEnv(schema, { DEBUG: '2' });
+    expect(result.valid).toBe(false);
+  });
+
+  test('boolean with default false uses default when missing', () => {
+    const schema: EnvConfig = { DEBUG: env.boolean().default(false) };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.DEBUG).toBe(false);
+  });
+
+  test('boolean with default true uses default when empty string', () => {
+    const schema: EnvConfig = { DEBUG: env.boolean().default(true) };
+    const result = validateEnv(schema, { DEBUG: '' });
+    expect(result.valid).toBe(true);
+    expect(result.env.DEBUG).toBe(true);
+  });
+});
+
+describe('env.url() edge cases', () => {
+  test('accepts https URL', () => {
+    const schema: EnvConfig = { API_URL: env.url() };
+    const result = validateEnv(schema, { API_URL: 'https://api.example.com' });
+    expect(result.valid).toBe(true);
+    expect(result.env.API_URL).toBe('https://api.example.com');
+  });
+
+  test('accepts http URL', () => {
+    const schema: EnvConfig = { API_URL: env.url() };
+    const result = validateEnv(schema, { API_URL: 'http://localhost:3000' });
+    expect(result.valid).toBe(true);
+  });
+
+  test('accepts URL with path and query', () => {
+    const schema: EnvConfig = { API_URL: env.url() };
+    const result = validateEnv(schema, { API_URL: 'https://example.com/api/v1?key=val' });
+    expect(result.valid).toBe(true);
+  });
+
+  test('rejects plain string as URL', () => {
+    const schema: EnvConfig = { API_URL: env.url() };
+    const result = validateEnv(schema, { API_URL: 'not-a-url' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toBe('Invalid URL');
+  });
+
+  test('rejects empty string for required URL', () => {
+    const schema: EnvConfig = { API_URL: env.url().required() };
+    const result = validateEnv(schema, { API_URL: '' });
+    expect(result.valid).toBe(false);
+  });
+
+  test('rejects partial URL without protocol', () => {
+    const schema: EnvConfig = { API_URL: env.url() };
+    const result = validateEnv(schema, { API_URL: 'example.com' });
+    expect(result.valid).toBe(false);
+  });
+
+  test('url with default value uses default when missing', () => {
+    const schema: EnvConfig = {
+      API_URL: env.url().default('https://default.example.com'),
+    };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.API_URL).toBe('https://default.example.com');
+  });
+});
+
+describe('env.enum() edge cases', () => {
+  test('accepts valid enum value', () => {
+    const schema: EnvConfig = {
+      NODE_ENV: env.enum(['development', 'production', 'test'] as const),
+    };
+    const result = validateEnv(schema, { NODE_ENV: 'production' });
+    expect(result.valid).toBe(true);
+    expect(result.env.NODE_ENV).toBe('production');
+  });
+
+  test('rejects invalid enum value', () => {
+    const schema: EnvConfig = {
+      NODE_ENV: env.enum(['development', 'production', 'test'] as const),
+    };
+    const result = validateEnv(schema, { NODE_ENV: 'staging' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Must be one of');
+    expect(result.errors[0].message).toContain('development');
+    expect(result.errors[0].message).toContain('production');
+    expect(result.errors[0].message).toContain('test');
+    expect(result.errors[0].received).toBe('staging');
+  });
+
+  test('enum is case-sensitive', () => {
+    const schema: EnvConfig = {
+      LOG_LEVEL: env.enum(['debug', 'info', 'warn', 'error'] as const),
+    };
+    const result = validateEnv(schema, { LOG_LEVEL: 'DEBUG' });
+    expect(result.valid).toBe(false);
+  });
+
+  test('required enum with missing value produces error', () => {
+    const schema: EnvConfig = {
+      NODE_ENV: env.enum(['development', 'production'] as const).required(),
+    };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].key).toBe('NODE_ENV');
+  });
+
+  test('enum with default uses default when missing', () => {
+    const schema: EnvConfig = {
+      NODE_ENV: env.enum(['development', 'production', 'test'] as const).default('development'),
+    };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.NODE_ENV).toBe('development');
+  });
+
+  test('single-value enum', () => {
+    const schema: EnvConfig = {
+      MODE: env.enum(['readonly'] as const),
+    };
+    const result = validateEnv(schema, { MODE: 'readonly' });
+    expect(result.valid).toBe(true);
+  });
+});
+
+describe('env.json() edge cases', () => {
+  test('parses valid JSON object', () => {
+    const schema: EnvConfig = { CONFIG: env.json() };
+    const result = validateEnv(schema, { CONFIG: '{"host":"localhost","port":5432}' });
+    expect(result.valid).toBe(true);
+    expect(result.env.CONFIG).toEqual({ host: 'localhost', port: 5432 });
+  });
+
+  test('parses JSON array', () => {
+    const schema: EnvConfig = { LIST: env.json() };
+    const result = validateEnv(schema, { LIST: '["a","b","c"]' });
+    expect(result.valid).toBe(true);
+    expect(result.env.LIST).toEqual(['a', 'b', 'c']);
+  });
+
+  test('parses JSON null', () => {
+    const schema: EnvConfig = { NULLABLE: env.json() };
+    const result = validateEnv(schema, { NULLABLE: 'null' });
+    expect(result.valid).toBe(true);
+    expect(result.env.NULLABLE).toBeNull();
+  });
+
+  test('rejects invalid JSON', () => {
+    const schema: EnvConfig = { CONFIG: env.json() };
+    const result = validateEnv(schema, { CONFIG: '{invalid}' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Invalid JSON');
+    expect(result.errors[0].received).toBe('{invalid}');
+  });
+
+  test('rejects plain string as JSON', () => {
+    const schema: EnvConfig = { CONFIG: env.json() };
+    const result = validateEnv(schema, { CONFIG: 'just a string' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Invalid JSON');
+  });
+
+  test('json with default uses default when missing', () => {
+    const schema: EnvConfig = {
+      CONFIG: env.json().default({ debug: false }),
+    };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.CONFIG).toEqual({ debug: false });
+  });
+
+  test('required json with empty string produces error', () => {
+    const schema: EnvConfig = { CONFIG: env.json().required() };
+    const result = validateEnv(schema, { CONFIG: '' });
+    expect(result.valid).toBe(false);
+  });
+});
+
+describe('env.number() edge cases', () => {
+  test('parses integer string', () => {
+    const schema: EnvConfig = { COUNT: env.number() };
+    const result = validateEnv(schema, { COUNT: '42' });
+    expect(result.valid).toBe(true);
+    expect(result.env.COUNT).toBe(42);
+  });
+
+  test('parses negative number', () => {
+    const schema: EnvConfig = { OFFSET: env.number() };
+    const result = validateEnv(schema, { OFFSET: '-10' });
+    expect(result.valid).toBe(true);
+    expect(result.env.OFFSET).toBe(-10);
+  });
+
+  test('parses float', () => {
+    const schema: EnvConfig = { RATE: env.number() };
+    const result = validateEnv(schema, { RATE: '3.14' });
+    expect(result.valid).toBe(true);
+    expect(result.env.RATE).toBe(3.14);
+  });
+
+  test('parses zero', () => {
+    const schema: EnvConfig = { VAL: env.number() };
+    const result = validateEnv(schema, { VAL: '0' });
+    expect(result.valid).toBe(true);
+    expect(result.env.VAL).toBe(0);
+  });
+
+  test('rejects non-numeric string', () => {
+    const schema: EnvConfig = { VAL: env.number() };
+    const result = validateEnv(schema, { VAL: 'abc' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Invalid number');
+  });
+
+  test('rejects mixed alphanumeric like "42px"', () => {
+    const schema: EnvConfig = { VAL: env.number() };
+    const result = validateEnv(schema, { VAL: '42px' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Invalid number');
+  });
+
+  test('number with default uses default when missing', () => {
+    const schema: EnvConfig = { TIMEOUT: env.number().default(5000) };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.TIMEOUT).toBe(5000);
+  });
+
+  test('required number with missing value produces error', () => {
+    const schema: EnvConfig = { COUNT: env.number().required() };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].key).toBe('COUNT');
+  });
+});
+
+describe('env.string() edge cases', () => {
+  test('accepts any string value', () => {
+    const schema: EnvConfig = { NAME: env.string() };
+    const result = validateEnv(schema, { NAME: 'hello world' });
+    expect(result.valid).toBe(true);
+    expect(result.env.NAME).toBe('hello world');
+  });
+
+  test('required string with empty string produces error', () => {
+    const schema: EnvConfig = { NAME: env.string().required() };
+    const result = validateEnv(schema, { NAME: '' });
+    expect(result.valid).toBe(false);
+  });
+
+  test('optional string with empty string triggers default', () => {
+    const schema: EnvConfig = { NAME: env.string().default('fallback') };
+    const result = validateEnv(schema, { NAME: '' });
+    expect(result.valid).toBe(true);
+    expect(result.env.NAME).toBe('fallback');
+  });
+
+  test('optional string without default skips when empty', () => {
+    const schema: EnvConfig = { NAME: env.string() };
+    const result = validateEnv(schema, { NAME: '' });
+    expect(result.valid).toBe(true);
+    expect(result.env.NAME).toBeUndefined();
+  });
+
+  test('optional string without default skips when undefined', () => {
+    const schema: EnvConfig = { NAME: env.string() };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.NAME).toBeUndefined();
+  });
+});
+
+describe('custom transform and validate', () => {
+  test('custom transform on string', () => {
+    const schema: EnvConfig = {
+      UPPER_NAME: env.string().validate((v) => {
+        if (v !== v.toUpperCase()) return 'Must be uppercase';
+        return true;
+      }),
+    };
+    const resultBad = validateEnv(schema, { UPPER_NAME: 'hello' });
+    expect(resultBad.valid).toBe(false);
+    expect(resultBad.errors[0].message).toBe('Must be uppercase');
+
+    const resultGood = validateEnv(schema, { UPPER_NAME: 'HELLO' });
+    expect(resultGood.valid).toBe(true);
+  });
+
+  test('custom validate on number (min/max range)', () => {
+    const schema: EnvConfig = {
+      WORKERS: env.number().validate((v) => {
+        if (v < 1 || v > 16) return 'Workers must be between 1 and 16';
+        return true;
+      }),
+    };
+    const tooLow = validateEnv(schema, { WORKERS: '0' });
+    expect(tooLow.valid).toBe(false);
+    expect(tooLow.errors[0].message).toBe('Workers must be between 1 and 16');
+
+    const tooHigh = validateEnv(schema, { WORKERS: '32' });
+    expect(tooHigh.valid).toBe(false);
+
+    const ok = validateEnv(schema, { WORKERS: '4' });
+    expect(ok.valid).toBe(true);
+    expect(ok.env.WORKERS).toBe(4);
+  });
+
+  test('validate function returning false produces generic message', () => {
+    const schema: EnvConfig = {
+      VAL: env.string().validate(() => false),
+    };
+    const result = validateEnv(schema, { VAL: 'something' });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].message).toContain('Validation failed for VAL');
+  });
+
+  test('validate function returning true passes', () => {
+    const schema: EnvConfig = {
+      VAL: env.string().validate(() => true),
+    };
+    const result = validateEnv(schema, { VAL: 'anything' });
+    expect(result.valid).toBe(true);
+    expect(result.env.VAL).toBe('anything');
+  });
+});
+
+describe('schema builder chaining interactions', () => {
+  test('required() then default() makes it optional with default', () => {
+    const schema = env.string().required().default('fallback');
+    expect(schema._schema.required).toBe(false);
+    expect(schema._schema.default).toBe('fallback');
+  });
+
+  test('default() then required() makes it required without default', () => {
+    const schema = env.string().default('initial').required();
+    expect(schema._schema.required).toBe(true);
+    expect(schema._schema.default).toBeUndefined();
+  });
+
+  test('builder returns same builder reference for chaining', () => {
+    const builder = env.string();
+    const chained = builder.required();
+    expect(chained).toBe(builder);
+  });
+
+  test('public() can be chained with other methods', () => {
+    const schema = env.number().default(42).public().description('Worker count');
+    expect(schema._schema.public).toBe(true);
+    expect(schema._schema.default).toBe(42);
+    expect(schema._schema.description).toBe('Worker count');
+  });
+});
+
+describe('multiple variables in one validateEnv call', () => {
+  test('validates multiple variables at once, all valid', () => {
+    const schema: EnvConfig = {
+      DB_HOST: env.string().required(),
+      DB_PORT: env.port().default(5432),
+      DB_NAME: env.string().default('mydb'),
+      DEBUG: env.boolean().default(false),
+      NODE_ENV: env.enum(['development', 'production', 'test'] as const).default('development'),
+      API_URL: env.url().required(),
+      CONFIG: env.json().default({}),
+    };
+    const result = validateEnv(schema, {
+      DB_HOST: 'localhost',
+      DB_PORT: '5432',
+      API_URL: 'https://api.example.com',
+    });
+    expect(result.valid).toBe(true);
+    expect(result.env.DB_HOST).toBe('localhost');
+    expect(result.env.DB_PORT).toBe(5432);
+    expect(result.env.DB_NAME).toBe('mydb');
+    expect(result.env.DEBUG).toBe(false);
+    expect(result.env.NODE_ENV).toBe('development');
+    expect(result.env.API_URL).toBe('https://api.example.com');
+    expect(result.env.CONFIG).toEqual({});
+  });
+
+  test('collects multiple errors from different variables', () => {
+    const schema: EnvConfig = {
+      DB_HOST: env.string().required(),
+      DB_PORT: env.port().required(),
+      API_URL: env.url().required(),
+    };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(false);
+    expect(result.errors).toHaveLength(3);
+    const errorKeys = result.errors.map((e) => e.key);
+    expect(errorKeys).toContain('DB_HOST');
+    expect(errorKeys).toContain('DB_PORT');
+    expect(errorKeys).toContain('API_URL');
+  });
+
+  test('mix of valid and invalid variables', () => {
+    const schema: EnvConfig = {
+      GOOD_STRING: env.string().required(),
+      BAD_PORT: env.port(),
+      GOOD_BOOL: env.boolean(),
+      BAD_URL: env.url(),
+    };
+    const result = validateEnv(schema, {
+      GOOD_STRING: 'ok',
+      BAD_PORT: 'not-a-port',
+      GOOD_BOOL: 'true',
+      BAD_URL: 'not-valid',
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toHaveLength(2);
+    const errorKeys = result.errors.map((e) => e.key);
+    expect(errorKeys).toContain('BAD_PORT');
+    expect(errorKeys).toContain('BAD_URL');
+    expect(result.env.GOOD_STRING).toBe('ok');
+    expect(result.env.GOOD_BOOL).toBe(true);
+  });
+});
+
+describe('env.array() edge cases', () => {
+  test('parses comma-separated values', () => {
+    const schema: EnvConfig = { ORIGINS: env.array() };
+    const result = validateEnv(schema, { ORIGINS: 'http://a.com,http://b.com' });
+    expect(result.valid).toBe(true);
+    expect(result.env.ORIGINS).toEqual(['http://a.com', 'http://b.com']);
+  });
+
+  test('trims whitespace around values', () => {
+    const schema: EnvConfig = { TAGS: env.array() };
+    const result = validateEnv(schema, { TAGS: ' foo , bar , baz ' });
+    expect(result.valid).toBe(true);
+    expect(result.env.TAGS).toEqual(['foo', 'bar', 'baz']);
+  });
+
+  test('empty string produces empty array', () => {
+    const schema: EnvConfig = { TAGS: env.array() };
+    const result = validateEnv(schema, { TAGS: '' });
+    // empty string is treated as missing, so skips (optional, no default)
+    expect(result.valid).toBe(true);
+    expect(result.env.TAGS).toBeUndefined();
+  });
+
+  test('whitespace-only string produces empty array', () => {
+    const schema: EnvConfig = { TAGS: env.array() };
+    const result = validateEnv(schema, { TAGS: '   ' });
+    expect(result.valid).toBe(true);
+    // "   " is not empty string, so transform runs
+    expect(result.env.TAGS).toEqual([]);
+  });
+
+  test('single value without comma', () => {
+    const schema: EnvConfig = { TAGS: env.array() };
+    const result = validateEnv(schema, { TAGS: 'single' });
+    expect(result.valid).toBe(true);
+    expect(result.env.TAGS).toEqual(['single']);
+  });
+
+  test('array with default uses default when missing', () => {
+    const schema: EnvConfig = {
+      ORIGINS: env.array().default(['http://localhost']),
+    };
+    const result = validateEnv(schema, {});
+    expect(result.valid).toBe(true);
+    expect(result.env.ORIGINS).toEqual(['http://localhost']);
+  });
+});
+
+describe('error object shape', () => {
+  test('transform error includes expected type and received value', () => {
+    const schema: EnvConfig = { NUM: env.number() };
+    const result = validateEnv(schema, { NUM: 'xyz' });
+    expect(result.errors[0]).toEqual({
+      key: 'NUM',
+      message: 'Invalid number: xyz',
+      expected: 'number',
+      received: 'xyz',
+    });
+  });
+
+  test('validation error includes received value', () => {
+    const schema: EnvConfig = { PORT: env.port() };
+    const result = validateEnv(schema, { PORT: '99999' });
+    expect(result.errors[0].key).toBe('PORT');
+    expect(result.errors[0].received).toBe('99999');
+  });
+
+  test('required missing error includes expected type', () => {
+    const schema: EnvConfig = { VAL: env.number().required() };
+    const result = validateEnv(schema, {});
+    expect(result.errors[0].expected).toBe('number');
+    expect(result.errors[0].received).toBeUndefined();
+  });
+});
+
+describe('EREO_ prefix warnings', () => {
+  test('does not warn about non-EREO_ prefixed unknown variables', () => {
+    const schema: EnvConfig = { KNOWN: env.string() };
+    const result = validateEnv(schema, {
+      KNOWN: 'value',
+      OTHER_UNKNOWN: 'something',
+    });
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  test('warns about multiple unknown EREO_ variables', () => {
+    const schema: EnvConfig = {};
+    const result = validateEnv(schema, {
+      EREO_ONE: 'a',
+      EREO_TWO: 'b',
+    });
+    expect(result.warnings).toHaveLength(2);
+  });
+});

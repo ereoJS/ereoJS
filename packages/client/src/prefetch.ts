@@ -52,9 +52,9 @@ function isCacheValid(entry: PrefetchEntry, cacheDuration: number): boolean {
  * Prefetch a URL.
  */
 export async function prefetch(url: string): Promise<void> {
-  // Check cache
+  // Check cache — skip if already loaded or currently loading
   const cached = prefetchCache.get(url);
-  if (cached && isCacheValid(cached, defaultOptions.cacheDuration)) {
+  if (cached && (cached.loading || isCacheValid(cached, defaultOptions.cacheDuration))) {
     return;
   }
 

@@ -9,7 +9,6 @@ import {
   createApp,
   type FrameworkConfig,
   setupEnv,
-  type EnvConfig,
   type AppContext,
   type NextFunction,
 } from '@ereo/core';
@@ -22,6 +21,7 @@ import {
   HMR_CLIENT_CODE,
   ERROR_OVERLAY_SCRIPT,
 } from '@ereo/bundler';
+import { loadConfig } from '../config';
 
 /**
  * Dev command options.
@@ -34,33 +34,20 @@ export interface DevOptions {
   trace?: boolean;
 }
 
-/** Extended config with env schema */
-interface EreoConfig extends FrameworkConfig {
-  env?: EnvConfig;
-}
-
 /**
  * Run the dev command.
  */
 export async function dev(options: DevOptions = {}): Promise<void> {
-  const port = options.port || 3000;
-  const hostname = options.host || 'localhost';
   const root = process.cwd();
 
   console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Dev Server\n');
 
-  // Load config if exists
-  let config: EreoConfig = {};
-  const configPath = join(root, 'ereo.config.ts');
+  // Load config if exists (must happen before port/hostname resolution)
+  const { config, configPath } = await loadConfig(root);
 
-  try {
-    if (await Bun.file(configPath).exists()) {
-      const configModule = await import(configPath);
-      config = configModule.default || configModule;
-    }
-  } catch (error) {
-    console.warn('Could not load config:', error);
-  }
+  // Resolve port/hostname: CLI option → config → default
+  const port = options.port || config.server?.port || 3000;
+  const hostname = options.host || config.server?.hostname || 'localhost';
 
   // Load and validate environment variables
   if (config.env) {
@@ -78,10 +65,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     config: {
       ...config,
       server: {
+        ...config.server,
         port,
         hostname,
         development: true,
-        ...config.server,
       },
     },
   });
@@ -101,6 +88,18 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
   // Watch for file changes
   hmrWatcher.watch(join(root, 'app'));
+
+  // Watch config file for changes and restart
+  if (configPath) {
+    const { watch } = await import('node:fs');
+    let configDebounce: ReturnType<typeof setTimeout> | null = null;
+    watch(configPath, () => {
+      if (configDebounce) clearTimeout(configDebounce);
+      configDebounce = setTimeout(() => {
+        console.log('\x1b[33m⟳\x1b[0m Config changed — restart the dev server to apply changes.');
+      }, 200);
+    });
+  }
 
   // Handle route changes
   router.on('reload', async () => {

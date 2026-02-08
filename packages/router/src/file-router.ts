@@ -343,8 +343,14 @@ export class FileRouter {
    * Find parent route for a given route.
    */
   private findParentRoute(route: Route): Route | undefined {
-    const parentId = route.id.split('/').slice(0, -1).join('/') || '/';
-    return this.routes.find((r) => r.id === parentId);
+    // Walk up the path hierarchy until we find an existing parent route
+    const segments = route.id.split('/');
+    for (let i = segments.length - 1; i >= 1; i--) {
+      const parentId = segments.slice(0, i).join('/') || '/';
+      const parent = this.routes.find((r) => r.id === parentId);
+      if (parent) return parent;
+    }
+    return undefined;
   }
 
   /**

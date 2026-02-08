@@ -30,6 +30,16 @@ export interface RouteInfo {
   authRequired?: boolean;
 }
 
+/** Escape HTML special characters */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Generate HTML for the route inspector UI */
 export function generateInspectorHTML(routes: RouteInfo[]): string {
   return `<!DOCTYPE html>
@@ -169,16 +179,16 @@ export function generateInspectorHTML(routes: RouteInfo[]): string {
 
     <div class="route-tree">
       ${routes.map(route => `
-        <div class="route-item" data-path="${route.path.toLowerCase()}">
-          <span class="method-badge method-${route.renderMode}">${route.renderMode}</span>
-          <span class="route-path">${route.path}</span>
+        <div class="route-item" data-path="${escapeHtml(route.path.toLowerCase())}">
+          <span class="method-badge method-${escapeHtml(route.renderMode)}">${escapeHtml(route.renderMode)}</span>
+          <span class="route-path">${escapeHtml(route.path)}</span>
           <div class="route-tags">
             ${route.islandCount > 0 ? `<span class="tag tag-islands">${route.islandCount} islands</span>` : ''}
             ${route.hasLoader ? `<span class="tag tag-loader">loader</span>` : ''}
             ${route.hasAction ? `<span class="tag tag-action">action</span>` : ''}
             ${route.authRequired ? `<span class="tag tag-auth">auth</span>` : ''}
           </div>
-          <span class="route-file">${route.file}</span>
+          <span class="route-file">${escapeHtml(route.file)}</span>
         </div>
       `).join('')}
     </div>

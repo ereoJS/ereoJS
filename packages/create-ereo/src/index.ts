@@ -600,7 +600,7 @@ async function generateTailwindProject(
   // ereo.config.ts
   // ============================================================================
   const ereoConfig = `
-import { defineConfig, env } from '@ereo/core';
+import { defineConfig } from '@ereo/core';
 import tailwind from '@ereo/plugin-tailwind';
 
 export default defineConfig({
@@ -611,13 +611,6 @@ export default defineConfig({
   },
   build: {
     target: 'bun',
-  },
-  // Environment variable validation
-  env: {
-    NODE_ENV: env.enum(['development', 'production', 'test'] as const).default('development'),
-    // Add your environment variables here:
-    // DATABASE_URL: env.string().required(),
-    // API_KEY: env.string(),
   },
   plugins: [
     tailwind(),
@@ -1556,7 +1549,7 @@ export default function BlogLayout({ children }${ts ? ': BlogLayoutProps' : ''})
   const blogIndex = `
 import { PostCard } from '~/components/PostCard';
 import { getAllPosts, simulateDelay } from '~/lib/data';
-
+${ts ? "import type { Post } from '~/lib/types';\n" : ''}
 /**
  * Loader for the blog index page.
  */
@@ -1568,15 +1561,7 @@ export async function loader() {
 
 ${ts ? `interface BlogIndexProps {
   loaderData: {
-    posts: Array<{
-      slug: string;
-      title: string;
-      excerpt: string;
-      author: string;
-      date: string;
-      readTime: string;
-      tags: string[];
-    }>;
+    posts: Post[];
   };
 }\n` : ''}
 export default function BlogIndex({ loaderData }${ts ? ': BlogIndexProps' : ''}) {

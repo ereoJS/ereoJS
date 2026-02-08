@@ -6,6 +6,7 @@
 
 import { join } from 'node:path';
 import { type FrameworkConfig } from '@ereo/core';
+import { loadConfig } from '../config';
 
 /**
  * Supported deployment targets.
@@ -52,17 +53,7 @@ export async function deploy(options: DeployOptions = {}): Promise<DeployResult>
   console.log(`  Target: \x1b[33m${target}\x1b[0m\n`);
 
   // Load config
-  let config: FrameworkConfig = {};
-  const configPath = join(root, 'ereo.config.ts');
-
-  try {
-    if (await Bun.file(configPath).exists()) {
-      const configModule = await import(configPath);
-      config = configModule.default || configModule;
-    }
-  } catch (error) {
-    console.warn('Could not load config:', error);
-  }
+  const { config } = await loadConfig(root);
 
   // Build if needed
   if (options.build !== false) {

@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { createApp, type FrameworkConfig } from '@ereo/core';
 import { initFileRouter } from '@ereo/router';
 import { createServer } from '@ereo/server';
+import { loadConfig } from '../config';
 
 /**
  * Start command options.
@@ -37,17 +38,7 @@ export async function start(options: StartOptions = {}): Promise<void> {
   const manifest = await Bun.file(manifestPath).json();
 
   // Load config if exists
-  let config: FrameworkConfig = {};
-  const configPath = join(root, 'ereo.config.ts');
-
-  try {
-    if (await Bun.file(configPath).exists()) {
-      const configModule = await import(configPath);
-      config = configModule.default || configModule;
-    }
-  } catch {
-    // Config is optional
-  }
+  const { config } = await loadConfig(root);
 
   const port = options.port || config.server?.port || 3000;
   const hostname = options.host || config.server?.hostname || '0.0.0.0';

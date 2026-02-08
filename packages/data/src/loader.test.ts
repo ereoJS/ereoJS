@@ -348,6 +348,214 @@ describe('@ereo/data - Loader', () => {
     });
   });
 
+  describe('createLoader shorthand', () => {
+    test('returns the function directly when given a plain function', () => {
+      const loadFn = async () => ({ data: 'test' });
+      const loader = createLoader(loadFn);
+
+      expect(loader).toBe(loadFn);
+    });
+
+    test('shorthand loader can be invoked', async () => {
+      const loader = createLoader(async ({ params }: any) => {
+        return { id: params.id };
+      });
+
+      const result = await loader({
+        request: new Request('http://localhost/'),
+        params: { id: '42' },
+        context: {} as any,
+      });
+
+      expect(result).toEqual({ id: '42' });
+    });
+  });
+
+  describe('createLoader error handling edge cases', () => {
+    test('rethrows non-Error exceptions even with onError', async () => {
+      const loader = createLoader({
+        load: async () => {
+          throw 'string error';
+        },
+        onError: (error) => ({ error: error.message }),
+      });
+
+      const mockContext = { cache: { set: () => {} } };
+
+      // onError only catches Error instances, so 'string error' should rethrow
+      try {
+        await loader({
+          request: new Request('http://localhost/'),
+          params: {},
+          context: mockContext as any,
+        });
+        expect(true).toBe(false);
+      } catch (e) {
+        expect(e).toBe('string error');
+      }
+    });
+  });
+
+  describe('serializeLoaderData XSS protection', () => {
+    test('escapes script tags to prevent XSS', () => {
+      const data = { payload: '<script>alert("xss")</script>' };
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain('<script>');
+      expect(serialized).not.toContain('</script>');
+      expect(serialized).not.toContain('<');
+      expect(serialized).not.toContain('>');
+    });
+
+    test('escapes closing script tag in various forms', () => {
+      const data = { a: '</script>', b: '</SCRIPT>' };
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain('</script>');
+      // Note: uppercase S won't be escaped, but < and > will be
+      expect(serialized).not.toContain('<');
+      expect(serialized).not.toContain('>');
+    });
+
+    test('escapes ampersand to prevent HTML entity injection', () => {
+      const data = { text: 'a & b && c' };
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain('&');
+      expect(serialized).toContain('\\u0026');
+    });
+
+    test('escapes single quotes', () => {
+      const data = { text: "it's a test" };
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain("'");
+      expect(serialized).toContain('\\u0027');
+    });
+
+    test('escapes Unicode line separator (U+2028)', () => {
+      const data = { text: 'line\u2028separator' };
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain('\u2028');
+      expect(serialized).toContain('\\u2028');
+    });
+
+    test('escapes Unicode paragraph separator (U+2029)', () => {
+      const data = { text: 'para\u2029separator' };
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain('\u2029');
+      expect(serialized).toContain('\\u2029');
+    });
+
+    test('escapes all dangerous characters simultaneously', () => {
+      const data = { evil: "<script>alert('xss' & \u2028\u2029)</script>" };
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain('<');
+      expect(serialized).not.toContain('>');
+      expect(serialized).not.toContain('&');
+      expect(serialized).not.toContain("'");
+      expect(serialized).not.toContain('\u2028');
+      expect(serialized).not.toContain('\u2029');
+    });
+
+    test('serialized output is valid JSON when unescaped', () => {
+      const data = { name: 'test', count: 42, nested: { arr: [1, 2] } };
+      const serialized = serializeLoaderData(data);
+
+      // The escaped output should still parse correctly as JSON
+      const parsed = JSON.parse(serialized);
+      expect(parsed).toEqual(data);
+    });
+
+    test('handles null data', () => {
+      expect(serializeLoaderData(null)).toBe('null');
+    });
+
+    test('handles boolean data', () => {
+      expect(serializeLoaderData(true)).toBe('true');
+      expect(serializeLoaderData(false)).toBe('false');
+    });
+
+    test('handles empty string', () => {
+      const serialized = serializeLoaderData('');
+      expect(serialized).toBe('""');
+    });
+
+    test('handles numeric data', () => {
+      expect(serializeLoaderData(42)).toBe('42');
+      expect(serializeLoaderData(0)).toBe('0');
+    });
+
+    test('handles array data', () => {
+      const data = ['<script>', '&amp;', "'quote'"];
+      const serialized = serializeLoaderData(data);
+
+      expect(serialized).not.toContain('<');
+      expect(serialized).not.toContain('>');
+      expect(serialized).not.toContain("'");
+    });
+
+    test('prevents inline script injection via closing tag', () => {
+      // This is the classic XSS vector for JSON in script tags:
+      // <script>var data = {"html":"</script><script>alert(1)</script>"}</script>
+      const data = { html: '</script><script>alert(1)</script>' };
+      const serialized = serializeLoaderData(data);
+
+      // The serialized output should not contain any raw < or > that could
+      // break out of a script context
+      expect(serialized).not.toMatch(/<\/script>/i);
+      expect(serialized).not.toContain('<');
+    });
+  });
+
+  describe('parseLoaderData', () => {
+    test('throws on invalid JSON', () => {
+      expect(() => parseLoaderData('not valid json')).toThrow('Failed to parse loader data: invalid JSON');
+    });
+
+    test('throws on empty string', () => {
+      expect(() => parseLoaderData('')).toThrow('Failed to parse loader data: invalid JSON');
+    });
+
+    test('throws on incomplete JSON', () => {
+      expect(() => parseLoaderData('{"incomplete')).toThrow('Failed to parse loader data: invalid JSON');
+    });
+
+    test('parses valid JSON objects', () => {
+      expect(parseLoaderData('{"a":1}')).toEqual({ a: 1 });
+    });
+
+    test('parses valid JSON arrays', () => {
+      expect(parseLoaderData('[1,2,3]')).toEqual([1, 2, 3]);
+    });
+
+    test('parses valid JSON primitives', () => {
+      expect(parseLoaderData('42')).toBe(42);
+      expect(parseLoaderData('"hello"')).toBe('hello');
+      expect(parseLoaderData('true')).toBe(true);
+      expect(parseLoaderData('null')).toBe(null);
+    });
+
+    test('roundtrips serializeLoaderData for safe data', () => {
+      const original = { nested: { array: [1, 2, 3] }, name: 'test' };
+      const serialized = serializeLoaderData(original);
+      const parsed = parseLoaderData(serialized);
+      expect(parsed).toEqual(original);
+    });
+
+    test('roundtrips serializeLoaderData for data with special chars', () => {
+      // Characters like <, >, & get escaped by serializeLoaderData
+      // but JSON.parse handles the unicode escapes correctly
+      const original = { html: '<div>test & stuff</div>' };
+      const serialized = serializeLoaderData(original);
+      const parsed = parseLoaderData<typeof original>(serialized);
+      expect(parsed).toEqual(original);
+    });
+  });
+
   describe('fetchData', () => {
     test('fetches JSON data', async () => {
       // Mock a JSON endpoint

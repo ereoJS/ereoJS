@@ -880,7 +880,11 @@ export class BunServer {
         ? `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
         : '';
       const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
-      html = html.replace('</body>', `${loaderScript}${clientScript}</body>`);
+      if (html.includes('</body>')) {
+        html = html.replace('</body>', `${loaderScript}${clientScript}</body>`);
+      } else {
+        html += `${loaderScript}${clientScript}`;
+      }
 
       const encoder = new TextEncoder();
       const htmlBytes = encoder.encode(html);

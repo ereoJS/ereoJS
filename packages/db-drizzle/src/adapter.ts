@@ -443,6 +443,42 @@ async function createLibSQLClient(config: LibSQLConfig): Promise<DrizzleClientRe
   return { client, connection };
 }
 
+/**
+ * Valid PRAGMA journal modes for SQLite.
+ */
+export const VALID_JOURNAL_MODES = ['DELETE', 'TRUNCATE', 'PERSIST', 'MEMORY', 'WAL', 'OFF'] as const;
+
+/**
+ * Valid PRAGMA synchronous modes for SQLite.
+ */
+export const VALID_SYNCHRONOUS = ['OFF', 'NORMAL', 'FULL', 'EXTRA'] as const;
+
+/**
+ * Validate PRAGMA configuration values.
+ * Defense-in-depth: runtime validation prevents SQL injection even if TypeScript types are bypassed.
+ *
+ * @throws {Error} If any PRAGMA value is invalid
+ */
+export function validatePragmaConfig(pragma: NonNullable<BunSQLiteConfig['pragma']>): void {
+  const { journal_mode, synchronous, cache_size } = pragma;
+
+  if (journal_mode) {
+    if (!(VALID_JOURNAL_MODES as readonly string[]).includes(journal_mode)) {
+      throw new Error(`Invalid journal_mode: ${journal_mode}`);
+    }
+  }
+  if (synchronous) {
+    if (!(VALID_SYNCHRONOUS as readonly string[]).includes(synchronous)) {
+      throw new Error(`Invalid synchronous mode: ${synchronous}`);
+    }
+  }
+  if (cache_size !== undefined && cache_size !== 0) {
+    if (!Number.isInteger(cache_size)) {
+      throw new Error(`Invalid cache_size: ${cache_size}`);
+    }
+  }
+}
+
 async function createBunSQLiteClient(config: BunSQLiteConfig): Promise<DrizzleClientResult> {
   const sqliteModule = await import('bun:sqlite');
   const drizzleModule = await import('drizzle-orm/bun-sqlite' as string) as any;
@@ -451,11 +487,18 @@ async function createBunSQLiteClient(config: BunSQLiteConfig): Promise<DrizzleCl
 
   // Apply PRAGMA settings
   if (config.pragma) {
+    validatePragmaConfig(config.pragma);
     const { journal_mode, synchronous, foreign_keys, cache_size } = config.pragma;
-    if (journal_mode) connection.exec(`PRAGMA journal_mode = ${journal_mode}`);
-    if (synchronous) connection.exec(`PRAGMA synchronous = ${synchronous}`);
+    if (journal_mode) {
+      connection.exec(`PRAGMA journal_mode = ${journal_mode}`);
+    }
+    if (synchronous) {
+      connection.exec(`PRAGMA synchronous = ${synchronous}`);
+    }
     if (foreign_keys !== undefined) connection.exec(`PRAGMA foreign_keys = ${foreign_keys ? 'ON' : 'OFF'}`);
-    if (cache_size) connection.exec(`PRAGMA cache_size = ${cache_size}`);
+    if (cache_size) {
+      connection.exec(`PRAGMA cache_size = ${cache_size}`);
+    }
   }
 
   const client = drizzleModule.drizzle(connection, {

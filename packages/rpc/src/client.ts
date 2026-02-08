@@ -403,6 +403,7 @@ export function createClient<T extends Router<RouterDef>>(
 
               // Close WebSocket if no more subscriptions
               if (subscriptions.size === 0 && pendingSubscriptions.length === 0) {
+                stopHeartbeat();
                 if (reconnectTimeout) {
                   clearTimeout(reconnectTimeout);
                   reconnectTimeout = null;
@@ -410,6 +411,7 @@ export function createClient<T extends Router<RouterDef>>(
                 ws?.close();
                 ws = null;
                 wsConnected = false;
+                wsConnecting = false;
               }
             };
           };

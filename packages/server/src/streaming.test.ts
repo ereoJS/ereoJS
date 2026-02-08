@@ -560,4 +560,334 @@ describe('@ereo/server - Streaming', () => {
       expect(fullContent).toContain('</html>');
     });
   });
+
+  // ============================================================================
+  // Additional Tests: Shell creation with special characters (XSS prevention)
+  // ============================================================================
+  describe('createShell - XSS prevention and special characters', () => {
+    test('escapes double quotes in meta name attributes', () => {
+      const { head } = createShell({
+        shell: {
+          meta: [
+            { name: 'author" onload="alert(1)', content: 'Safe' },
+          ],
+        },
+      });
+
+      // Double quotes should be escaped to &quot;
+      expect(head).not.toContain('onload="alert(1)');
+      expect(head).toContain('&quot;');
+    });
+
+    test('escapes HTML entities in meta content', () => {
+      const { head } = createShell({
+        shell: {
+          meta: [
+            { name: 'description', content: 'Text with <script>alert("xss")</script> injection' },
+          ],
+        },
+      });
+
+      // < should be escaped to &lt;
+      expect(head).not.toContain('<script>alert');
+      expect(head).toContain('&lt;');
+    });
+
+    test('escapes ampersands in meta content', () => {
+      const { head } = createShell({
+        shell: {
+          meta: [
+            { name: 'description', content: 'Tom & Jerry & Friends' },
+          ],
+        },
+      });
+
+      expect(head).toContain('&amp;');
+      // The raw & should be escaped
+      expect(head).toContain('Tom &amp; Jerry &amp; Friends');
+    });
+
+    test('escapes special chars in OG property meta tags', () => {
+      const { head } = createShell({
+        shell: {
+          meta: [
+            { property: 'og:description" onclick="alert(1)', content: 'Safe content' },
+          ],
+        },
+      });
+
+      expect(head).not.toContain('onclick="alert(1)');
+      expect(head).toContain('&quot;');
+    });
+
+    test('escapes special characters in link descriptor attributes', () => {
+      const { head } = createShell({
+        shell: {
+          links: [
+            { rel: 'stylesheet', href: '/styles/main.css" onload="alert(1)' } as any,
+          ],
+        },
+      });
+
+      expect(head).not.toContain('onload="alert(1)');
+      expect(head).toContain('&quot;');
+    });
+
+    test('handles empty meta content safely', () => {
+      const { head } = createShell({
+        shell: {
+          meta: [
+            { name: 'robots', content: '' },
+          ],
+        },
+      });
+
+      expect(head).toContain('name="robots" content=""');
+    });
+
+    test('handles meta with only property (no name)', () => {
+      const { head } = createShell({
+        shell: {
+          meta: [
+            { property: 'og:image', content: 'https://example.com/image.jpg' },
+          ],
+        },
+      });
+
+      expect(head).toContain('property="og:image"');
+      expect(head).toContain('content="https://example.com/image.jpg"');
+    });
+
+    test('handles meta with neither name nor property', () => {
+      const { head } = createShell({
+        shell: {
+          meta: [
+            { content: 'orphaned content' } as any,
+          ],
+        },
+      });
+
+      // Should render with property="" since name is not provided
+      expect(head).toContain('property=""');
+      expect(head).toContain('content="orphaned content"');
+    });
+  });
+
+  // ============================================================================
+  // Additional Tests: Shell with link descriptors
+  // ============================================================================
+  describe('createShell - Link descriptors', () => {
+    test('renders multiple link descriptors with all attributes', () => {
+      const { head } = createShell({
+        shell: {
+          links: [
+            { rel: 'stylesheet', href: '/styles/main.css' },
+            { rel: 'preload', href: '/fonts/inter.woff2', as: 'font', type: 'font/woff2', crossorigin: 'anonymous' } as any,
+            { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon' } as any,
+          ],
+        },
+      });
+
+      expect(head).toContain('rel="stylesheet"');
+      expect(head).toContain('href="/styles/main.css"');
+      expect(head).toContain('rel="preload"');
+      expect(head).toContain('as="font"');
+      expect(head).toContain('crossorigin="anonymous"');
+      expect(head).toContain('rel="icon"');
+      expect(head).toContain('href="/favicon.ico"');
+    });
+
+    test('filters out undefined link attributes', () => {
+      const { head } = createShell({
+        shell: {
+          links: [
+            { rel: 'stylesheet', href: '/main.css', as: undefined } as any,
+          ],
+        },
+      });
+
+      expect(head).toContain('rel="stylesheet"');
+      expect(head).toContain('href="/main.css"');
+      // as should not appear since it's undefined
+      expect(head).not.toContain('as=');
+    });
+  });
+
+  // ============================================================================
+  // Additional Tests: createSuspenseStream edge cases
+  // ============================================================================
+  describe('createSuspenseStream - edge cases', () => {
+    test('pushing empty string produces empty chunk', async () => {
+      const { stream, push, close } = createSuspenseStream();
+
+      push('');
+      push('data');
+      close();
+
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let result = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        result += decoder.decode(value);
+      }
+
+      expect(result).toBe('data');
+    });
+
+    test('pushing many chunks builds correct output', async () => {
+      const { stream, push, close } = createSuspenseStream();
+
+      for (let i = 0; i < 100; i++) {
+        push(`chunk${i}`);
+      }
+      close();
+
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let result = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        result += decoder.decode(value);
+      }
+
+      for (let i = 0; i < 100; i++) {
+        expect(result).toContain(`chunk${i}`);
+      }
+    });
+
+    test('handles special unicode characters', async () => {
+      const { stream, push, close } = createSuspenseStream();
+
+      push('Emoji: \u{1F600}');
+      push(' Math: \u00B1');
+      push(' CJK: \u4E16\u754C');
+      close();
+
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let result = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        result += decoder.decode(value);
+      }
+
+      expect(result).toContain('\u{1F600}');
+      expect(result).toContain('\u00B1');
+      expect(result).toContain('\u4E16\u754C');
+    });
+  });
+
+  // ============================================================================
+  // Additional Tests: createShell with combined options
+  // ============================================================================
+  describe('createShell - combined options', () => {
+    test('shell with all options combined', () => {
+      const { head, tail } = createShell({
+        shell: {
+          title: 'Full Test Page',
+          htmlAttrs: { lang: 'ja', dir: 'ltr' },
+          bodyAttrs: { class: 'dark theme-blue', 'data-page': 'home' },
+          meta: [
+            { name: 'description', content: 'A fully featured page' },
+            { property: 'og:title', content: 'OG Full Test' },
+          ],
+          links: [
+            { rel: 'stylesheet', href: '/styles.css' },
+          ],
+          head: '<script>console.log("custom head")</script>',
+        },
+        scripts: ['/app.js', '/vendor.js'],
+        styles: ['/theme.css'],
+        loaderData: { message: 'hello' },
+      });
+
+      // head checks
+      expect(head).toContain('lang="ja"');
+      expect(head).toContain('dir="ltr"');
+      expect(head).toContain('class="dark theme-blue"');
+      expect(head).toContain('data-page="home"');
+      expect(head).toContain('<title>Full Test Page</title>');
+      expect(head).toContain('name="description"');
+      expect(head).toContain('property="og:title"');
+      expect(head).toContain('href="/styles.css"');
+      expect(head).toContain('href="/theme.css"');
+      expect(head).toContain('console.log("custom head")');
+
+      // tail checks
+      expect(tail).toContain('src="/app.js"');
+      expect(tail).toContain('src="/vendor.js"');
+      expect(tail).toContain('window.__EREO_DATA__');
+    });
+
+    test('shell with no options produces valid HTML structure', () => {
+      const { head, tail } = createShell({});
+
+      expect(head).toContain('<!DOCTYPE html>');
+      expect(head).toContain('<html');
+      expect(head).toContain('<head>');
+      expect(head).toContain('<meta charset="utf-8">');
+      expect(head).toContain('<meta name="viewport"');
+      expect(head).toContain('<body');
+      expect(head).toContain('<div id="root">');
+
+      expect(tail).toContain('</div>');
+      expect(tail).toContain('</body>');
+      expect(tail).toContain('</html>');
+    });
+
+    test('shell without loaderData omits data script', () => {
+      const { tail } = createShell({
+        scripts: ['/app.js'],
+      });
+
+      expect(tail).not.toContain('window.__EREO_DATA__');
+      expect(tail).toContain('src="/app.js"');
+    });
+  });
+
+  // ============================================================================
+  // Additional Tests: createResponse with stream body
+  // ============================================================================
+  describe('createResponse - additional cases', () => {
+    test('creates response from ReadableStream body', () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode('<html>'));
+          controller.enqueue(encoder.encode('<body>Test</body>'));
+          controller.enqueue(encoder.encode('</html>'));
+          controller.close();
+        },
+      });
+
+      const response = createResponse({
+        body: stream,
+        headers: new Headers({ 'Content-Type': 'text/html; charset=utf-8' }),
+        status: 200,
+      });
+
+      expect(response).toBeInstanceOf(Response);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
+      // Body should be a ReadableStream
+      expect(response.body).toBeInstanceOf(ReadableStream);
+    });
+
+    test('creates response with 500 status', () => {
+      const response = createResponse({
+        body: 'Internal Server Error',
+        headers: new Headers({ 'Content-Type': 'text/plain' }),
+        status: 500,
+      });
+
+      expect(response.status).toBe(500);
+    });
+  });
 });

@@ -7,6 +7,7 @@
 import { join } from 'node:path';
 import { build as bundlerBuild, printBuildReport, type BuildOptions } from '@ereo/bundler';
 import type { FrameworkConfig } from '@ereo/core';
+import { loadConfig } from '../config';
 
 /**
  * Build command options.
@@ -27,17 +28,7 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
   console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Production Build\n');
 
   // Load config if exists
-  let config: FrameworkConfig = {};
-  const configPath = join(root, 'ereo.config.ts');
-
-  try {
-    if (await Bun.file(configPath).exists()) {
-      const configModule = await import(configPath);
-      config = configModule.default || configModule;
-    }
-  } catch (error) {
-    console.warn('Could not load config:', error);
-  }
+  const { config } = await loadConfig(root);
 
   // Map config target to bundler target
   const configTarget = config.build?.target || 'bun';

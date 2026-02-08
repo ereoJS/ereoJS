@@ -238,9 +238,9 @@ export class RouteMatcher {
     let normalizedPath = pathname === '' ? '/' : pathname;
     // Collapse consecutive slashes (e.g., //admin///users → /admin/users)
     normalizedPath = normalizedPath.replace(/\/{2,}/g, '/');
-    // Decode URI components for matching (e.g., /users/hello%20world → /users/hello world)
+    // Decode URI for matching, preserving path separators (%2F stays encoded)
     try {
-      normalizedPath = decodeURIComponent(normalizedPath);
+      normalizedPath = decodeURI(normalizedPath);
     } catch {
       // Malformed URI, use as-is
     }
