@@ -1,6 +1,6 @@
 {
   "name": "@ereo/cli",
-  "version": "0.1.32",
+  "version": "0.1.33",
   "license": "MIT",
   "author": "Ereo Team",
   "homepage": "https://ereo.dev",
@@ -38,10 +38,10 @@
     "@ereo/core": "workspace:*",
     "@ereo/router": "workspace:*",
     "@ereo/server": "workspace:*",
-    "@ereo/bundler": "workspace:*",
     "@ereo/trace": "workspace:*"
   },
   "devDependencies": {
+    "@ereo/bundler": "workspace:*",
     "@types/bun": "^1.1.0",
     "typescript": "^5.4.0"
   }

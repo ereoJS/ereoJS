@@ -5,7 +5,7 @@
  */
 
 import { join } from 'node:path';
-import { build as bundlerBuild, printBuildReport, type BuildOptions } from '@ereo/bundler';
+import type { BuildOptions } from '@ereo/bundler';
 import type { FrameworkConfig } from '@ereo/core';
 import { loadConfig } from '../config';
 
@@ -46,6 +46,9 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
   console.log(`  Target: ${buildOptions.target}`);
   console.log(`  Output: ${buildOptions.outDir}`);
   console.log('');
+
+  // Lazy-load bundler (not needed by start command)
+  const { build: bundlerBuild, printBuildReport } = await import('@ereo/bundler');
 
   // Run build
   const result = await bundlerBuild(buildOptions);

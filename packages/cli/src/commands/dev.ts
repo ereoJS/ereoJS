@@ -14,13 +14,6 @@ import {
 } from '@ereo/core';
 import { initFileRouter } from '@ereo/router';
 import { createServer, type ServerOptions } from '@ereo/server';
-import {
-  createHMRServer,
-  createHMRWatcher,
-  createHMRWebSocket,
-  HMR_CLIENT_CODE,
-  ERROR_OVERLAY_SCRIPT,
-} from '@ereo/bundler';
 import { loadConfig } from '../config';
 
 /**
@@ -81,6 +74,15 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
   // Load route modules
   await router.loadAllModules();
+
+  // Lazy-load bundler (not needed by start command)
+  const {
+    createHMRServer,
+    createHMRWatcher,
+    createHMRWebSocket,
+    HMR_CLIENT_CODE,
+    ERROR_OVERLAY_SCRIPT,
+  } = await import('@ereo/bundler');
 
   // Create HMR server
   const hmr = createHMRServer();

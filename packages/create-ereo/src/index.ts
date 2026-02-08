@@ -174,25 +174,25 @@ COPY package.json bun.lockb* ./
 RUN bun install --production --ignore-scripts
 
 # ---- Stage 3: Production image ----
-FROM oven/bun:1-slim AS runner
+FROM oven/bun:1-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
 # Non-root user for security
-RUN groupadd --system --gid 1001 ereo && \\
-    useradd --system --uid 1001 --gid ereo --no-create-home ereo
+RUN addgroup -S -g 1001 ereo && \\
+    adduser -S -u 1001 -G ereo -H ereo
 
 # Copy production node_modules
 COPY --from=deps --chown=ereo:ereo /app/node_modules ./node_modules
 
 # Copy build output and runtime files
-COPY --from=builder --chown=ereo:ereo /app/.ereo   ./.ereo
-COPY --from=builder --chown=ereo:ereo /app/app     ./app
-COPY --from=builder --chown=ereo:ereo /app/public  ./public
-COPY --from=builder --chown=ereo:ereo /app/package.json   ./
-COPY --from=builder --chown=ereo:ereo /app/ereo.config.*  ./
-COPY --from=builder --chown=ereo:ereo /app/tsconfig.*     ./
+COPY --from=builder --chown=ereo:ereo /app/.ereo        ./.ereo
+COPY --from=builder --chown=ereo:ereo /app/app          ./app
+COPY --from=builder --chown=ereo:ereo /app/public       ./public
+COPY --from=builder --chown=ereo:ereo /app/package.json ./
+COPY --from=builder --chown=ereo:ereo /app/ereo.config.* ./
+COPY --from=builder --chown=ereo:ereo /app/tsconfig.*    ./
 
 USER ereo
 
@@ -566,14 +566,16 @@ async function generateTailwindProject(
       '@ereo/data': EREO_VERSION,
       '@ereo/cli': EREO_VERSION,
       '@ereo/runtime-bun': EREO_VERSION,
-      '@ereo/plugin-tailwind': EREO_VERSION,
       ...(trace ? { '@ereo/trace': EREO_VERSION } : {}),
       react: '^18.2.0',
       'react-dom': '^18.2.0',
     },
     devDependencies: {
+      '@ereo/bundler': EREO_VERSION,
       '@ereo/testing': EREO_VERSION,
       '@ereo/dev-inspector': EREO_VERSION,
+      '@ereo/plugin-tailwind': EREO_VERSION,
+      tailwindcss: '^3.4.0',
       ...(ts
         ? {
             '@types/bun': '^1.1.0',
@@ -582,7 +584,6 @@ async function generateTailwindProject(
             typescript: '^5.4.0',
           }
         : {}),
-      tailwindcss: '^3.4.0',
     },
   };
 
@@ -593,20 +594,23 @@ async function generateTailwindProject(
   // ============================================================================
   const ereoConfig = `
 import { defineConfig } from '@ereo/core';
-import tailwind from '@ereo/plugin-tailwind';
+
+const plugins = [];
+
+// Tailwind is a dev/build dependency — skip in production
+if (process.env.NODE_ENV !== 'production') {
+  const { default: tailwind } = await import('@ereo/plugin-tailwind');
+  plugins.push(tailwind());
+}
 
 export default defineConfig({
   server: {
     port: 3000,
-    // Enable development features
-    development: process.env.NODE_ENV !== 'production',
   },
   build: {
     target: 'bun',
   },
-  plugins: [
-    tailwind(),
-  ],
+  plugins,
 });
 `.trim();
 
