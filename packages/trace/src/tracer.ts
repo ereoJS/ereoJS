@@ -199,11 +199,13 @@ export class TracerImpl implements Tracer {
           activeTrace.spans.set(spanData.id, spanData);
         }
         activeTrace.activeSpanCount--;
+        // Guard against negative count from double-end bugs
+        if (activeTrace.activeSpanCount < 0) activeTrace.activeSpanCount = 0;
 
         this.emit({ type: 'span:end', span: spanData });
 
         // If all spans ended, finalize the trace
-        if (activeTrace.activeSpanCount <= 0) {
+        if (activeTrace.activeSpanCount === 0) {
           this.finalizeTrace(activeTrace);
         }
       }

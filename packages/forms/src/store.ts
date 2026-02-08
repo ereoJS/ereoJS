@@ -98,7 +98,7 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
   getSignal<P extends FormPath<T>>(path: P): Signal<PathValue<T, P>>;
   getSignal(path: string): Signal<unknown>;
-  getSignal(path: string): Signal<unknown> {
+  getSignal(path: string): Signal<any> {
     let sig = this._signals.get(path);
     if (!sig) {
       let value = getPath(this._baseline, path);

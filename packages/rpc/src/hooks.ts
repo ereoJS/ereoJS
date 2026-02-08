@@ -228,7 +228,11 @@ export function useSubscription<TInput, TOutput>(
       onData: (value) => {
         setStatus('connected');
         setData(value);
-        setHistory((prev) => [...prev, value]);
+        setHistory((prev) => {
+          const next = [...prev, value];
+          // Cap history at 1000 entries to prevent unbounded memory growth
+          return next.length > 1000 ? next.slice(-1000) : next;
+        });
         onData?.(value);
       },
       onError: (err) => {

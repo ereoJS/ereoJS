@@ -4,7 +4,7 @@
  * useSyncExternalStore wrappers for signals to ensure React Compiler compatibility.
  */
 
-import { useSyncExternalStore, useCallback } from 'react';
+import { useSyncExternalStore, useCallback, useRef } from 'react';
 import type { Signal, Store } from './signals';
 
 /**
@@ -66,15 +66,32 @@ export function useStoreKey<T extends Record<string, unknown>, K extends keyof T
  * ```
  */
 export function useStore<T extends Record<string, unknown>>(store: Store<T>): T {
+  const cachedSnapshot = useRef<T | null>(null);
+  const versionRef = useRef(0);
+
   return useSyncExternalStore(
     useCallback((callback) => {
       const unsubscribers: (() => void)[] = [];
-      for (const [key, sig] of store.entries()) {
-        unsubscribers.push(sig.subscribe(callback));
+      for (const [, sig] of store.entries()) {
+        unsubscribers.push(sig.subscribe(() => {
+          versionRef.current++;
+          cachedSnapshot.current = null; // invalidate cache
+          callback();
+        }));
       }
       return () => unsubscribers.forEach((unsub) => unsub());
     }, [store]),
-    () => store.getSnapshot(),
-    () => store.getSnapshot()
+    () => {
+      if (cachedSnapshot.current === null) {
+        cachedSnapshot.current = store.getSnapshot();
+      }
+      return cachedSnapshot.current;
+    },
+    () => {
+      if (cachedSnapshot.current === null) {
+        cachedSnapshot.current = store.getSnapshot();
+      }
+      return cachedSnapshot.current;
+    }
   );
 }

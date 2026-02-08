@@ -164,13 +164,21 @@ export async function hydrateIslands(): Promise<void> {
     }
 
     // Parse props
-    const props = propsJson ? JSON.parse(propsJson) : {};
+    let props: Record<string, unknown> = {};
+    if (propsJson) {
+      try {
+        props = JSON.parse(propsJson);
+      } catch {
+        console.error(`Failed to parse props for island "${islandId}": invalid JSON`);
+        continue;
+      }
+    }
 
     // Register island
     islandRegistry.register(islandId, component, props, strategy, element, media);
 
     // Create hydration trigger
-    const cleanup = createHydrationTrigger(
+    const triggerCleanup = createHydrationTrigger(
       strategy,
       element,
       () => {
@@ -180,13 +188,16 @@ export async function hydrateIslands(): Promise<void> {
         const root = hydrateRoot(element, createElement(component, props));
         islandRegistry.markHydrated(islandId);
 
-        // Store cleanup
-        islandRegistry.setCleanup(islandId, () => root.unmount());
+        // Store composite cleanup: both trigger and root unmount
+        islandRegistry.setCleanup(islandId, () => {
+          triggerCleanup();
+          root.unmount();
+        });
       },
       media
     );
 
-    islandRegistry.setCleanup(islandId, cleanup);
+    islandRegistry.setCleanup(islandId, triggerCleanup);
   }
 }
 

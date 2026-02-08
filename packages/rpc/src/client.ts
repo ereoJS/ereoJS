@@ -425,14 +425,32 @@ export function createClient<T extends Router<RouterDef>>(
 }
 
 async function handleHttpResponse(response: Response, path: string[]): Promise<unknown> {
-  const result: RPCResponse = await response.json();
+  let result: RPCResponse;
+  try {
+    result = await response.json();
+  } catch {
+    const error = new Error(`RPC call to ${path.join('.')} returned invalid JSON (status ${response.status})`) as RPCClientError;
+    error.name = 'RPCClientError';
+    error.code = 'PARSE_ERROR';
+    error.path = path.join('.');
+    throw error;
+  }
+
+  if (!result || !('ok' in result)) {
+    const error = new Error(`RPC call to ${path.join('.')} returned unexpected response format`) as RPCClientError;
+    error.name = 'RPCClientError';
+    error.code = 'INVALID_RESPONSE';
+    error.path = path.join('.');
+    throw error;
+  }
 
   if (!result.ok) {
-    const error = new Error(result.error.message) as RPCClientError;
+    const errMsg = result.error?.message || 'Unknown RPC error';
+    const error = new Error(errMsg) as RPCClientError;
     error.name = 'RPCClientError';
-    error.code = result.error.code;
+    error.code = result.error?.code || 'UNKNOWN';
     error.path = path.join('.');
-    error.details = result.error.details;
+    error.details = result.error?.details;
     throw error;
   }
 

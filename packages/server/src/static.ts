@@ -256,7 +256,11 @@ export function serveStatic(options: StaticOptions): (request: Request) => Promi
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         // Try fallback for SPA routing
         if (fallback) {
-          const fallbackPath = join(root, fallback);
+          const fallbackPath = resolve(root, normalize(fallback));
+          // Validate fallback path doesn't escape root
+          if (!fallbackPath.startsWith(resolvedRoot)) {
+            return new Response('Forbidden', { status: 403 });
+          }
           try {
             const file = Bun.file(fallbackPath);
             return new Response(file, {
@@ -283,10 +287,14 @@ async function createDirectoryListing(dirpath: string, pathname: string): Promis
   const { readdir } = await import('node:fs/promises');
   const entries = await readdir(dirpath, { withFileTypes: true });
 
+  const escHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const safePath = escHtml(pathname);
   const items = entries.map((entry) => {
     const name = entry.isDirectory() ? `${entry.name}/` : entry.name;
-    const href = join(pathname, entry.name);
-    return `<li><a href="${href}">${name}</a></li>`;
+    const href = encodeURI(join(pathname, entry.name));
+    return `<li><a href="${escHtml(href)}">${escHtml(name)}</a></li>`;
   });
 
   const html = `
@@ -294,7 +302,7 @@ async function createDirectoryListing(dirpath: string, pathname: string): Promis
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Index of ${pathname}</title>
+  <title>Index of ${safePath}</title>
   <style>
     body { font-family: system-ui, sans-serif; padding: 2rem; }
     ul { list-style: none; padding: 0; }
@@ -304,7 +312,7 @@ async function createDirectoryListing(dirpath: string, pathname: string): Promis
   </style>
 </head>
 <body>
-  <h1>Index of ${pathname}</h1>
+  <h1>Index of ${safePath}</h1>
   <ul>
     ${pathname !== '/' ? '<li><a href="..">..</a></li>' : ''}
     ${items.join('\n    ')}

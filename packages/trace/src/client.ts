@@ -111,7 +111,7 @@ class ClientTracer {
   }
 
   private connect(): void {
-    if (typeof WebSocket === 'undefined') return;
+    if (typeof WebSocket === 'undefined' || typeof location === 'undefined') return;
 
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${location.host}/__ereo/trace-ws`;
@@ -128,6 +128,8 @@ class ClientTracer {
       };
       this.ws.onerror = () => {
         // Silently fail — tracing is optional
+        this.connected = false;
+        this.ws = null;
       };
     } catch {
       // WebSocket not available
@@ -135,7 +137,7 @@ class ClientTracer {
   }
 
   private interceptFetch(): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || typeof window.fetch !== 'function') return;
 
     const originalFetch = window.fetch.bind(window);
     const self = this;

@@ -351,7 +351,7 @@ export class ValidationEngine<T extends Record<string, any>> {
         // Determine if they're sync or async based on validators
         const validation = this._fieldValidations.get(path);
         const hasAsync = validation?.validators.some(v => v._isAsync);
-        const source = hasAsync && errors.length > 0 ? 'sync' : 'sync';
+        const source = hasAsync && errors.length > 0 ? 'async' : 'sync';
         const fieldOnlyErrors = errors.filter(e => !schemaErrors[path]?.includes(e));
         if (fieldOnlyErrors.length > 0) {
           this._store.setErrorsWithSource(path, fieldOnlyErrors, source);

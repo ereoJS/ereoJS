@@ -278,6 +278,7 @@ export function unregisterMiddleware(name: string): boolean {
  */
 export function clearMiddlewareRegistry(): void {
   namedMiddlewareRegistry.clear();
+  typedMiddlewareRegistry.clear();
 }
 
 /**
@@ -618,10 +619,19 @@ export function createRateLimitMiddleware(options: {
 
   // Simple in-memory store (use Redis in production)
   const store = new Map<string, { count: number; resetTime: number }>();
+  let lastCleanup = Date.now();
 
   return async (request, context, next) => {
     const key = keyGenerator(request);
     const now = Date.now();
+
+    // Periodically clean up expired entries to prevent memory leaks
+    if (now - lastCleanup > windowMs) {
+      lastCleanup = now;
+      for (const [k, v] of store) {
+        if (now > v.resetTime) store.delete(k);
+      }
+    }
 
     let record = store.get(key);
     if (!record || now > record.resetTime) {

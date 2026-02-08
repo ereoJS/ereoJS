@@ -243,7 +243,11 @@ export function serializeLoaderData(data: unknown): string {
  * Parse serialized loader data.
  */
 export function parseLoaderData<T>(serialized: string): T {
-  return JSON.parse(serialized);
+  try {
+    return JSON.parse(serialized);
+  } catch {
+    throw new Error(`Failed to parse loader data: invalid JSON`);
+  }
 }
 
 /**

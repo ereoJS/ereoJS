@@ -296,6 +296,7 @@ export function rateLimit(options: RateLimitOptions = {}): MiddlewareHandler {
   const { windowMs = 60000, max = 100, keyGenerator } = options;
 
   const requests = new Map<string, { count: number; resetTime: number }>();
+  let lastCleanup = Date.now();
 
   const getKey = keyGenerator || ((request: Request) => {
     // Use IP or fallback
@@ -316,8 +317,9 @@ export function rateLimit(options: RateLimitOptions = {}): MiddlewareHandler {
 
     record.count++;
 
-    // Clean up old entries periodically
-    if (Math.random() < 0.01) {
+    // Clean up expired entries deterministically every window period
+    if (now - lastCleanup > windowMs) {
+      lastCleanup = now;
       for (const [k, v] of requests) {
         if (now > v.resetTime) {
           requests.delete(k);

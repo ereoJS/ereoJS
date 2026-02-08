@@ -11,9 +11,12 @@ type Subscriber<T> = (value: T) => void;
 export class Signal<T> {
   private _value: T;
   private _subscribers: Set<Subscriber<T>> = new Set();
+  /** Stable reference for batch deduplication */
+  private readonly _boundFire: () => void;
 
   constructor(initialValue: T) {
     this._value = initialValue;
+    this._boundFire = this._fireSubscribers.bind(this);
   }
 
   /** Get current value (subscribes in reactive context) */
@@ -48,6 +51,13 @@ export class Signal<T> {
   }
 
   private _notify(): void {
+    const deferred = _scheduleBatchNotification(this._boundFire);
+    if (!deferred) {
+      this._fireSubscribers();
+    }
+  }
+
+  private _fireSubscribers(): void {
     for (const subscriber of this._subscribers) {
       try {
         subscriber(this._value);
@@ -84,10 +94,36 @@ export function atom<T>(initialValue: T): Signal<T> {
   return signal(initialValue);
 }
 
-/** Batch multiple updates */
+/** Whether we are currently inside a batch */
+let batchDepth = 0;
+/** Pending notifications to fire after the batch completes */
+let batchQueue: Set<() => void> | null = null;
+
+/** Schedule a notification (called from Signal._notify) */
+export function _scheduleBatchNotification(notifier: () => void): boolean {
+  if (batchDepth > 0) {
+    if (!batchQueue) batchQueue = new Set();
+    batchQueue.add(notifier);
+    return true; // deferred
+  }
+  return false; // not batching, fire immediately
+}
+
+/** Batch multiple updates — notifications are deferred until the batch completes */
 export function batch<T>(fn: () => T): T {
-  // In a real implementation, this would batch notifications
-  return fn();
+  batchDepth++;
+  try {
+    return fn();
+  } finally {
+    batchDepth--;
+    if (batchDepth === 0 && batchQueue) {
+      const queue = batchQueue;
+      batchQueue = null;
+      for (const notifier of queue) {
+        notifier();
+      }
+    }
+  }
 }
 
 /** Store for global state */

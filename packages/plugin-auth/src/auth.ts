@@ -958,6 +958,9 @@ export function getOAuthUrl(
   // Generate state for CSRF protection
   const state = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
 
+  // Store state for validation in callback
+  context.set('__oauth_state', state);
+
   return provider.getAuthorizationUrl(state, redirectUri);
 }
 
@@ -976,6 +979,14 @@ export async function handleOAuthCallback(
   if (!provider || provider.type !== 'oauth' || !provider.handleCallback) {
     throw new Error(`OAuth provider not found or not configured: ${providerId}`);
   }
+
+  // Validate CSRF state token
+  const storedState = context.get('__oauth_state') as string | undefined;
+  if (!storedState || storedState !== params.state) {
+    throw new Error('OAuth state mismatch: possible CSRF attack');
+  }
+  // Clear state after validation
+  context.set('__oauth_state', undefined);
 
   const user = await provider.handleCallback(params);
   if (!user) {
