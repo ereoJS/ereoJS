@@ -38,7 +38,7 @@ SESSION_SECRET=super-secret-production-key
 ### Define a Schema
 
 ```ts
-// src/lib/env.ts
+// app/lib/env.ts
 import { env, setupEnv, initializeEnv } from '@ereo/core'
 
 export const envSchema = {
@@ -68,7 +68,7 @@ export type Env = typeof envSchema
 ### Initialize Environment
 
 ```ts
-// src/index.ts
+// app/index.ts
 import { setupEnv, initializeEnv } from '@ereo/core'
 import { envSchema } from './lib/env'
 
@@ -282,13 +282,13 @@ import { generateEnvTypes } from '@ereo/core'
 import { envSchema } from './lib/env'
 
 const types = generateEnvTypes(envSchema)
-await Bun.write('src/env.d.ts', types)
+await Bun.write('app/env.d.ts', types)
 ```
 
 Output:
 
 ```ts
-// src/env.d.ts
+// app/env.d.ts
 declare namespace NodeJS {
   interface ProcessEnv {
     DATABASE_URL: string

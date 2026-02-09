@@ -289,11 +289,12 @@ For external webhooks, use `createRevalidationHandler` instead:
 
 ```ts
 // routes/api/revalidate.ts
+import type { ActionArgs } from '@ereo/core'
 import { createRevalidationHandler } from '@ereo/data'
 
 const handler = createRevalidationHandler(process.env.REVALIDATION_SECRET)
 
-export async function POST(request: Request) {
+export async function POST({ request }: ActionArgs) {
   return handler(request)
 }
 ```
@@ -333,7 +334,7 @@ import { createRevalidationHandler } from '@ereo/data'
 const handler = createRevalidationHandler(process.env.REVALIDATION_SECRET)
 
 // In an API route
-export async function POST(request: Request) {
+export async function POST({ request }: ActionArgs) {
   return handler(request)
 }
 ```
@@ -396,7 +397,9 @@ export const action = createAction(async ({ params }) => {
 
 ```ts
 // routes/api/cms-webhook.ts
-export async function POST(request: Request) {
+import type { ActionArgs } from '@ereo/core'
+
+export async function POST({ request }: ActionArgs) {
   const body = await request.json()
 
   // Handle different CMS events

@@ -117,13 +117,13 @@ function App() {
 import { ErrorBoundary, useErrorBoundary } from '@ereo/client'
 
 function ErrorFallback() {
-  const { error, resetBoundary } = useErrorBoundary()
+  const { error, reset } = useErrorBoundary()
 
   return (
     <div>
       <h2>Error</h2>
       <p>{error?.message}</p>
-      <button onClick={resetBoundary}>Try Again</button>
+      <button onClick={reset}>Try Again</button>
     </div>
   )
 }
@@ -209,7 +209,9 @@ For API routes, return proper error responses:
 
 ```tsx
 // routes/api/posts.ts
-export async function POST(request: Request) {
+import type { ActionArgs } from '@ereo/core'
+
+export async function POST({ request }: ActionArgs) {
   try {
     const body = await request.json()
     const post = await db.posts.create(body)

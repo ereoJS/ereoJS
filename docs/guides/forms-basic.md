@@ -108,7 +108,7 @@ import { Form, useActionData, useNavigation } from '@ereo/client'
 export default function CreatePost() {
   const actionData = useActionData()
   const navigation = useNavigation()
-  const isSubmitting = navigation.state === 'submitting'
+  const isSubmitting = navigation.status === 'submitting'
 
   return (
     <Form method="post">

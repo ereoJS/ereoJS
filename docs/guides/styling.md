@@ -18,7 +18,7 @@ bunx tailwindcss init -p
 ```js
 // tailwind.config.js
 export default {
-  content: ['./src/**/*.{js,ts,jsx,tsx}'],
+  content: ['./app/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -38,7 +38,7 @@ export default {
 ### Entry CSS
 
 ```css
-/* public/styles.css */
+/* app/styles.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

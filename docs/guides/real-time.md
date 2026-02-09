@@ -10,6 +10,8 @@ SSE is the simplest way to push data from server to client. It works over HTTP, 
 
 ```ts
 // routes/api/events.ts
+import type { LoaderArgs } from '@ereo/core'
+
 export async function GET({ request, context }: LoaderArgs) {
   const stream = new ReadableStream({
     start(controller) {

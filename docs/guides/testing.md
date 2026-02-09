@@ -17,7 +17,7 @@ EreoJS works with Bun's built-in test runner.
 bun test
 
 # Run specific file
-bun test src/lib/utils.test.ts
+bun test app/lib/utils.test.ts
 
 # Watch mode
 bun test --watch

@@ -100,12 +100,14 @@ export async function POST(request: Request) {
 **EreoJS:**
 ```ts
 // routes/api/users.ts
-export async function GET() {
+import type { LoaderArgs, ActionArgs } from '@ereo/core'
+
+export async function GET({ request }: LoaderArgs) {
   const users = await db.select().from(usersTable)
   return Response.json(users)
 }
 
-export async function POST(request: Request) {
+export async function POST({ request }: ActionArgs) {
   const body = await request.json()
   const [user] = await db.insert(usersTable).values(body).returning()
   return Response.json(user, { status: 201 })

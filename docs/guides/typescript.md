@@ -19,12 +19,14 @@ This guide covers TypeScript patterns and best practices in EreoJS.
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "~/*": ["./app/*"],
+      "@/*": ["./app/*"]
     },
     "types": ["bun-types"]
   },
-  "include": ["src", "*.ts"],
+  "include": ["app/**/*", "*.config.ts"],
   "exclude": ["node_modules", "dist"]
 }
 ```
@@ -83,17 +85,16 @@ export const loader = createLoader<PostLoaderData, PostParams>(
 ### Extracting Loader Data Type
 
 ```tsx
-import type { LoaderData } from '@ereo/core'
-
 export const loader = createLoader(async () => {
   return { posts: await getPosts() }
 })
 
-// Extract type from loader
-type Data = LoaderData<typeof loader>
-// { posts: Post[] }
+// Type the component props directly
+interface PostsPageProps {
+  loaderData: { posts: Post[] }
+}
 
-export default function Posts({ loaderData }: { loaderData: Data }) {
+export default function Posts({ loaderData }: PostsPageProps) {
   return <PostList posts={loaderData.posts} />
 }
 ```
@@ -180,10 +181,8 @@ interface Params {
 
 export default function PostPage({
   loaderData,
-  actionData,
   params,
-  searchParams
-}: RouteComponentProps<LoaderData, Params>) {
+}: RouteComponentProps<LoaderData>) {
   return (
     <article>
       <h1>{loaderData.post.title}</h1>
@@ -254,7 +253,7 @@ export const loader = createLoader(async ({ context }) => {
 ## Middleware Types
 
 ```ts
-import type { MiddlewareHandler } from '@ereo/router'
+import type { MiddlewareHandler } from '@ereo/core'
 
 const authMiddleware: MiddlewareHandler = async (request, context, next) => {
   const user = await getUser(request)
@@ -272,6 +271,7 @@ const authMiddleware: MiddlewareHandler = async (request, context, next) => {
 
 ```ts
 // routes/api/posts.ts
+import type { ActionArgs } from '@ereo/core'
 import type { Post } from '@/types'
 
 interface CreatePostBody {
@@ -285,7 +285,7 @@ interface CreatePostResponse {
   error?: string
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST({ request }: ActionArgs): Promise<Response> {
   const body: CreatePostBody = await request.json()
 
   if (!body.title) {

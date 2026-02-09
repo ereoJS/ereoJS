@@ -319,9 +319,10 @@ Expose an API route for external revalidation:
 
 ```tsx
 // routes/api/revalidate.ts
+import type { ActionArgs } from '@ereo/core'
 import { revalidateTag } from '@ereo/data'
 
-export async function POST(request: Request) {
+export async function POST({ request }: ActionArgs) {
   const { secret, tag } = await request.json()
 
   if (secret !== process.env.REVALIDATION_SECRET) {

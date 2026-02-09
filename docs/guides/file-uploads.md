@@ -109,6 +109,8 @@ For large files, process the stream directly without buffering the entire file i
 
 ```ts
 // routes/api/upload-stream.ts
+import type { ActionArgs } from '@ereo/core'
+
 export async function POST({ request }: ActionArgs) {
   const contentType = request.headers.get('Content-Type') || ''
 
@@ -172,6 +174,7 @@ export async function uploadToS3(file: File, key: string) {
 
 ```ts
 // routes/api/upload.ts
+import type { ActionArgs } from '@ereo/core'
 import { uploadToS3 } from '../../lib/storage'
 
 export async function POST({ request }: ActionArgs) {

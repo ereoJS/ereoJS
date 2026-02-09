@@ -20,7 +20,7 @@ export default function ContactPage() {
       <input name="email" type="email" required />
       {actionData?.errors?.email && <p>{actionData.errors.email}</p>}
       <textarea name="message" required />
-      <button disabled={navigation.state === 'submitting'}>Send</button>
+      <button disabled={navigation.status === 'submitting'}>Send</button>
     </Form>
   )
 }
