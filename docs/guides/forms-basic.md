@@ -61,6 +61,12 @@ Use `useActionData` to access data returned from the action. This is useful for 
 import { createAction } from '@ereo/data'
 import { Form, useActionData } from '@ereo/client'
 
+type SubscribeResult = {
+  success?: boolean
+  error?: string
+  values?: { email: string }
+}
+
 export const action = createAction(async ({ request }) => {
   const formData = await request.formData()
   const email = formData.get('email') as string
@@ -74,7 +80,7 @@ export const action = createAction(async ({ request }) => {
 })
 
 export default function Subscribe() {
-  const actionData = useActionData()
+  const actionData = useActionData<SubscribeResult>()
 
   return (
     <div>
@@ -106,7 +112,7 @@ Use `useNavigation` to show a loading indicator while the form is submitting:
 import { Form, useActionData, useNavigation } from '@ereo/client'
 
 export default function CreatePost() {
-  const actionData = useActionData()
+  const actionData = useActionData<{ error?: string }>()
   const navigation = useNavigation()
   const isSubmitting = navigation.status === 'submitting'
 

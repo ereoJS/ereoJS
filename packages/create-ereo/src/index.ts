@@ -232,6 +232,31 @@ coverage
 }
 
 /**
+ * Write ereo-env.d.ts with JSX type augmentation for client:* directives.
+ */
+async function writeEreoEnvDts(projectDir: string): Promise<void> {
+  const content = `import 'react';
+
+declare module 'react' {
+  namespace JSX {
+    interface IntrinsicAttributes {
+      /** Hydrate island immediately on page load */
+      'client:load'?: boolean;
+      /** Hydrate island when browser is idle */
+      'client:idle'?: boolean;
+      /** Hydrate island when element becomes visible */
+      'client:visible'?: boolean;
+      /** Hydrate island when media query matches */
+      'client:media'?: string;
+    }
+  }
+}
+`;
+
+  await Bun.write(join(projectDir, 'ereo-env.d.ts'), content);
+}
+
+/**
  * Generate a minimal project.
  */
 async function generateMinimalProject(
@@ -521,10 +546,11 @@ export default function HomePage() {
           '@/*': ['./app/*'],
         },
       },
-      include: ['app/**/*', '*.config.ts'],
+      include: ['app/**/*', '*.config.ts', 'ereo-env.d.ts'],
     };
 
     await Bun.write(join(projectDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
+    await writeEreoEnvDts(projectDir);
   } else {
     const jsconfig = {
       compilerOptions: {
@@ -665,10 +691,11 @@ export default defineConfig({
           '@/*': ['./app/*'],
         },
       },
-      include: ['app/**/*', '*.config.ts'],
+      include: ['app/**/*', '*.config.ts', 'ereo-env.d.ts'],
     };
 
     await Bun.write(join(projectDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
+    await writeEreoEnvDts(projectDir);
   } else {
     const jsconfig = {
       compilerOptions: {
@@ -2325,10 +2352,11 @@ export default defineConfig({
           '@/*': ['./app/*'],
         },
       },
-      include: ['app/**/*', '*.config.ts'],
+      include: ['app/**/*', '*.config.ts', 'ereo-env.d.ts'],
     };
 
     await Bun.write(join(projectDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
+    await writeEreoEnvDts(projectDir);
   } else {
     const jsconfig = {
       compilerOptions: {

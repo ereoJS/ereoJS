@@ -1,4 +1,4 @@
-import type { ValidatorFunction } from './types';
+import type { ValidatorFunction, CrossFieldValidationContext } from './types';
 
 // ─── Core Validators ─────────────────────────────────────────────────────────
 
@@ -122,10 +122,12 @@ export function positive(msg = 'Must be a positive number'): ValidatorFunction<n
 // ─── Custom Validators ───────────────────────────────────────────────────────
 
 export function custom<T = unknown>(
-  fn: (value: T) => string | undefined,
+  fn: (value: T, context?: CrossFieldValidationContext<any>) => string | undefined,
   _msg?: string
 ): ValidatorFunction<T> {
-  return (value) => fn(value);
+  const validator: ValidatorFunction<T> = (value, context) => fn(value, context);
+  validator._crossField = true;
+  return validator;
 }
 
 export function async<T = unknown>(
