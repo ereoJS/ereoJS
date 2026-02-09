@@ -1,6 +1,6 @@
 # Known Issues
 
-Current known issues in EreoJS v0.1.x and their workarounds.
+Current known issues in EreoJS v0.2.x and their workarounds.
 
 ## Hot Reload Occasionally Misses Island Changes
 

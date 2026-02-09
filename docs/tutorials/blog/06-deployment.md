@@ -18,7 +18,7 @@ DATABASE_URL=./data/blog.db
 Update your code to use environment variables:
 
 ```ts
-// src/lib/db.ts
+// app/lib/db.ts
 import Database from 'better-sqlite3'
 
 const dbPath = process.env.DATABASE_URL || 'blog.db'

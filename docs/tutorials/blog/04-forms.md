@@ -12,7 +12,7 @@ Create `app/routes/posts/[slug]/edit.tsx`:
 // app/routes/posts/[slug]/edit.tsx
 import { createLoader, createAction, redirect } from '@ereo/data'
 import { Form, Link, useActionData, useNavigation } from '@ereo/client'
-import { getPost, db } from '../../../lib/db'
+import { getPost, db } from '~/lib/db'
 
 export const loader = createLoader(async ({ params }) => {
   const post = getPost(params.slug)
@@ -230,7 +230,7 @@ Update `app/routes/posts/[slug].tsx` to add an edit link:
 
 Let's add a "like" feature using `useFetcher` for non-navigating updates.
 
-First, add a likes column to the database. Update `src/lib/db.ts`:
+First, add a likes column to the database. Update `app/lib/db.ts`:
 
 ```ts
 // Add this after the CREATE TABLE statements
@@ -245,7 +245,7 @@ Create an API route for likes at `app/routes/api/posts/[id]/like.ts`:
 
 ```ts
 // app/routes/api/posts/[id]/like.ts
-import { db } from '../../../../lib/db'
+import { db } from '~/lib/db'
 
 export async function POST({ request, params }) {
   const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(params.id)

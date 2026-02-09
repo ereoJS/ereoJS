@@ -42,13 +42,13 @@ export const loader = createLoader(async ({ params, request }) => {
 })
 ```
 
-For structured logging, use `context.log` which includes request metadata:
+For structured logging, use `console` methods or a logging library. You can store a logger instance in context via middleware:
 
 ```tsx
 export const loader = createLoader(async ({ params, context }) => {
-  context.log.info('Loading post', { id: params.id })
-  context.log.warn('Deprecated endpoint hit')
-  context.log.error('Database query failed', { error: err.message })
+  console.info('Loading post', { id: params.id })
+  console.warn('Deprecated endpoint hit')
+  console.error('Database query failed', { error: err.message })
 
   return { post }
 })

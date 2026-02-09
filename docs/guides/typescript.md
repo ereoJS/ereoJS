@@ -209,28 +209,41 @@ export function ErrorBoundary({ error }: RouteErrorComponentProps) {
 
 ## Typed Context
 
-### Extending Context Types
+### Using Generic Type Annotations
+
+The `AppContext` provides generic `get<T>()` and `set<T>()` methods. Use explicit type annotations to keep context access type-safe:
 
 ```ts
-// types/context.d.ts
-import type { User } from './models'
+import type { MiddlewareHandler } from '@ereo/core'
 
-declare module '@ereo/core' {
-  interface ContextTypes {
-    user: User | null
-    session: SessionData
-    requestId: string
-  }
+interface User {
+  id: string
+  email: string
+  name: string
+}
+
+interface SessionData {
+  id: string
+  expiresAt: Date
+}
+
+export const middleware: MiddlewareHandler = async (request, context, next) => {
+  const user = await getUser(request)
+  if (!user) return Response.redirect('/login')
+  context.set<User>('user', user)
+  context.set<SessionData>('session', { id: crypto.randomUUID(), expiresAt: new Date() })
+  context.set<string>('requestId', crypto.randomUUID())
+  return next()
 }
 ```
 
-### Using Typed Context
+### Accessing Typed Context
 
 ```tsx
 export const loader = createLoader(async ({ context }) => {
-  // Type-safe access
-  const user = context.get('user') // User | null
-  const session = context.get('session') // SessionData
+  // Use type parameter for type-safe access
+  const user = context.get<User>('user')       // User
+  const session = context.get<SessionData>('session') // SessionData
 
   if (!user) throw redirect('/login')
 

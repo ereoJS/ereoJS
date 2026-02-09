@@ -10,7 +10,7 @@ Create `app/routes/posts/index.tsx`:
 // app/routes/posts/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
-import { getPosts } from '../../lib/db'
+import { getPosts } from '~/lib/db'
 
 export const loader = createLoader(async () => {
   const posts = getPosts()
@@ -53,7 +53,7 @@ Create `app/routes/posts/[slug].tsx` for dynamic routing:
 // app/routes/posts/[slug].tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
-import { getPost, getPostComments } from '../../lib/db'
+import { getPost, getPostComments } from '~/lib/db'
 
 export const loader = createLoader(async ({ params }) => {
   const post = getPost(params.slug)

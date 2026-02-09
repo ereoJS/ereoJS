@@ -12,7 +12,7 @@ Create `app/routes/posts/new.tsx`:
 // app/routes/posts/new.tsx
 import { createAction, redirect } from '@ereo/data'
 import { Form, useActionData, useNavigation } from '@ereo/client'
-import { createPost } from '../../lib/db'
+import { createPost } from '~/lib/db'
 
 function slugify(text: string): string {
   return text
@@ -203,7 +203,7 @@ Update `app/routes/posts/[slug].tsx` to include a comment form:
 // app/routes/posts/[slug].tsx
 import { createLoader, createAction } from '@ereo/data'
 import { Form, Link, useActionData, useNavigation } from '@ereo/client'
-import { getPost, getPostComments, createComment } from '../../lib/db'
+import { getPost, getPostComments, createComment } from '~/lib/db'
 
 export const loader = createLoader(async ({ params }) => {
   const post = getPost(params.slug)

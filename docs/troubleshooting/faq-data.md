@@ -164,9 +164,9 @@ export const selectedItems = signal<string[]>([])
 Yes. Use `clientLoader` for data that should be fetched in the browser after hydration:
 
 ```tsx
-import { clientLoader as createClientLoader } from '@ereo/data'
+import { clientLoader } from '@ereo/data'
 
-export const clientLoader = createClientLoader(async () => {
+export const loader = clientLoader(async () => {
   const res = await fetch('/api/realtime-data')
   return res.json()
 })

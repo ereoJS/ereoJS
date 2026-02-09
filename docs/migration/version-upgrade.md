@@ -24,14 +24,14 @@ Or update `package.json` manually:
 ```json
 {
   "dependencies": {
-    "@ereo/core": "^0.1.24",
-    "@ereo/client": "^0.1.24",
-    "@ereo/data": "^0.1.24",
-    "@ereo/server": "^0.1.24",
-    "@ereo/forms": "^0.1.24"
+    "@ereo/core": "^0.2.8",
+    "@ereo/client": "^0.2.8",
+    "@ereo/data": "^0.2.8",
+    "@ereo/server": "^0.2.8",
+    "@ereo/forms": "^0.2.8"
   },
   "devDependencies": {
-    "@ereo/cli": "^0.1.24"
+    "@ereo/cli": "^0.2.8"
   }
 }
 ```
@@ -49,7 +49,7 @@ All `@ereo/*` packages should be on the same version to avoid compatibility issu
 Some versions include automated migration scripts. Check the release notes for the version you are upgrading to:
 
 ```bash
-bunx @ereo/cli migrate --from 0.1.20 --to 0.1.24
+bunx @ereo/cli migrate --from 0.2.0 --to 0.2.8
 ```
 
 The migration script handles:
@@ -89,16 +89,20 @@ During the 0.x.x phase, minor versions may include breaking changes. Pin to exac
 ```json
 {
   "dependencies": {
-    "@ereo/core": "0.1.24"
+    "@ereo/core": "0.2.8"
   }
 }
 ```
 
 ## Breaking Changes Log
 
-### 0.1.24
+### 0.2.8
 
 - No breaking changes
+
+### 0.2.0
+
+- Major version bump with new features; see changelog for migration details
 
 ### 0.1.22
 

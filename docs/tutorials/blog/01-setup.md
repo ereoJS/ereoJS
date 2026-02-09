@@ -28,10 +28,10 @@ This creates a new project with the following structure:
 
 ```
 blog/
-├── src/
+├── app/
 │   ├── routes/
 │   │   └── index.tsx
-│   └── index.ts
+│   └── entry.client.tsx
 ├── public/
 ├── ereo.config.ts
 ├── package.json
@@ -66,10 +66,10 @@ export default defineConfig({
 
 ## Set Up the Database
 
-Create a simple SQLite database for our blog. Create `src/lib/db.ts`:
+Create a simple SQLite database for our blog. Create `app/lib/db.ts`:
 
 ```ts
-// src/lib/db.ts
+// app/lib/db.ts
 import Database from 'better-sqlite3'
 
 const db = new Database('blog.db')

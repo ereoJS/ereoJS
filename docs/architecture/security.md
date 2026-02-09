@@ -83,21 +83,26 @@ function generateCSRFToken(): string {
   return crypto.randomUUID()
 }
 
-// Middleware to add CSRF token
+// Middleware to add CSRF protection via cookies (double-submit pattern)
 const csrfMiddleware: MiddlewareHandler = async (request, context, next) => {
-  // Generate token for GET requests
+  // Generate token for GET requests and store in a cookie
   if (request.method === 'GET') {
     const token = generateCSRFToken()
+    context.cookies.set('_csrf', token, {
+      httpOnly: false, // Client JS needs to read this
+      sameSite: 'Strict',
+      path: '/',
+    })
     context.set('csrfToken', token)
   }
 
   // Validate token for state-changing requests
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
     const formData = await request.clone().formData()
-    const token = formData.get('_csrf')
-    const sessionToken = context.get('csrfToken')
+    const formToken = formData.get('_csrf')
+    const cookieToken = context.cookies.get('_csrf')
 
-    if (!token || token !== sessionToken) {
+    if (!formToken || !cookieToken || formToken !== cookieToken) {
       return new Response('Invalid CSRF token', { status: 403 })
     }
   }

@@ -8,7 +8,7 @@ EreoJS provides end-to-end type safety across route parameters, loader data, act
 Route file path   →  RouteParamsFor<'/posts/[id]'>     →  { id: string }
 Loader return     →  LoaderData<typeof loader>         →  { post: Post }
 Action return     →  ActionData<typeof action>         →  { success: boolean }
-Middleware context →  ContextTypes augmentation         →  { user: User }
+Middleware context →  Generic get<T>()/set<T>()          →  { user: User }
 Navigation        →  TypedLink, typedNavigate           →  Compile-time route checking
 ```
 
@@ -61,30 +61,40 @@ export default function Post({ loaderData }: { loaderData: LoaderData<typeof loa
 
 ## Typed Context
 
-Use module augmentation to type values that middleware sets on the request context:
-
-```tsx
-// app/types/context.d.ts
-declare module '@ereo/core' {
-  interface ContextTypes {
-    user: User
-    session: { id: string; expiresAt: Date }
-    requestId: string
-  }
-}
-```
-
-Now `context.get('user')` returns `User` and `context.set('user', ...)` enforces the type everywhere:
+The `AppContext` provides generic `get<T>()` and `set<T>()` methods for sharing data between middleware and loaders. Use explicit type annotations to keep context access type-safe:
 
 ```tsx
 import type { MiddlewareHandler } from '@ereo/core'
 
+interface User {
+  id: string
+  email: string
+}
+
 export const middleware: MiddlewareHandler = async (request, context, next) => {
   const user = await getUser(request)
   if (!user) return Response.redirect('/login')
-  context.set('user', user)       // enforced as User
+  context.set<User>('user', user)
   return next()
 }
+```
+
+Access typed context in loaders:
+
+```tsx
+export const loader = createLoader(async ({ context }) => {
+  const user = context.get<User>('user')
+  return { user }
+})
+```
+
+For full route-level type safety — where context types are inferred from the middleware chain — use the generated `ContextFor<T>` type (produced by the `createTypesPlugin`):
+
+```tsx
+import type { ContextFor } from '@ereo/core'
+
+// After running type generation, context types flow through the route tree
+type DashboardContext = ContextFor<'/dashboard'>
 ```
 
 ## Generating Route Types
@@ -187,13 +197,13 @@ return { success: true as const, postId: post.id }
 
 ### Context Types with Optional Values
 
-Mark context values as optional when only set by middleware on certain routes:
+When some context values are only set by middleware on certain routes, use a union type or optional generic to handle both cases:
 
 ```tsx
-interface ContextTypes {
-  user: User              // always set by auth middleware
-  organization?: Org      // only set on /org/* routes
-}
+// Middleware sets context.set<User>('user', user) on all authenticated routes
+// But 'organization' is only set on /org/* routes
+const user = context.get<User>('user')             // always set by auth middleware
+const org = context.get<Org | undefined>('organization')  // only set on /org/* routes
 ```
 
 ## Next Steps

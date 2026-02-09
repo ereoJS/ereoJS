@@ -192,23 +192,20 @@ File names must use lowercase letters, hyphens, and the special bracket syntax. 
 
 **Fix:**
 
-When using `<Form>` from `@ereo/client`, the CSRF token is included automatically. For standard HTML forms, include the token manually:
+When using `<Form>` from `@ereo/client`, the CSRF token is included automatically. For standard HTML forms, read the token from the cookie and include it manually:
 
 ```tsx
-import { useCsrfToken } from '@ereo/client'
-
 export default function MyForm() {
-  const csrfToken = useCsrfToken()
-
   return (
     <form method="post">
-      <input type="hidden" name="_csrf" value={csrfToken} />
       <input name="title" />
       <button type="submit">Submit</button>
     </form>
   )
 }
 ```
+
+Prefer `<Form>` from `@ereo/client` over native `<form>` elements --- it handles CSRF tokens, progressive enhancement, and client-side navigation automatically.
 
 If CSRF is causing issues during development, verify the middleware is configured:
 
