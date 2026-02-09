@@ -7,6 +7,7 @@
 
 import type { ReactElement, ComponentType } from 'react';
 import type { EnvConfig } from './env';
+import type { InferParams } from './types/path-parser';
 
 // ============================================================================
 // Configuration Types
@@ -1084,8 +1085,8 @@ export type RouteParamsFor<T extends TypedRoutes> =
   T extends keyof RouteTypes
     ? RouteTypes[T] extends { params: infer P }
       ? P
-      : RouteParams
-    : RouteParams;
+      : InferParams<T & string>
+    : InferParams<T & string>;
 
 export type LoaderDataFor<T extends TypedRoutes> =
   T extends keyof RouteTypes
