@@ -42,6 +42,9 @@ interface Signal<T> {
 
   // Create derived signal
   map<U>(fn: (value: T) => U): Signal<U>
+
+  // Dispose signal and clean up all subscriptions
+  dispose(): void
 }
 ```
 

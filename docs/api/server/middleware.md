@@ -13,8 +13,8 @@ import type { MiddlewareHandler } from '@ereo/core'
 ```ts
 type MiddlewareHandler = (
   request: Request,
-  context: RequestContext,
-  next: () => Promise<Response>
+  context: AppContext,
+  next: NextFunction
 ) => Promise<Response> | Response
 ```
 
@@ -23,8 +23,8 @@ type MiddlewareHandler = (
 | Name | Type | Description |
 |------|------|-------------|
 | request | `Request` | The incoming HTTP request |
-| context | `RequestContext` | Shared request context for storing data |
-| next | `() => Promise<Response>` | Call to continue to next middleware/handler |
+| context | `AppContext` | Shared request context for storing data (implemented by `RequestContext`) |
+| next | `NextFunction` | Call to continue to next middleware/handler |
 
 ## Built-in Middleware
 

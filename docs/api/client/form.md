@@ -12,8 +12,8 @@ import {
   useSubmit,
   useFetcher,
   useFetchers,
-  useActionData,      // Form-specific
-  useNavigation,      // Form-specific
+  useFormActionData,   // Form-specific (aliased from useActionData)
+  useFormNavigation,   // Form-specific (aliased from useNavigation)
   serializeFormData,
   parseFormData,
   formDataToObject,

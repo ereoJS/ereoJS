@@ -27,7 +27,7 @@ bun dev
 | Option | Alias | Description | Default |
 |--------|-------|-------------|---------|
 | `--port` | `-p` | Port to listen on | `3000` |
-| `--host` | `-h` | Host to bind to | `localhost` |
+| `--host` | | Host to bind to | `localhost` |
 | `--open` | `-o` | Open browser on start | `false` |
 
 ## Examples

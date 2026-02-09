@@ -180,16 +180,6 @@ After build, check bundle sizes:
 ls -lh dist/client/
 ```
 
-### Visualization
-
-Generate bundle analysis:
-
-```bash
-bun ereo build --analyze
-```
-
-Opens interactive bundle visualization in browser.
-
 ## Optimization Tips
 
 ### Code Splitting
@@ -228,9 +218,6 @@ export default defineConfig({
 ```bash
 # Verbose output
 DEBUG=ereo:* bun ereo build
-
-# Skip type checking
-bun ereo build --skipTypeCheck
 ```
 
 ### Large Bundle Size

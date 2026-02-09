@@ -190,6 +190,19 @@ function typedAction<TBody, TResult, P>(
 ): ActionFunction<ActionResult<TResult>, P>
 ```
 
+### TypedActionArgs
+
+```ts
+interface TypedActionArgs<TBody, P extends RouteParams = RouteParams> extends ActionArgs<P> {
+  /** Parsed body data (from JSON or FormData) */
+  body: TBody;
+  /** Raw FormData (if content-type was form data) */
+  formData?: FormData;
+  /** Content type of the request */
+  contentType: 'json' | 'form' | 'text' | 'unknown';
+}
+```
+
 ### TypedActionOptions
 
 ```ts

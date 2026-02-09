@@ -38,6 +38,7 @@ create-ereo my-app
 | `--no-typescript` | | Use JavaScript instead of TypeScript | `false` |
 | `--no-git` | | Skip git initialization | `false` |
 | `--no-install` | | Skip dependency installation | `false` |
+| `--trace` | | Include `@ereo/trace` for full-stack observability | `false` |
 | `--help` | `-h` | Show help message | |
 
 ## Templates
@@ -156,6 +157,12 @@ bunx create-ereo@latest my-app --template minimal --no-install
 bunx create-ereo@latest my-app --template tasks
 ```
 
+### With Tracing
+
+```bash
+bunx create-ereo@latest my-app --trace
+```
+
 ### Skip Git Initialization
 
 ```bash
@@ -174,6 +181,7 @@ my-app/
 │   │   ├── Footer.tsx        # Footer component
 │   │   ├── Navigation.tsx    # Navigation with mobile menu ('use client')
 │   │   └── PostCard.tsx      # Blog post card component
+│   ├── entry.client.tsx      # Client entry point (hydration + navigation)
 │   ├── lib/
 │   │   ├── data.ts           # Mock data and helpers
 │   │   └── types.ts          # TypeScript type definitions
@@ -191,6 +199,7 @@ my-app/
 │   └── styles.css            # Global Tailwind styles
 ├── public/                   # Static assets
 ├── ereo.config.ts            # EreoJS configuration
+├── ereo-env.d.ts             # Generated environment type declarations
 ├── tailwind.config.js        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
 ├── Dockerfile                # Multi-stage production Docker image
@@ -266,23 +275,24 @@ my-app/
 The configuration file sets up the server, build options, and plugins:
 
 ```ts
-import { defineConfig, env } from '@ereo/core';
-import tailwind from '@ereo/plugin-tailwind';
+import { defineConfig } from '@ereo/core';
+
+const plugins = [];
+
+// Tailwind is a dev/build dependency — skip in production
+if (process.env.NODE_ENV !== 'production') {
+  const { default: tailwind } = await import('@ereo/plugin-tailwind');
+  plugins.push(tailwind());
+}
 
 export default defineConfig({
   server: {
     port: 3000,
-    development: process.env.NODE_ENV !== 'production',
   },
   build: {
     target: 'bun',
   },
-  env: {
-    NODE_ENV: env.enum(['development', 'production', 'test'] as const).default('development'),
-  },
-  plugins: [
-    tailwind(),
-  ],
+  plugins,
 });
 ```
 

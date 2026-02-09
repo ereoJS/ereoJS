@@ -328,22 +328,22 @@ See [cache](/api/core/cache) for complete caching documentation.
 ### Route Types
 
 ```tsx
-import type { 
-  LoaderArgs, 
+import type {
+  LoaderArgs,
   ActionArgs,
   MetaFunction,
-  HeadersFunction 
+  HeadersFunction
 } from '@ereo/core';
 
 export async function loader({ params, context }: LoaderArgs) {
   // params and context are fully typed
-  return json({ data: 'value' });
+  return { data: 'value' };
 }
 
 export async function action({ request }: ActionArgs) {
   // request is the standard Request object
   const formData = await request.formData();
-  return json({ success: true });
+  return { success: true };
 }
 
 export const meta: MetaFunction = ({ data }) => [

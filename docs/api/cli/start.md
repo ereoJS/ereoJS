@@ -31,7 +31,7 @@ Run `bun ereo build` before starting the production server.
 | Option | Alias | Description | Default |
 |--------|-------|-------------|---------|
 | `--port` | `-p` | Port to listen on | `3000` |
-| `--host` | `-h` | Host to bind to | `0.0.0.0` |
+| `--host` | | Host to bind to | `0.0.0.0` |
 
 ## Examples
 

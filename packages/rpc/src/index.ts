@@ -5,7 +5,7 @@
  */
 
 // Procedure builder (main API)
-export { procedure } from './procedure';
+export { procedure, executeMiddleware } from './procedure';
 export type { ProcedureBuilder } from './procedure';
 
 // Legacy procedure builders (deprecated but kept for compatibility)

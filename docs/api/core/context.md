@@ -234,6 +234,8 @@ export const middleware = async (request, context, next) => {
 
 ```ts
 // routes/dashboard.tsx
+import { createLoader } from '@ereo/data'
+
 export const loader = createLoader(async ({ context }) => {
   const user = context.get('user')
 
@@ -249,6 +251,8 @@ export const loader = createLoader(async ({ context }) => {
 ### Setting Response Headers
 
 ```ts
+import { createLoader } from '@ereo/data'
+
 export const loader = createLoader(async ({ context }) => {
   // Set custom headers
   context.responseHeaders.set('X-Request-Id', crypto.randomUUID())
@@ -263,6 +267,8 @@ export const loader = createLoader(async ({ context }) => {
 ### Cache Control via Context
 
 ```ts
+import { createLoader } from '@ereo/data'
+
 export const loader = createLoader(async ({ params, context }) => {
   const post = await db.posts.find(params.id)
 

@@ -1005,7 +1005,7 @@ describe('requireAuth', () => {
       } as AppContext;
 
       const result = await config.auth?.check?.({ context: mockContext } as any);
-      expect(result).toBe(false);
+      expect(result.allowed).toBe(false);
     });
 
     it('should return true when authenticated without role requirements', async () => {
@@ -1029,7 +1029,7 @@ describe('requireAuth', () => {
       } as AppContext;
 
       const result = await config.auth?.check?.({ context: mockContext } as any);
-      expect(result).toBe(true);
+      expect(result.allowed).toBe(true);
     });
 
     it('should return false when authenticated but missing required roles', async () => {
@@ -1053,7 +1053,7 @@ describe('requireAuth', () => {
       } as AppContext;
 
       const result = await config.auth?.check?.({ context: mockContext } as any);
-      expect(result).toBe(false);
+      expect(result.allowed).toBe(false);
     });
 
     it('should return true when authenticated with required roles', async () => {
@@ -1077,7 +1077,7 @@ describe('requireAuth', () => {
       } as AppContext;
 
       const result = await config.auth?.check?.({ context: mockContext } as any);
-      expect(result).toBe(true);
+      expect(result.allowed).toBe(true);
     });
 
     it('should return false when auth context is undefined', async () => {
@@ -1088,7 +1088,7 @@ describe('requireAuth', () => {
       } as AppContext;
 
       const result = await config.auth?.check?.({ context: mockContext } as any);
-      expect(result).toBe(false);
+      expect(result.allowed).toBe(false);
     });
   });
 });
@@ -1129,7 +1129,7 @@ describe('requireRoles', () => {
     } as AppContext;
 
     const result = await config.auth?.check?.({ context: mockContext } as any);
-    expect(result).toBe(true);
+    expect(result.allowed).toBe(true);
   });
 });
 
