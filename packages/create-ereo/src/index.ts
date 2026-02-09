@@ -515,11 +515,29 @@ export default function HomePage() {
         skipLibCheck: true,
         forceConsistentCasingInFileNames: true,
         types: ['bun-types'],
+        baseUrl: '.',
+        paths: {
+          '~/*': ['./app/*'],
+          '@/*': ['./app/*'],
+        },
       },
       include: ['app/**/*', '*.config.ts'],
     };
 
     await Bun.write(join(projectDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
+  } else {
+    const jsconfig = {
+      compilerOptions: {
+        baseUrl: '.',
+        paths: {
+          '~/*': ['./app/*'],
+          '@/*': ['./app/*'],
+        },
+      },
+      include: ['app/**/*'],
+    };
+
+    await Bun.write(join(projectDir, 'jsconfig.json'), JSON.stringify(jsconfig, null, 2));
   }
 
   // .gitignore
@@ -641,14 +659,29 @@ export default defineConfig({
         skipLibCheck: true,
         forceConsistentCasingInFileNames: true,
         types: ['bun-types'],
+        baseUrl: '.',
         paths: {
           '~/*': ['./app/*'],
+          '@/*': ['./app/*'],
         },
       },
       include: ['app/**/*', '*.config.ts'],
     };
 
     await Bun.write(join(projectDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
+  } else {
+    const jsconfig = {
+      compilerOptions: {
+        baseUrl: '.',
+        paths: {
+          '~/*': ['./app/*'],
+          '@/*': ['./app/*'],
+        },
+      },
+      include: ['app/**/*'],
+    };
+
+    await Bun.write(join(projectDir, 'jsconfig.json'), JSON.stringify(jsconfig, null, 2));
   }
 
   // ============================================================================
@@ -860,7 +893,7 @@ For production, alias \\\`@ereo/trace\\\` to \\\`@ereo/trace/noop\\\` — a 592-
   },` : '';
 
   const mockData = `
-${ts ? "import type { Post } from './types';\n" : ''}
+${ts ? "import type { Post } from '~/lib/types';\n" : ''}
 /**
  * Mock blog posts data.
  * In a real app, this would come from a database or CMS.
@@ -2295,14 +2328,29 @@ export default defineConfig({
         skipLibCheck: true,
         forceConsistentCasingInFileNames: true,
         types: ['bun-types'],
+        baseUrl: '.',
         paths: {
           '~/*': ['./app/*'],
+          '@/*': ['./app/*'],
         },
       },
       include: ['app/**/*', '*.config.ts'],
     };
 
     await Bun.write(join(projectDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2));
+  } else {
+    const jsconfig = {
+      compilerOptions: {
+        baseUrl: '.',
+        paths: {
+          '~/*': ['./app/*'],
+          '@/*': ['./app/*'],
+        },
+      },
+      include: ['app/**/*'],
+    };
+
+    await Bun.write(join(projectDir, 'jsconfig.json'), JSON.stringify(jsconfig, null, 2));
   }
 
   // ============================================================================
@@ -2604,7 +2652,7 @@ export default db;
  * Shared types for the application.
  */
 
-export type { User, Task, TaskStats } from './db';
+export type { User, Task, TaskStats } from '~/lib/db';
 
 export interface ActionResult<T = unknown> {
   success: boolean;

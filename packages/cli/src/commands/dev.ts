@@ -5,6 +5,8 @@
  */
 
 import { join } from 'node:path';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import {
   createApp,
   type FrameworkConfig,
@@ -188,9 +190,114 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     server.use(middleware);
   }
 
+  // Build client entry for dev mode
+  // In production, `ereo build` creates this. In dev, we build on-demand.
+  const clientBuildDir = await mkdtemp(join(tmpdir(), 'ereo-dev-client-'));
+  const clientBundleCache = new Map<string, string>();
+
+  async function buildDevClient(): Promise<void> {
+    // Check for custom client entry
+    const customEntry = join(root, 'app/entry.client.tsx');
+    const customEntryAlt = join(root, 'app/entry.client.ts');
+    const hasCustom = await Bun.file(customEntry).exists();
+    const hasCustomAlt = await Bun.file(customEntryAlt).exists();
+
+    let entrypoint: string;
+
+    if (hasCustom) {
+      entrypoint = customEntry;
+    } else if (hasCustomAlt) {
+      entrypoint = customEntryAlt;
+    } else {
+      // Generate default client entry
+      const defaultEntrySource = `
+import { hydrateRoot } from 'react-dom/client';
+
+async function initClient() {
+  if (document.readyState === 'loading') {
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+  }
+
+  const serverData = window.__EREO_DATA__ || {};
+  console.log('[EreoJS] Client hydration initialized');
+
+  const islands = document.querySelectorAll('[data-island]');
+  if (islands.length > 0) {
+    console.log(\`[EreoJS] Found \${islands.length} island(s) to hydrate\`);
+  }
+}
+
+initClient().catch(console.error);
+export { initClient };
+`.trim();
+
+      const defaultEntryPath = join(clientBuildDir, '_entry.client.tsx');
+      await Bun.write(defaultEntryPath, defaultEntrySource);
+      entrypoint = defaultEntryPath;
+    }
+
+    try {
+      const result = await Bun.build({
+        entrypoints: [entrypoint],
+        outdir: clientBuildDir,
+        target: 'browser',
+        minify: false,
+        sourcemap: 'inline',
+        naming: {
+          entry: 'client.[ext]',
+          chunk: 'chunks/[name]-[hash].[ext]',
+        },
+      });
+
+      if (!result.success) {
+        for (const log of result.logs) {
+          console.error('  \x1b[31m✖\x1b[0m Client build error:', log.message);
+        }
+        return;
+      }
+
+      // Cache built outputs
+      clientBundleCache.clear();
+      for (const output of result.outputs) {
+        const relativePath = output.path.replace(clientBuildDir, '').replace(/^\//, '');
+        clientBundleCache.set(relativePath, await output.text());
+      }
+    } catch (error) {
+      console.error('  \x1b[31m✖\x1b[0m Failed to build client entry:', error);
+    }
+  }
+
+  await buildDevClient();
+
+  // Rebuild client on route changes
+  router.on('reload', () => {
+    buildDevClient();
+  });
+
   // Add HMR middleware
   server.use(async (request: Request, context: AppContext, next: NextFunction) => {
     const url = new URL(request.url);
+
+    // Serve dev client bundle
+    if (url.pathname === '/_ereo/client.js') {
+      const code = clientBundleCache.get('client.js');
+      if (code) {
+        return new Response(code, {
+          headers: { 'Content-Type': 'text/javascript; charset=utf-8' },
+        });
+      }
+    }
+
+    // Serve client bundle chunks
+    if (url.pathname.startsWith('/_ereo/chunks/')) {
+      const chunkPath = url.pathname.replace('/_ereo/', '');
+      const code = clientBundleCache.get(chunkPath);
+      if (code) {
+        return new Response(code, {
+          headers: { 'Content-Type': 'text/javascript; charset=utf-8' },
+        });
+      }
+    }
 
     // Inject HMR client
     if (url.pathname === '/__hmr-client.js') {
@@ -282,6 +389,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
           console.log('\n  Shutting down...\n');
           server.stop();
           hmrWatcher.stop();
+          rm(clientBuildDir, { recursive: true, force: true }).catch(() => {});
           process.exit(0);
           break;
       }
@@ -293,6 +401,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     console.log('\n  Shutting down...\n');
     server.stop();
     hmrWatcher.stop();
+    rm(clientBuildDir, { recursive: true, force: true }).catch(() => {});
     process.exit(0);
   });
 }
