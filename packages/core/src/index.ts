@@ -92,6 +92,7 @@ export type {
   RouteCacheConfig,
   ProgressiveConfig,
   RouteCompositionConfig,
+  AuthCheckResult,
   AuthConfig,
   DevConfig,
   ErrorConfig,

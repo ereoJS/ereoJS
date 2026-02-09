@@ -40,6 +40,13 @@ export type {
   AppContext,
 } from '@ereo/core';
 
+// Auth Enforcement
+export {
+  enforceAuthConfig,
+  resolveAuthDenial,
+  resolveCheckResult,
+} from './auth-enforcement';
+
 // Static Files
 export {
   serveStatic,

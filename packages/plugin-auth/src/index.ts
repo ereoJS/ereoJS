@@ -35,6 +35,9 @@ export type {
   AuthContext,
 } from './auth';
 
+// Re-export AuthCheckResult from core so users can import from either package
+export type { AuthCheckResult } from '@ereo/core';
+
 // Provider exports
 export {
   credentials,

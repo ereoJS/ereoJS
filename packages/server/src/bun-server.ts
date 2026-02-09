@@ -21,6 +21,7 @@ import { createShell, createResponse, renderToString, type ShellTemplate } from 
 import { serializeLoaderData, hasDeferredData, resolveAllDeferred } from '@ereo/data';
 import { createElement, type ReactElement, type ComponentType, type ReactNode } from 'react';
 import { OutletProvider } from '@ereo/client';
+import { enforceAuthConfig } from './auth-enforcement';
 
 /**
  * Type for the streaming renderer result.
@@ -401,6 +402,13 @@ export class BunServer {
     context: RequestContext
   ): Promise<Response> {
     const module = match.route.module!;
+
+    // --- Auth Config Enforcement ---
+    const routeAuthConfig = match.route.config?.auth || module.config?.auth;
+    if (routeAuthConfig) {
+      const denied = await enforceAuthConfig(routeAuthConfig, request, context, match.params);
+      if (denied) return denied;
+    }
 
     // --- Method Handler Dispatch (API Routes) ---
     const httpMethod = request.method.toUpperCase();

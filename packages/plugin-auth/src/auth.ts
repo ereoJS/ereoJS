@@ -835,12 +835,17 @@ export function requireAuth(options?: {
       check: async ({ context }) => {
         const auth = context.get('auth') as AuthContext | undefined;
         if (!auth?.isAuthenticated()) {
-          return false;
+          // Not authenticated — 401, or redirect if configured
+          if (options?.redirect) {
+            return { allowed: false, redirect: options.redirect };
+          }
+          return { allowed: false, status: 401, body: { error: 'Authentication required' } };
         }
         if (options?.roles && !auth.hasAnyRole(options.roles)) {
-          return false;
+          // Authenticated but wrong role — 403
+          return { allowed: false, status: 403, body: { error: 'Insufficient permissions' } };
         }
-        return true;
+        return { allowed: true };
       },
     },
   };
@@ -872,12 +877,18 @@ export function requireRoles(roles: string[], options?: {
       check: async ({ context }) => {
         const auth = context.get('auth') as AuthContext | undefined;
         if (!auth?.isAuthenticated()) {
-          return false;
+          if (options?.redirect) {
+            return { allowed: false, redirect: options.redirect };
+          }
+          return { allowed: false, status: 401, body: { error: 'Authentication required' } };
         }
-        if (options?.requireAll) {
-          return auth.hasAllRoles(roles);
+        const hasRoles = options?.requireAll
+          ? auth.hasAllRoles(roles)
+          : auth.hasAnyRole(roles);
+        if (!hasRoles) {
+          return { allowed: false, status: 403, body: { error: 'Insufficient permissions', requiredRoles: roles } };
         }
-        return auth.hasAnyRole(roles);
+        return { allowed: true };
       },
     },
   };

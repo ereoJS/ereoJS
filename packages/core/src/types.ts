@@ -240,6 +240,13 @@ export interface RouteCompositionConfig {
   };
 }
 
+/** Result from a custom auth check — controls the denial response */
+export type AuthCheckResult =
+  | { allowed: true }
+  | { allowed: false; redirect: string }
+  | { allowed: false; status: number; body?: unknown }
+  | { allowed: false; response: Response };
+
 /** Authentication/authorization configuration */
 export interface AuthConfig {
   /** Whether authentication is required */
@@ -248,8 +255,8 @@ export interface AuthConfig {
   roles?: string[];
   /** Required permissions */
   permissions?: string[];
-  /** Custom auth check */
-  check?: (args: { request: Request; context: AppContext; params: RouteParams }) => boolean | Promise<boolean>;
+  /** Custom auth check — return boolean for simple allow/deny, or AuthCheckResult for control over the denial response */
+  check?: (args: { request: Request; context: AppContext; params: RouteParams }) => boolean | AuthCheckResult | Promise<boolean | AuthCheckResult>;
   /** Redirect URL for unauthenticated users (can use {pathname} placeholder) */
   redirect?: string;
   /** API response for unauthorized access */
