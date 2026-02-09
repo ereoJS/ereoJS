@@ -1042,10 +1042,6 @@ export async function simulateDelay(ms${ts ? ': number' : ''} = 100)${ts ? ': Pr
   // Components: Navigation
   // ============================================================================
   const navigation = `
-'use client';
-
-import { useState } from 'react';
-
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/blog', label: 'Blog' },
@@ -1054,8 +1050,6 @@ const navLinks = [
 ];
 
 export function Navigation() {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-6xl mx-auto px-4">
@@ -1088,37 +1082,26 @@ export function Navigation() {
             ))}
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Toggle menu"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
+          {/* Mobile Navigation - uses native <details> for JS-free toggle */}
+          <details className="md:hidden relative">
+            <summary className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
+              </svg>
+            </summary>
+            <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="block px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </details>
         </div>
-
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-800">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="block py-2 text-gray-600 dark:text-gray-300 hover:text-primary-600"
-                onClick={() => setIsOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
       </div>
     </nav>
   );
@@ -1271,6 +1254,26 @@ export default function RootLayout({ children }${ts ? ': RootLayoutProps' : ''})
 `.trim();
 
   await Bun.write(join(projectDir, `app/routes/_layout.${ext}`), rootLayout);
+
+  // ============================================================================
+  // Client Entry Point
+  // ============================================================================
+  const clientEntry = `
+/**
+ * Client Entry Point
+ *
+ * This file initializes the client-side runtime:
+ * - Hydrates island components marked with 'use client'
+ * - Sets up client-side navigation
+ * - Enables link prefetching
+ */
+import { initClient } from '@ereo/client';
+
+// Initialize the EreoJS client runtime
+initClient();
+`.trim();
+
+  await Bun.write(join(projectDir, `app/entry.client.${ext}`), clientEntry);
 
   // ============================================================================
   // Home Page
@@ -1487,7 +1490,7 @@ export async function action({ request }) {
               This counter is an island — it's the only part of this page that ships JavaScript. The rest is pure HTML from the server.
             </p>
             <div className="flex justify-center">
-              <Counter initialCount={0} />
+              <Counter client:load initialCount={0} />
             </div>
           </div>
         </div>
@@ -1725,13 +1728,9 @@ export function ErrorBoundary({ error }${ts ? ': { error: Error }' : ''}) {
   // Contact Page with Form Action
   // ============================================================================
   const contactPage = `
-'use client';
-
-import { useState } from 'react';
-
 /**
  * Action handler for the contact form.
- * Runs on the server when the form is submitted.
+ * Runs on the server when the form is submitted via POST.
  */
 export async function action({ request }${ts ? ': { request: Request }' : ''}) {
   const formData = await request.formData();
@@ -1778,13 +1777,6 @@ ${ts ? `interface ContactPageProps {
   };
 }\n` : ''}
 export default function ContactPage({ actionData }${ts ? ': ContactPageProps' : ''}) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e${ts ? ': React.FormEvent<HTMLFormElement>' : ''}) => {
-    setIsSubmitting(true);
-    // Form will be handled by the action
-  };
-
   return (
     <div className="min-h-screen py-12 px-4">
       <div className="max-w-2xl mx-auto">
@@ -1803,7 +1795,7 @@ export default function ContactPage({ actionData }${ts ? ': ContactPageProps' : 
             </div>
           </div>
         ) : (
-          <form method="POST" onSubmit={handleSubmit} className="space-y-6">
+          <form method="POST" className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium mb-2">
                 Name
@@ -1857,10 +1849,9 @@ export default function ContactPage({ actionData }${ts ? ': ContactPageProps' : 
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="btn btn-primary w-full disabled:opacity-50"
+              className="btn btn-primary w-full"
             >
-              {isSubmitting ? 'Sending...' : 'Send Message'}
+              Send Message
             </button>
           </form>
         )}

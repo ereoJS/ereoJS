@@ -211,24 +211,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     } else {
       // Generate default client entry
       const defaultEntrySource = `
-import { hydrateRoot } from 'react-dom/client';
+import { initClient } from '@ereo/client';
 
-async function initClient() {
-  if (document.readyState === 'loading') {
-    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
-  }
-
-  const serverData = window.__EREO_DATA__ || {};
-  console.log('[EreoJS] Client hydration initialized');
-
-  const islands = document.querySelectorAll('[data-island]');
-  if (islands.length > 0) {
-    console.log(\`[EreoJS] Found \${islands.length} island(s) to hydrate\`);
-  }
-}
-
-initClient().catch(console.error);
-export { initClient };
+// Initialize the EreoJS client runtime (hydrates islands, sets up navigation, prefetching)
+initClient();
 `.trim();
 
       const defaultEntryPath = join(clientBuildDir, '_entry.client.tsx');

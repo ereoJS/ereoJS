@@ -11,20 +11,36 @@ bun add @ereo/client
 ## Quick Start
 
 ```typescript
-import { initClient, Link, useLoaderData } from '@ereo/client';
+// app/entry.client.ts
+import { initClient } from '@ereo/client';
 
-// Initialize the client runtime
+// Initialize the client runtime (hydrates islands, navigation, prefetching)
 initClient();
+```
 
-// Use loader data in components
-function UserProfile() {
-  const { user } = useLoaderData<{ user: { name: string } }>();
-  return <h1>{user.name}</h1>;
+### Data Access
+
+Route components receive `loaderData` and `actionData` as props during SSR:
+
+```tsx
+// app/routes/users.tsx
+export async function loader() {
+  return { users: await db.user.findMany() };
 }
 
-// Client-side navigation with prefetching
-function Nav() {
-  return <Link to="/dashboard" prefetch="intent">Dashboard</Link>;
+export default function UsersPage({ loaderData }: { loaderData: { users: User[] } }) {
+  return <ul>{loaderData.users.map(u => <li key={u.id}>{u.name}</li>)}</ul>;
+}
+```
+
+For nested or child components, use hooks to access data without prop drilling:
+
+```tsx
+import { useLoaderData } from '@ereo/client';
+
+function UserCount() {
+  const { users } = useLoaderData<{ users: User[] }>();
+  return <span>{users.length} users</span>;
 }
 ```
 
