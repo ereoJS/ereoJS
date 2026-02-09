@@ -252,8 +252,10 @@ export function useActionData<T>(): T | undefined {
 /**
  * Get current navigation state.
  *
+ * During SSR or when used outside of EreoProvider, returns a default idle state.
+ * This allows the hook to be safely used in server-rendered route components.
+ *
  * @returns The current navigation state
- * @throws Error if used outside of EreoProvider
  *
  * @example
  * ```tsx
@@ -272,14 +274,17 @@ export function useActionData<T>(): T | undefined {
  * }
  * ```
  */
+const ssrNavigationState: NavigationStateHook = {
+  status: 'idle' as NavigationStatus,
+};
+
 export function useNavigation(): NavigationStateHook {
   const context = useContext(NavigationContext);
 
+  // During SSR or when EreoProvider is not present, return default idle state.
+  // This allows the hook to be used in components that are server-rendered.
   if (context === null) {
-    throw new Error(
-      'useNavigation must be used within an EreoProvider. ' +
-        'Make sure your component is wrapped with <EreoProvider>.'
-    );
+    return ssrNavigationState;
   }
 
   return context.state;

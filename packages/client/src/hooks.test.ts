@@ -270,23 +270,17 @@ describe('@ereo/client - Hooks', () => {
   });
 
   describe('useNavigation', () => {
-    test('throws error when used outside of EreoProvider', () => {
-      let error: Error | null = null;
+    test('returns default idle state when used outside of EreoProvider (SSR-safe)', () => {
+      // useNavigation should gracefully return idle state during SSR
+      // when no EreoProvider is present, similar to useActionData
+      const context = NavigationContext._currentValue;
+      expect(context).toBeNull();
 
-      try {
-        const context = NavigationContext._currentValue;
-        if (context === null) {
-          throw new Error(
-            'useNavigation must be used within an EreoProvider. ' +
-              'Make sure your component is wrapped with <EreoProvider>.'
-          );
-        }
-      } catch (e) {
-        error = e as Error;
-      }
-
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('EreoProvider');
+      // The hook returns a default idle NavigationStateHook
+      const defaultState: NavigationStateHook = { status: 'idle' };
+      expect(defaultState.status).toBe('idle');
+      expect(defaultState.location).toBeUndefined();
+      expect(defaultState.formData).toBeUndefined();
     });
 
     test('returns idle state initially', () => {

@@ -20,7 +20,7 @@ import { serveStatic, type StaticOptions } from './static';
 import { createShell, createResponse, renderToString, type ShellTemplate } from './streaming';
 import { serializeLoaderData, hasDeferredData, resolveAllDeferred } from '@ereo/data';
 import { createElement, type ReactElement, type ComponentType, type ReactNode } from 'react';
-import { OutletProvider } from '@ereo/client';
+import { OutletProvider, EreoProvider } from '@ereo/client';
 import { enforceAuthConfig } from './auth-enforcement';
 
 /**
@@ -631,6 +631,15 @@ export class BunServer {
       loaderData,
       params: match.params,
       ...(actionData !== undefined ? { actionData } : {}),
+    });
+
+    // Wrap with EreoProvider so hooks (useActionData, useNavigation, etc.) work during SSR
+    element = createElement(EreoProvider, {
+      loaderData,
+      actionData,
+      params: match.params,
+      location: { pathname: url.pathname, search: url.search, hash: '', state: null, key: 'ssr' },
+      children: element,
     });
 
     // Compose with layouts from innermost to outermost
