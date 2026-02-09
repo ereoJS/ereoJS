@@ -31,6 +31,7 @@ export {
   createTracesAPIHandler,
   serializeTrace,
   deserializeTrace,
+  serializeEvent,
   type SerializedTraceData,
   type SerializedTraceStreamEvent,
 } from './transport';

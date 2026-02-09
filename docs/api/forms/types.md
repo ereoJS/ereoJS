@@ -437,9 +437,9 @@ interface FormActionConfig<T, TResult = unknown> {
 ### WizardStepConfig
 
 ```ts
-interface WizardStepConfig {
+interface WizardStepConfig<T extends Record<string, any> = Record<string, any>> {
   id: string;
-  fields?: string[];
+  fields?: FormPath<T>[];
   validate?: () => Promise<boolean> | boolean;
 }
 ```
@@ -448,7 +448,7 @@ interface WizardStepConfig {
 
 ```ts
 interface WizardConfig<T extends Record<string, any>> {
-  steps: WizardStepConfig[];
+  steps: WizardStepConfig<T>[];
   form: FormConfig<T>;
   persist?: 'localStorage' | 'sessionStorage' | false;
   persistKey?: string;

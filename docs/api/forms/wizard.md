@@ -32,7 +32,7 @@ function createWizard<T extends Record<string, any>>(
 
 | Name | Type | Description |
 |------|------|-------------|
-| `steps` | `WizardStepConfig[]` | Array of step definitions (required) |
+| `steps` | `WizardStepConfig<T>[]` | Array of step definitions (required) |
 | `form` | `FormConfig<T>` | Form configuration (passed to `FormStore`) (required) |
 | `persist` | `'localStorage' \| 'sessionStorage' \| false` | Persist wizard state across page reloads |
 | `persistKey` | `string` | Storage key (default `'ereo-wizard'`) |
@@ -43,7 +43,7 @@ function createWizard<T extends Record<string, any>>(
 | Name | Type | Description |
 |------|------|-------------|
 | `id` | `string` | Unique step identifier (required) |
-| `fields` | `string[]` | Field paths that belong to this step (validated on `next()`) |
+| `fields` | `FormPath<T>[]` | Type-safe field paths that belong to this step (validated on `next()`) |
 | `validate` | `() => Promise<boolean> \| boolean` | Custom step-level validation |
 
 ### WizardHelpers
