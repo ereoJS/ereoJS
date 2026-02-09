@@ -30,8 +30,8 @@ interface Store<T> {
   // Set a value for a key
   set<K extends keyof T>(key: K, value: T[K]): void
 
-  // Subscribe to changes on any key
-  subscribe(subscriber: (snapshot: T) => void): () => void
+  // Subscribe to changes on any key (use getSnapshot() to read current values)
+  subscribe(listener: () => void): () => void
 
   // Iterate over all key-signal pairs
   entries(): IterableIterator<[string, Signal<unknown>]>
