@@ -104,9 +104,11 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   }
 
   // Handle route changes
-  router.on('reload', async () => {
+  router.on('reload', () => {
     console.log('\x1b[33m⟳\x1b[0m Routes reloaded');
-    await router.loadAllModules();
+    // Don't eagerly loadAllModules — modules will be loaded on-demand
+    // per request with mtime-based freshness checks. This avoids serving
+    // stale content from Bun's import cache.
     hmr.reload();
   });
 

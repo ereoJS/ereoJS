@@ -750,6 +750,12 @@ export class HMRWatcher {
         // Skip hidden files and node_modules
         if (filename.startsWith('.') || filename.includes('node_modules')) return;
 
+        // Skip route files — these are handled by FileRouter's own watcher
+        // which invalidates modules and emits change/reload events.
+        // Processing them here would race with the FileRouter and cause
+        // the browser to reload before the server has fresh modules.
+        if (filename.startsWith('routes/') || filename.startsWith('routes\\')) return;
+
         // Add to pending changes
         this.pendingChanges.add(filename);
 

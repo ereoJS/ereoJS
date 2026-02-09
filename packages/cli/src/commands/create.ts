@@ -184,6 +184,10 @@ function generateTemplateFiles(
   // .gitignore
   files['.gitignore'] = generateGitignore();
 
+  // Docker support
+  files['Dockerfile'] = generateDockerfile();
+  files['.dockerignore'] = generateDockerignore();
+
   return files;
 }
 
@@ -1312,5 +1316,66 @@ export async function action({ request, context }${typescript ? ': ActionArgs' :
 
   return json({ received: true, timestamp: new Date().toISOString() });
 }
+`.trim();
+}
+
+/**
+ * Generate Dockerfile for multi-stage build
+ */
+function generateDockerfile(): string {
+  return `# ---- Build Stage ----
+FROM oven/bun:1 AS build
+
+WORKDIR /app
+
+# Install dependencies first (cached layer)
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
+
+# Copy source files
+COPY app/ ./app/
+COPY public/ ./public/
+COPY ereo.config.ts tsconfig.json ./
+
+# Build for production
+RUN bun run build
+
+# ---- Production Stage ----
+FROM oven/bun:1-slim
+
+WORKDIR /app
+
+# Copy package manifests and install production deps only
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile --production
+
+# Copy source (needed by ereo start for route discovery)
+COPY app/ ./app/
+COPY ereo.config.ts ./
+
+# Copy build output from build stage
+COPY --from=build /app/.ereo ./.ereo
+
+# Expose port
+EXPOSE 3000
+
+# Run production server
+CMD ["bun", "run", "start"]
+`.trim();
+}
+
+/**
+ * Generate .dockerignore
+ */
+function generateDockerignore(): string {
+  return `node_modules
+.ereo
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.git
+.gitignore
 `.trim();
 }

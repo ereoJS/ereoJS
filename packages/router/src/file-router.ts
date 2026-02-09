@@ -39,6 +39,8 @@ export class FileRouter {
   private matcher: RouteMatcher | null = null;
   private watcher: ReturnType<typeof import('node:fs').watch> | null = null;
   private eventHandlers: Partial<RouterEvents> = {};
+  /** Tracks file mtimes to detect changes in dev mode */
+  private mtimeCache = new Map<string, number>();
 
   constructor(options: RouterOptions = {}) {
     this.options = { ...defaultOptions, ...options };
@@ -176,13 +178,14 @@ export class FileRouter {
             // File added or renamed
             await this.discoverRoutes();
           } else {
-            // File changed
+            // File changed — invalidate module on both tree node and routes array
             const routeId = '/' + toUrlPath(filename).replace(/\.(tsx?|jsx?)$/, '');
             const node = this.tree?.findById(routeId);
 
             if (node) {
-              // Invalidate module cache if needed
               delete node.module;
+              // Also clear from the routes array so loadModule re-imports
+              this.invalidateRouteModule(routeId);
               this.emit('change', this.nodeToRoute(node));
             }
           }
@@ -198,6 +201,23 @@ export class FileRouter {
         }
       }
     }, 50);
+  }
+
+  /**
+   * Clear cached module for a route by ID (searches nested children).
+   */
+  private invalidateRouteModule(routeId: string): void {
+    const search = (routes: Route[]): void => {
+      for (const route of routes) {
+        if (route.id === routeId) {
+          delete route.module;
+          delete route.config;
+          return;
+        }
+        if (route.children) search(route.children);
+      }
+    };
+    search(this.routes);
   }
 
   /**
@@ -275,20 +295,53 @@ export class FileRouter {
 
   /**
    * Load a route module and parse its configuration.
+   * In dev mode (watch: true), checks file mtime to detect changes
+   * and re-imports when the file has been modified on disk.
    */
   async loadModule(route: Route): Promise<void> {
+    if (this.options.watch) {
+      // Dev mode: validate freshness via file mtime
+      try {
+        const fileStat = await stat(route.file);
+        const mtime = fileStat.mtimeMs;
+        const cachedMtime = this.mtimeCache.get(route.file);
+
+        if (route.module && cachedMtime === mtime) {
+          return; // File unchanged since last import
+        }
+
+        // File changed or first load — re-import with mtime-based cache key
+        const mod = await import(`${route.file}?v=${mtime}`);
+        route.module = mod;
+        this.mtimeCache.set(route.file, mtime);
+
+        // Re-parse config from fresh module
+        route.config = undefined;
+        if (mod.config) {
+          route.config = parseRouteConfig(mod.config);
+        }
+        const parent = this.findParentRoute(route);
+        if (parent?.config) {
+          route.config = mergeRouteConfigs(parent.config, route.config);
+        }
+      } catch (error) {
+        console.error(`Failed to load route module: ${route.file}`, error);
+        throw error;
+      }
+      return;
+    }
+
+    // Production: simple cache — load once
     if (route.module) return;
 
     try {
       const mod = await import(route.file);
       route.module = mod;
 
-      // Parse and apply route config from module
       if (mod.config) {
         route.config = parseRouteConfig(mod.config);
       }
 
-      // Merge with parent config if available
       const parent = this.findParentRoute(route);
       if (parent?.config) {
         route.config = mergeRouteConfigs(parent.config, route.config);
