@@ -695,6 +695,7 @@ export class BunServer {
     shell: ShellTemplate,
     loaderData: unknown
   ): Promise<Response> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
       const { renderToReadableStream } = await getStreamingRenderer();
 
@@ -720,7 +721,7 @@ export class BunServer {
 
       // Abort streaming after 10s to prevent hanging on unresolved Suspense.
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 10000);
+      timeoutId = setTimeout(() => abortController.abort(), 10000);
 
       // bootstrapModules tells React to:
       // 1. Emit $RC/$RX inline scripts for out-of-order Suspense boundary completion
@@ -850,6 +851,7 @@ export class BunServer {
     element: ReactElement,
     loaderData: unknown
   ): Promise<Response> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
       const { renderToReadableStream } = await getStreamingRenderer();
 
@@ -864,7 +866,7 @@ export class BunServer {
 
       // Abort streaming after 10s to prevent hanging on unresolved Suspense.
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 10000);
+      timeoutId = setTimeout(() => abortController.abort(), 10000);
 
       // Layout provides full HTML structure. bootstrapModules tells React to
       // emit $RC scripts for Suspense and inject client entry at stream end.
