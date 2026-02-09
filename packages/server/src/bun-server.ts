@@ -29,7 +29,14 @@ import { enforceAuthConfig } from './auth-enforcement';
 type StreamingRenderer = {
   renderToReadableStream?: (
     element: ReactElement,
-    options?: { onError?: (error: unknown) => void }
+    options?: {
+      bootstrapModules?: string[];
+      bootstrapScripts?: string[];
+      bootstrapScriptContent?: string;
+      signal?: AbortSignal;
+      onError?: (error: unknown) => void;
+      progressiveChunkSize?: number;
+    }
   ) => Promise<ReadableStream<Uint8Array> & { allReady: Promise<void> }>;
   renderToString: (element: ReactElement) => string;
 };
@@ -697,13 +704,13 @@ export class BunServer {
       }
 
       const hasDeferred = hasDeferredData(loaderData);
-      const scripts = [this.options.clientEntry!];
+      const clientEntry = this.options.clientEntry!;
 
-      // If deferred data exists, send head without loader data — the tail
-      // will be constructed after the React stream ends (all Suspense resolved).
+      // Don't pass scripts to createShell — React's bootstrapModules injects
+      // the client entry <script> at the end of its own stream.
       const { head, tail } = createShell({
         shell,
-        scripts,
+        scripts: [],
         loaderData: hasDeferred ? null : loaderData,
       });
 
@@ -711,16 +718,22 @@ export class BunServer {
       const headBytes = encoder.encode(head);
       const tailBytes = hasDeferred ? null : encoder.encode(tail);
 
-      // Use renderToReadableStream which is the Web Streams API version
+      // Abort streaming after 10s to prevent hanging on unresolved Suspense.
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 10000);
+
+      // bootstrapModules tells React to:
+      // 1. Emit $RC/$RX inline scripts for out-of-order Suspense boundary completion
+      // 2. Inject <script type="module" src="..."> at the end of its stream
       const reactStream = await renderToReadableStream(element, {
+        bootstrapModules: [clientEntry],
+        signal: abortController.signal,
         onError(error: unknown) {
           console.error('Streaming render error:', error);
         },
       });
 
-      const clientEntry = this.options.clientEntry!;
-
-      // Pipe progressively: head → React content → tail
+      // Pipe progressively: head → React content (with $RC scripts) → tail
       // Do NOT await allReady — that defeats streaming by buffering everything.
       const reader = reactStream.getReader();
       let phase: 'head' | 'body' | 'done' = 'head';
@@ -737,16 +750,28 @@ export class BunServer {
               const { done, value } = await reader.read();
               if (done) {
                 // React finished rendering — all Suspense boundaries resolved.
+                // React's stream already included the client entry <script> via bootstrapModules.
                 if (hasDeferred) {
-                  // Resolve deferred data now that React stream is complete
-                  const resolved = await resolveAllDeferred(loaderData);
-                  const loaderScript = `<script>window.__EREO_DATA__=${serializeLoaderData(resolved)}</script>`;
-                  const scriptTag = `<script type="module" src="${clientEntry}"></script>`;
-                  const resolvedTail = `</div>\n    ${loaderScript}\n    ${scriptTag}\n</body>\n</html>`;
+                  let resolvedData: unknown;
+                  try {
+                    // Race against a timeout so a hanging deferred can't stall the stream forever.
+                    resolvedData = await Promise.race([
+                      resolveAllDeferred(loaderData),
+                      new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Deferred data resolution timed out')), 10000)
+                      ),
+                    ]);
+                  } catch (error) {
+                    console.error('Deferred data resolution failed:', error);
+                    resolvedData = null;
+                  }
+                  const loaderScript = `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`;
+                  const resolvedTail = `</div>\n    ${loaderScript}\n</body>\n</html>`;
                   controller.enqueue(encoder.encode(resolvedTail));
                 } else {
                   controller.enqueue(tailBytes!);
                 }
+                clearTimeout(timeoutId);
                 controller.close();
                 phase = 'done';
               } else {
@@ -758,6 +783,7 @@ export class BunServer {
         },
         cancel() {
           reader.cancel();
+          clearTimeout(timeoutId);
         },
       });
 
@@ -768,6 +794,7 @@ export class BunServer {
         },
       });
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Streaming render failed:', error);
       // Fallback to string rendering on error
       return this.renderStringPage(element, shell, loaderData);
@@ -831,26 +858,31 @@ export class BunServer {
         return this.renderStringPageDirect(element, loaderData);
       }
 
-      // Render the element directly - layout provides html/head/body
+      const hasDeferred = hasDeferredData(loaderData);
+      const clientEntry = this.options.clientEntry!;
+      const encoder = new TextEncoder();
+
+      // Abort streaming after 10s to prevent hanging on unresolved Suspense.
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 10000);
+
+      // Layout provides full HTML structure. bootstrapModules tells React to
+      // emit $RC scripts for Suspense and inject client entry at stream end.
       const reactStream = await renderToReadableStream(element, {
+        bootstrapModules: [clientEntry],
+        signal: abortController.signal,
         onError(error: unknown) {
           console.error('Streaming render error:', error);
         },
       });
 
-      const encoder = new TextEncoder();
-      const hasDeferred = hasDeferredData(loaderData);
-      const clientEntry = this.options.clientEntry;
+      // Pre-build loader script if no deferred data (fast path).
+      // Client entry is NOT included here — React handles it via bootstrapModules.
+      const loaderScript = (!hasDeferred && loaderData)
+        ? encoder.encode(`<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`)
+        : null;
 
-      // Pre-build scripts if no deferred data (fast path)
-      const injectedScripts = hasDeferred ? null : encoder.encode(
-        (loaderData
-          ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
-          : '') +
-        `<script type="module" src="${clientEntry}"></script>`
-      );
-
-      // Pipe progressively: React content → hydration scripts
+      // Pipe progressively: React content (with $RC scripts) → loader data
       // Do NOT await allReady — stream bytes to the client as React renders.
       const reader = reactStream.getReader();
       let done = false;
@@ -862,16 +894,29 @@ export class BunServer {
           const result = await reader.read();
           if (result.done) {
             // React finished — all Suspense boundaries resolved.
+            // React's stream already included the client entry <script> via bootstrapModules.
             if (hasDeferred) {
-              const resolved = await resolveAllDeferred(loaderData);
-              const loaderScript = resolved
-                ? `<script>window.__EREO_DATA__=${serializeLoaderData(resolved)}</script>`
-                : '';
-              const clientScript = `<script type="module" src="${clientEntry}"></script>`;
-              controller.enqueue(encoder.encode(loaderScript + clientScript));
-            } else {
-              controller.enqueue(injectedScripts!);
+              let resolvedData: unknown;
+              try {
+                // Race against a timeout so a hanging deferred can't stall the stream forever.
+                resolvedData = await Promise.race([
+                  resolveAllDeferred(loaderData),
+                  new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Deferred data resolution timed out')), 10000)
+                  ),
+                ]);
+              } catch (error) {
+                console.error('Deferred data resolution failed:', error);
+                resolvedData = null;
+              }
+              // Always emit __EREO_DATA__ (even null) so the client has a consistent contract.
+              controller.enqueue(encoder.encode(
+                `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
+              ));
+            } else if (loaderScript) {
+              controller.enqueue(loaderScript);
             }
+            clearTimeout(timeoutId);
             controller.close();
             done = true;
           } else {
@@ -880,6 +925,7 @@ export class BunServer {
         },
         cancel() {
           reader.cancel();
+          clearTimeout(timeoutId);
         },
       });
 
@@ -890,6 +936,7 @@ export class BunServer {
         },
       });
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Streaming render failed:', error);
       return this.renderStringPageDirect(element, loaderData);
     }

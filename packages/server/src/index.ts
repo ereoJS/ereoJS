@@ -62,7 +62,6 @@ export {
   renderToStream,
   renderToString,
   createResponse,
-  createSuspenseStream,
 } from './streaming';
 
 export type {

@@ -2,7 +2,6 @@ import { describe, expect, test, mock, beforeEach, afterEach, spyOn } from 'bun:
 import {
   createShell,
   createResponse,
-  createSuspenseStream,
   renderToString,
   renderToStream,
 } from './streaming';
@@ -19,8 +18,24 @@ function createMockReadableStream(content: string): ReadableStream<Uint8Array> {
   });
 }
 
+// Helper to read a ReadableStream to string
+async function readStreamToString(body: string | ReadableStream<Uint8Array>): Promise<string> {
+  if (typeof body === 'string') return body;
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let result = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    result += decoder.decode(value, { stream: true });
+  }
+  result += decoder.decode();
+  return result;
+}
+
 // Mock callbacks for testing
 let capturedOnError: ((error: unknown) => void) | null = null;
+let capturedBootstrapModules: string[] | undefined = undefined;
 let mockPipeableContent = '<div>mock content</div>';
 
 // Mock the react-dom/server module
@@ -36,10 +51,11 @@ mock.module('react-dom/server', () => ({
     return '<div>mock content</div>';
   },
   renderToPipeableStream: (element: any, options?: any) => {
-    // Capture callbacks
+    // Capture callbacks and options
     if (options?.onError) {
       capturedOnError = options.onError;
     }
+    capturedBootstrapModules = options?.bootstrapModules;
 
     const result = {
       pipe: (writable: any) => {
@@ -75,6 +91,10 @@ mock.module('stream', () => {
     end() {
       // Use setImmediate to allow the pipe to complete before emitting end
       setImmediate(() => this.emit('end'));
+    }
+
+    destroy() {
+      this.emit('close');
     }
   }
 
@@ -214,51 +234,6 @@ describe('@ereo/server - Streaming', () => {
     });
   });
 
-  describe('createSuspenseStream', () => {
-    test('creates suspense stream helper', () => {
-      const { stream, push, close } = createSuspenseStream();
-
-      expect(stream).toBeInstanceOf(ReadableStream);
-      expect(typeof push).toBe('function');
-      expect(typeof close).toBe('function');
-    });
-
-    test('can push and read chunks', async () => {
-      const { stream, push, close } = createSuspenseStream();
-
-      // Push some data
-      push('Hello');
-      push(' World');
-      close();
-
-      // Read the stream
-      const reader = stream.getReader();
-      const decoder = new TextDecoder();
-      let result = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        result += decoder.decode(value);
-      }
-
-      expect(result).toBe('Hello World');
-    });
-
-    test('encodes chunks as UTF-8', async () => {
-      const { stream, push, close } = createSuspenseStream();
-
-      push('Hello 世界');
-      close();
-
-      const reader = stream.getReader();
-      const decoder = new TextDecoder();
-      const { value } = await reader.read();
-
-      expect(decoder.decode(value)).toBe('Hello 世界');
-    });
-  });
-
   describe('renderToString', () => {
     test('renders element to string with Content-Length header', async () => {
       const React = await import('react');
@@ -337,10 +312,11 @@ describe('@ereo/server - Streaming', () => {
     beforeEach(() => {
       // Reset mocks before each test
       capturedOnError = null;
+      capturedBootstrapModules = undefined;
       mockPipeableContent = '<div>mock content</div>';
     });
 
-    test('renderToStream returns correct structure with HTML body', async () => {
+    test('renderToStream returns correct structure with streaming body', async () => {
       const React = await import('react');
       const element = React.createElement('div', null, 'Test');
 
@@ -356,9 +332,11 @@ describe('@ereo/server - Streaming', () => {
 
       expect(result.status).toBe(200);
       expect(result.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
-      expect(result.headers.get('Content-Length')).toBeDefined();
-      expect(typeof result.body).toBe('string');
-      expect(result.body).toContain('<!DOCTYPE html>');
+      // Streaming responses don't include Content-Length
+      expect(result.headers.has('Content-Length')).toBe(false);
+      expect(result.body).toBeInstanceOf(ReadableStream);
+      const html = await readStreamToString(result.body);
+      expect(html).toContain('<!DOCTYPE html>');
     });
 
     test('renderToStream executes loader when available (lines 133-137)', async () => {
@@ -395,16 +373,16 @@ describe('@ereo/server - Streaming', () => {
 
       // Verify result structure
       expect(result.status).toBe(200);
-      expect(typeof result.body).toBe('string');
+      expect(result.body).toBeInstanceOf(ReadableStream);
     });
 
-    test('renderToStream onError callback is called on render errors (line 144)', async () => {
+    test('renderToStream onError callback is called on render errors', async () => {
       const React = await import('react');
       const element = React.createElement('div', null, 'Test');
       const consoleSpy = spyOn(console, 'error').mockImplementation(() => {});
 
       // Call renderToStream to set up the onError callback
-      await renderToStream(element, {
+      const result = await renderToStream(element, {
         match: {
           route: { id: '/test', path: '/test', file: '/test.tsx' },
           params: {},
@@ -412,6 +390,9 @@ describe('@ereo/server - Streaming', () => {
         },
         context: createMockContext() as any,
       });
+
+      // Consume the stream so it fully processes
+      await readStreamToString(result.body);
 
       // The onError callback should have been captured
       expect(capturedOnError).toBeDefined();
@@ -442,7 +423,7 @@ describe('@ereo/server - Streaming', () => {
         styles: ['/style.css'],
       });
 
-      const fullContent = result.body as string;
+      const fullContent = await readStreamToString(result.body);
 
       // Verify head was prepended
       expect(fullContent).toContain('<!DOCTYPE html>');
@@ -456,8 +437,11 @@ describe('@ereo/server - Streaming', () => {
       expect(fullContent).toContain('</div>');
       expect(fullContent).toContain('</body>');
       expect(fullContent).toContain('</html>');
-      expect(fullContent).toContain('src="/app.js"');
+      // Scripts are NOT in the shell tail — React handles them via bootstrapModules
+      expect(fullContent).not.toContain('src="/app.js"');
       expect(fullContent).toContain('href="/style.css"');
+      // Verify bootstrapModules was passed to renderToPipeableStream
+      expect(capturedBootstrapModules).toEqual(['/app.js']);
     });
 
     test('renderToStream includes loader data in shell', async () => {
@@ -480,7 +464,7 @@ describe('@ereo/server - Streaming', () => {
         context: createMockContext() as any,
       });
 
-      const fullContent = result.body as string;
+      const fullContent = await readStreamToString(result.body);
 
       // Verify loader data is included
       expect(fullContent).toContain('window.__EREO_DATA__');
@@ -505,7 +489,7 @@ describe('@ereo/server - Streaming', () => {
       });
 
       expect(result.status).toBe(200);
-      const fullContent = result.body as string;
+      const fullContent = await readStreamToString(result.body);
 
       // Should not contain loader data script when no loader
       expect(fullContent).not.toContain('window.__EREO_DATA__');
@@ -551,7 +535,7 @@ describe('@ereo/server - Streaming', () => {
         context: createMockContext() as any,
       });
 
-      const fullContent = result.body as string;
+      const fullContent = await readStreamToString(result.body);
 
       // Verify content was included
       expect(fullContent).toContain('chunk1');
@@ -710,77 +694,6 @@ describe('@ereo/server - Streaming', () => {
       expect(head).toContain('href="/main.css"');
       // as should not appear since it's undefined
       expect(head).not.toContain('as=');
-    });
-  });
-
-  // ============================================================================
-  // Additional Tests: createSuspenseStream edge cases
-  // ============================================================================
-  describe('createSuspenseStream - edge cases', () => {
-    test('pushing empty string produces empty chunk', async () => {
-      const { stream, push, close } = createSuspenseStream();
-
-      push('');
-      push('data');
-      close();
-
-      const reader = stream.getReader();
-      const decoder = new TextDecoder();
-      let result = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        result += decoder.decode(value);
-      }
-
-      expect(result).toBe('data');
-    });
-
-    test('pushing many chunks builds correct output', async () => {
-      const { stream, push, close } = createSuspenseStream();
-
-      for (let i = 0; i < 100; i++) {
-        push(`chunk${i}`);
-      }
-      close();
-
-      const reader = stream.getReader();
-      const decoder = new TextDecoder();
-      let result = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        result += decoder.decode(value);
-      }
-
-      for (let i = 0; i < 100; i++) {
-        expect(result).toContain(`chunk${i}`);
-      }
-    });
-
-    test('handles special unicode characters', async () => {
-      const { stream, push, close } = createSuspenseStream();
-
-      push('Emoji: \u{1F600}');
-      push(' Math: \u00B1');
-      push(' CJK: \u4E16\u754C');
-      close();
-
-      const reader = stream.getReader();
-      const decoder = new TextDecoder();
-      let result = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        result += decoder.decode(value);
-      }
-
-      expect(result).toContain('\u{1F600}');
-      expect(result).toContain('\u00B1');
-      expect(result).toContain('\u4E16\u754C');
     });
   });
 

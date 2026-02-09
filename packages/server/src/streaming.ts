@@ -131,6 +131,13 @@ export function createShell(options: {
 /**
  * Render a route to a streaming response.
  * Uses renderToPipeableStream for Node.js/Bun environments.
+ *
+ * Returns a ReadableStream body that progressively sends:
+ *   shell head → React content (with $RC scripts for Suspense) → tail
+ *
+ * Deferred data is NOT resolved upfront — React streams Suspense fallbacks
+ * and resolves them out-of-order via inline $RC scripts. Loader data is
+ * serialized into the tail only after all Suspense boundaries resolve.
  */
 export async function renderToStream(
   element: ReactElement,
@@ -151,49 +158,101 @@ export async function renderToStream(
     });
   }
 
-  // Resolve any deferred data before serialization into the shell
-  if (hasDeferredData(loaderData)) {
-    loaderData = await resolveAllDeferred(loaderData);
-  }
+  const hasDeferred = hasDeferredData(loaderData);
 
-  const { head, tail } = createShell({ shell, scripts, styles, loaderData });
+  // Don't pass scripts to createShell — React's bootstrapModules handles
+  // the client entry injection, avoiding double <script> tags.
+  const { head, tail } = createShell({
+    shell,
+    scripts: [],
+    styles,
+    loaderData: hasDeferred ? null : loaderData,
+  });
 
   return new Promise((resolve, reject) => {
     const { PassThrough } = require('stream');
 
+    const DEFERRED_TIMEOUT_MS = 10_000;
+    const RENDER_TIMEOUT_MS = 10_000;
+
+    const timeoutId = setTimeout(() => {
+      abort();
+    }, RENDER_TIMEOUT_MS);
+
     const { pipe, abort } = renderToPipeableStream(element, {
-      bootstrapScripts: scripts,
+      bootstrapModules: scripts,
       onShellReady() {
         const passThrough = new PassThrough();
-        const chunks: Buffer[] = [];
-        chunks.push(Buffer.from(head));
+        const encoder = new TextEncoder();
 
-        passThrough.on('data', (chunk: Buffer) => {
-          chunks.push(chunk);
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            // Send head immediately so the browser can parse CSS/meta
+            controller.enqueue(encoder.encode(head));
+
+            passThrough.on('data', (chunk: Buffer) => {
+              controller.enqueue(new Uint8Array(chunk));
+            });
+
+            passThrough.on('end', () => {
+              // Wrap async work in a self-executing function with error handling
+              // to prevent unhandled promise rejections.
+              (async () => {
+                // React stream complete — resolve deferred data if needed.
+                // React's stream already included the $RC scripts and client entry.
+                if (hasDeferred) {
+                  let resolvedData: unknown;
+                  try {
+                    resolvedData = await Promise.race([
+                      resolveAllDeferred(loaderData),
+                      new Promise<null>((_, rejectTimeout) =>
+                        setTimeout(() => rejectTimeout(new Error('Deferred data resolution timed out')), DEFERRED_TIMEOUT_MS)
+                      ),
+                    ]);
+                  } catch (error) {
+                    console.error('Deferred data resolution failed:', error);
+                    resolvedData = null;
+                  }
+                  const loaderScript = `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`;
+                  const resolvedTail = `</div>\n    ${loaderScript}\n</body>\n</html>`;
+                  controller.enqueue(encoder.encode(resolvedTail));
+                } else {
+                  controller.enqueue(encoder.encode(tail));
+                }
+                controller.close();
+              })().catch((error) => {
+                // Catch errors from controller methods (e.g. stream already cancelled)
+                console.error('Stream finalization error:', error);
+                try { controller.error(error); } catch { /* already errored/closed */ }
+              }).finally(() => {
+                clearTimeout(timeoutId);
+              });
+            });
+
+            passThrough.on('error', (error: Error) => {
+              clearTimeout(timeoutId);
+              console.error('Stream error:', error);
+              controller.error(error);
+            });
+          },
+          cancel() {
+            clearTimeout(timeoutId);
+            passThrough.destroy();
+          },
         });
 
-        passThrough.on('end', () => {
-          chunks.push(Buffer.from(tail));
-          const fullHtml = Buffer.concat(chunks).toString('utf-8');
-
-          resolve({
-            body: fullHtml,
-            headers: new Headers({
-              'Content-Type': 'text/html; charset=utf-8',
-              'Content-Length': Buffer.byteLength(fullHtml).toString(),
-            }),
-            status: 200,
-          });
-        });
-
-        passThrough.on('error', (error: Error) => {
-          console.error('Stream error:', error);
-          reject(error);
+        resolve({
+          body: stream,
+          headers: new Headers({
+            'Content-Type': 'text/html; charset=utf-8',
+          }),
+          status: 200,
         });
 
         pipe(passThrough);
       },
       onShellError(error: unknown) {
+        clearTimeout(timeoutId);
         console.error('Shell render error:', error);
         reject(error);
       },
@@ -201,11 +260,6 @@ export async function renderToStream(
         console.error('Render error:', error);
       },
     });
-
-    // Set a timeout to abort if rendering takes too long
-    setTimeout(() => {
-      abort();
-    }, 10000);
   });
 }
 
@@ -259,30 +313,3 @@ export function createResponse(result: RenderResult): Response {
   });
 }
 
-/**
- * Stream helper for sending chunks with delays (Suspense boundaries).
- */
-export function createSuspenseStream(): {
-  stream: ReadableStream<Uint8Array>;
-  push: (chunk: string) => void;
-  close: () => void;
-} {
-  const encoder = new TextEncoder();
-  let controller: ReadableStreamDefaultController<Uint8Array>;
-
-  const stream = new ReadableStream<Uint8Array>({
-    start(c) {
-      controller = c;
-    },
-  });
-
-  return {
-    stream,
-    push: (chunk: string) => {
-      controller.enqueue(encoder.encode(chunk));
-    },
-    close: () => {
-      controller.close();
-    },
-  };
-}
