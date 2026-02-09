@@ -81,6 +81,20 @@ export async function start(options: StartOptions = {}): Promise<void> {
   server.setApp(app);
   server.setRouter(router);
 
+  // Serve compiled Tailwind CSS in production
+  const cssPath = join(buildDir, 'assets/styles.css');
+  if (await Bun.file(cssPath).exists()) {
+    const cssContent = await Bun.file(cssPath).text();
+    server.use('/__tailwind.css', async (_request, _context, _next) => {
+      return new Response(cssContent, {
+        headers: {
+          'Content-Type': 'text/css; charset=utf-8',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    });
+  }
+
   // Start server
   await server.start();
 

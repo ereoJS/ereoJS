@@ -41,6 +41,7 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
     minify: options.minify ?? config.build?.minify ?? true,
     sourcemap: options.sourcemap ?? config.build?.sourcemap ?? true,
     target: bundlerTarget,
+    plugins: config.plugins,
   };
 
   console.log(`  Target: ${buildOptions.target}`);

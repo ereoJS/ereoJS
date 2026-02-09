@@ -160,6 +160,13 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
     // Clean and create output directory structure
     await cleanAndCreateDirs(outDir);
 
+    // Run plugin setup hooks (initializes processors like PostCSS/Tailwind)
+    if (options.plugins) {
+      for (const plugin of options.plugins) {
+        await plugin.setup?.({ root, config: {} as FrameworkConfig, mode: 'production' });
+      }
+    }
+
     // Run plugin buildStart hooks
     if (options.plugins) {
       for (const plugin of options.plugins) {
