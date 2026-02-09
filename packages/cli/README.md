@@ -52,6 +52,7 @@ Options:
 - `--port, -p` - Port number (default: 3000)
 - `--host, -h` - Host name (default: localhost)
 - `--open, -o` - Open browser automatically
+- `--trace` - Enable request tracing
 
 ### `ereo build`
 

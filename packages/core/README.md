@@ -47,6 +47,26 @@ await app.start();
 - **Unified Cache Interface** - Flexible caching with `createCache`, `createTaggedCache`, and tag-based invalidation
 - **Full TypeScript Support** - Comprehensive type definitions for routes, loaders, actions, middleware, and more
 
+## Request Context
+
+```typescript
+import { createContext, getContext, attachContext } from '@ereo/core';
+
+// Create a request-scoped context from an incoming request
+const ctx = createContext(request);
+
+// Store data in the context
+ctx.set('userId', '123');
+ctx.get('userId'); // '123'
+
+// Attach context to a request for downstream access
+attachContext(request, ctx);
+
+// Later, retrieve it
+const ctx2 = getContext(request);
+ctx2?.get('userId'); // '123'
+```
+
 ## Environment Variables
 
 ```typescript

@@ -81,6 +81,7 @@ bunx create-ereo@latest my-app --template minimal
 | `--no-typescript` | | Use JavaScript instead of TypeScript |
 | `--no-git` | | Skip git initialization |
 | `--no-install` | | Skip package installation |
+| `--trace` | | Include @ereo/trace for full-stack observability |
 | `--help` | `-h` | Show help message |
 
 ## Examples
@@ -97,6 +98,9 @@ bunx create-ereo@latest my-app --no-install
 
 # Create without git initialization
 bunx create-ereo@latest my-app --no-git
+
+# Create with tracing enabled
+bunx create-ereo@latest my-app --trace
 ```
 
 ## Project Structure
