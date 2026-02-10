@@ -20,31 +20,24 @@ In this tutorial, you'll build a full-featured blog application with EreoJS. By 
 ## Create the Project
 
 ```bash
-bunx create-ereo@latest blog
+bunx create-ereo@latest blog --template minimal
 cd blog
 ```
+
+> **Note:** We use `--template minimal` to start with a clean slate. The default template includes pre-built pages that would conflict with what we're building.
 
 This creates a new project with the following structure:
 
 ```
 blog/
 ├── app/
-│   ├── routes/
-│   │   └── index.tsx
-│   └── entry.client.tsx
+│   └── routes/
+│       ├── _layout.tsx
+│       └── index.tsx
 ├── public/
 ├── ereo.config.ts
 ├── package.json
 └── tsconfig.json
-```
-
-## Install Dependencies
-
-We'll use a few additional packages:
-
-```bash
-bun add better-sqlite3
-bun add -d @types/better-sqlite3
 ```
 
 ## Project Configuration
@@ -58,11 +51,10 @@ export default defineConfig({
   server: {
     port: 3000,
   },
-  build: {
-    target: 'bun',
-  },
 })
 ```
+
+> **Note:** Since Bun has a built-in SQLite driver (`bun:sqlite`), we don't need any extra database dependencies.
 
 ## Set Up the Database
 
@@ -70,7 +62,7 @@ Create a simple SQLite database for our blog. Create `app/lib/db.ts`:
 
 ```ts
 // app/lib/db.ts
-import Database from 'better-sqlite3'
+import { Database } from 'bun:sqlite'
 
 const db = new Database('blog.db')
 
@@ -182,7 +174,7 @@ Create `app/routes/_layout.tsx`:
 // app/routes/_layout.tsx
 import { Link } from '@ereo/client'
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -356,14 +348,14 @@ Replace `app/routes/index.tsx`:
 // app/routes/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
-import { getPosts } from '../lib/db'
+import { getPosts } from '~/lib/db'
 
 export const loader = createLoader(async () => {
   const posts = getPosts().slice(0, 3)
   return { posts }
 })
 
-export default function Home({ loaderData }) {
+export default function Home({ loaderData }: { loaderData: any }) {
   const { posts } = loaderData
 
   return (

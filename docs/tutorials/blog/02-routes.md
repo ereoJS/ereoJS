@@ -17,7 +17,7 @@ export const loader = createLoader(async () => {
   return { posts }
 })
 
-export default function Posts({ loaderData }) {
+export default function Posts({ loaderData }: { loaderData: any }) {
   const { posts } = loaderData
 
   return (
@@ -67,14 +67,14 @@ export const loader = createLoader(async ({ params }) => {
   return { post, comments }
 })
 
-export function meta({ data }) {
+export function meta({ data }: { data: any }) {
   return [
     { title: `${data.post.title} | My Blog` },
     { name: 'description', content: data.post.excerpt }
   ]
 }
 
-export default function PostPage({ loaderData }) {
+export default function PostPage({ loaderData }: { loaderData: any }) {
   const { post, comments } = loaderData
 
   return (
@@ -266,17 +266,16 @@ Try hovering over links - watch the network tab to see prefetching in action!
 ## Current File Structure
 
 ```
-src/
+app/
 ├── lib/
 │   └── db.ts
-├── routes/
-│   ├── _layout.tsx
-│   ├── index.tsx
-│   └── posts/
-│       ├── _error.tsx
-│       ├── index.tsx
-│       └── [slug].tsx
-└── index.ts
+└── routes/
+    ├── _layout.tsx
+    ├── index.tsx
+    └── posts/
+        ├── _error.tsx
+        ├── index.tsx
+        └── [slug].tsx
 ```
 
 ## Next Step

@@ -5,6 +5,7 @@
  */
 
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import {
@@ -139,6 +140,12 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     }
   }
 
+  // Serve static files from public/ directory in dev mode
+  const publicDir = join(root, 'public');
+  const staticConfig = existsSync(publicDir)
+    ? { root: publicDir, prefix: '/', maxAge: 0 }
+    : undefined;
+
   // Create server with HMR
   const server = createServer({
     port,
@@ -147,6 +154,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     logging: !options.trace, // Disable default logger when tracing (trace middleware provides richer output)
     websocket: createHMRWebSocket(hmr),
     trace: traceConfig,
+    static: staticConfig,
   });
 
   server.setApp(app);

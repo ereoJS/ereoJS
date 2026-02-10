@@ -65,7 +65,7 @@ For multi-server deployments, use PostgreSQL:
 bun add pg
 ```
 
-Update `src/lib/db.ts`:
+Update `app/lib/db.ts`:
 
 ```ts
 import { Pool } from 'pg'
@@ -317,7 +317,7 @@ server {
 For production, enhance session security:
 
 ```ts
-// src/lib/auth.ts
+// app/lib/auth.ts
 export function createSession(userId: number): string {
   const sessionId = randomUUID()
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -349,7 +349,7 @@ export function getSessionCookie(sessionId: string): string {
 Add health check endpoint:
 
 ```ts
-// routes/api/health.ts
+// app/routes/api/health.ts
 export const loader = createLoader(async () => {
   // Check database connection
   try {

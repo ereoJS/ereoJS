@@ -83,7 +83,7 @@ Update `app/routes/_layout.tsx`:
 // app/routes/_layout.tsx
 import { Link, NavLink } from '@ereo/client'
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -145,14 +145,14 @@ export default function RootLayout({ children }) {
 // app/routes/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
-import { getPosts } from '../lib/db'
+import { getPosts } from '~/lib/db'
 
 export const loader = createLoader(async () => {
   const posts = getPosts().slice(0, 3)
   return { posts }
 })
 
-export default function Home({ loaderData }) {
+export default function Home({ loaderData }: { loaderData: any }) {
   const { posts } = loaderData
 
   return (
@@ -219,14 +219,14 @@ export default function Home({ loaderData }) {
 // app/routes/posts/index.tsx
 import { createLoader } from '@ereo/data'
 import { Link } from '@ereo/client'
-import { getPosts } from '../../lib/db'
+import { getPosts } from '~/lib/db'
 
 export const loader = createLoader(async () => {
   const posts = getPosts()
   return { posts }
 })
 
-export default function Posts({ loaderData }) {
+export default function Posts({ loaderData }: { loaderData: any }) {
   const { posts } = loaderData
 
   return (
@@ -291,7 +291,7 @@ export default function Posts({ loaderData }) {
 // Update the post detail page with Tailwind classes
 // app/routes/posts/[slug].tsx
 
-export default function PostPage({ loaderData }) {
+export default function PostPage({ loaderData }: { loaderData: any }) {
   const { post, comments } = loaderData
   const actionData = useActionData()
   const navigation = useNavigation()

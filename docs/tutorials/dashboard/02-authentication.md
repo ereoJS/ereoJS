@@ -10,7 +10,7 @@ Create `app/routes/login.tsx`:
 import { createLoader, createAction } from '@ereo/data'
 import { useActionData } from '@ereo/client'
 import { Form, Link } from '@ereo/client'
-import { verifyCredentials, createSession } from '../lib/auth'
+import { verifyCredentials, createSession } from '~/lib/auth'
 
 export const loader = createLoader(async ({ request, context }) => {
   // Redirect if already logged in
@@ -56,7 +56,7 @@ export const action = createAction(async ({ request }) => {
   })
 })
 
-export default function LoginPage({ loaderData }) {
+export default function LoginPage({ loaderData }: { loaderData: any }) {
   const actionData = useActionData()
 
   return (
@@ -127,8 +127,8 @@ Create `app/routes/register.tsx`:
 import { createLoader, createAction } from '@ereo/data'
 import { useActionData } from '@ereo/client'
 import { Form, Link } from '@ereo/client'
-import { createUser, createSession } from '../lib/auth'
-import { db } from '../lib/db'
+import { createUser, createSession } from '~/lib/auth'
+import { db } from '~/lib/db'
 
 export const loader = createLoader(async ({ context }) => {
   const user = context.get('user')
@@ -260,7 +260,7 @@ Create `app/routes/logout.tsx`:
 
 ```tsx
 import { createAction } from '@ereo/data'
-import { deleteSession } from '../lib/auth'
+import { deleteSession } from '~/lib/auth'
 
 export const action = createAction(async ({ request }) => {
   const cookies = request.headers.get('cookie') || ''
@@ -292,18 +292,16 @@ Create `app/routes/dashboard/_layout.tsx`:
 ```tsx
 import { createLoader } from '@ereo/data'
 import { Outlet, Link, Form } from '@ereo/client'
-import { requireAuth } from '../../middleware/auth'
 
-export const config = {
-  middleware: [requireAuth]
-}
+// Note: Authentication is enforced by app/routes/dashboard/_middleware.ts
+// which we created in Chapter 1. It runs before this layout's loader.
 
 export const loader = createLoader(async ({ context }) => {
   const user = context.get('user')
   return { user }
 })
 
-export default function DashboardLayout({ loaderData }) {
+export default function DashboardLayout({ loaderData }: { loaderData: any }) {
   const { user } = loaderData
 
   return (

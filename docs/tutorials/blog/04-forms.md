@@ -69,7 +69,7 @@ export const action = createAction(async ({ request, params }) => {
   return redirect(`/posts/${params.slug}`)
 })
 
-export default function EditPost({ loaderData }) {
+export default function EditPost({ loaderData }: { loaderData: any }) {
   const { post } = loaderData
   const actionData = useActionData()
   const navigation = useNavigation()
@@ -234,21 +234,22 @@ First, add a likes column to the database. Update `app/lib/db.ts`:
 
 ```ts
 // Add this after the CREATE TABLE statements
-db.exec(`
-  ALTER TABLE posts ADD COLUMN likes INTEGER DEFAULT 0;
-`).catch(() => {
+try {
+  db.exec(`ALTER TABLE posts ADD COLUMN likes INTEGER DEFAULT 0`)
+} catch {
   // Column might already exist
-})
+}
 ```
 
 Create an API route for likes at `app/routes/api/posts/[id]/like.ts`:
 
 ```ts
 // app/routes/api/posts/[id]/like.ts
+import { createAction } from '@ereo/data'
 import { db } from '~/lib/db'
 
-export async function POST({ request, params }) {
-  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(params.id)
+export const action = createAction(async ({ params }) => {
+  const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(params.id) as any
 
   if (!post) {
     return Response.json({ error: 'Post not found' }, { status: 404 })
@@ -256,10 +257,10 @@ export async function POST({ request, params }) {
 
   db.prepare('UPDATE posts SET likes = likes + 1 WHERE id = ?').run(params.id)
 
-  const updated = db.prepare('SELECT likes FROM posts WHERE id = ?').get(params.id)
+  const updated = db.prepare('SELECT likes FROM posts WHERE id = ?').get(params.id) as any
 
   return Response.json({ likes: updated.likes })
-}
+})
 ```
 
 Now create a LikeButton component at `app/components/LikeButton.tsx`:

@@ -12,7 +12,7 @@ Islands let us hydrate only the interactive parts.
 
 ## Stats Widget Island
 
-Create `src/islands/StatsWidget.tsx`:
+Create `app/components/StatsWidget.tsx`:
 
 ```tsx
 import { useState, useEffect } from 'react'
@@ -78,7 +78,7 @@ export default function StatsWidget({ initialStats }: { initialStats: Stat[] }) 
 
 ## Activity Feed Island
 
-Create `src/islands/ActivityFeed.tsx`:
+Create `app/components/ActivityFeed.tsx`:
 
 ```tsx
 import { useState, useEffect, useRef } from 'react'
@@ -159,7 +159,7 @@ export default function ActivityFeed({ initialActivities }: { initialActivities:
 
 ## Chart Widget Island
 
-Create `src/islands/ChartWidget.tsx`:
+Create `app/components/ChartWidget.tsx`:
 
 ```tsx
 import { useState, useMemo } from 'react'
@@ -269,7 +269,7 @@ Update `app/routes/dashboard/index.tsx`:
 
 ```tsx
 import { createLoader } from '@ereo/data'
-import { db } from '../../lib/db'
+import { db } from '~/lib/db'
 
 export const loader = createLoader(async ({ context }) => {
   const user = context.get('user')
@@ -303,7 +303,7 @@ export const loader = createLoader(async ({ context }) => {
   return { stats, activities, chartData }
 })
 
-export default function DashboardHome({ loaderData }) {
+export default function DashboardHome({ loaderData }: { loaderData: any }) {
   const { stats, activities, chartData } = loaderData
 
   return (

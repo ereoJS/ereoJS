@@ -19,7 +19,7 @@ Update your code to use environment variables:
 
 ```ts
 // app/lib/db.ts
-import Database from 'better-sqlite3'
+import { Database } from 'bun:sqlite'
 
 const dbPath = process.env.DATABASE_URL || 'blog.db'
 const db = new Database(dbPath)
@@ -29,7 +29,7 @@ const db = new Database(dbPath)
 
 ### 2. Security Headers
 
-Add security middleware. Create `src/middleware/security.ts`:
+Add security middleware. Create `app/middleware/security.ts`:
 
 ```ts
 import type { MiddlewareHandler } from '@ereo/core'
@@ -116,7 +116,7 @@ export default function RootError() {
 Add SEO meta tags. Update `app/routes/_layout.tsx`:
 
 ```tsx
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -259,12 +259,14 @@ fly deploy
 Create `app/routes/api/health.ts`:
 
 ```ts
-export function GET() {
+import { createLoader } from '@ereo/data'
+
+export const loader = createLoader(async () => {
   return Response.json({
     status: 'ok',
     timestamp: new Date().toISOString()
   })
-}
+})
 ```
 
 ## Set Up Reverse Proxy (Nginx)
@@ -304,7 +306,7 @@ server {
 Add basic logging:
 
 ```ts
-// src/middleware/logger.ts
+// app/middleware/logger.ts
 import type { MiddlewareHandler } from '@ereo/core'
 
 export const loggerMiddleware: MiddlewareHandler = async (request, context, next) => {
@@ -328,32 +330,30 @@ export const loggerMiddleware: MiddlewareHandler = async (request, context, next
 
 ```
 blog/
-├── src/
-│   ├── islands/
+├── app/
+│   ├── components/
 │   │   └── LikeButton.tsx
 │   ├── lib/
 │   │   └── db.ts
 │   ├── middleware/
 │   │   ├── logger.ts
 │   │   └── security.ts
-│   ├── routes/
-│   │   ├── api/
-│   │   │   ├── health.ts
-│   │   │   └── posts/
-│   │   │       └── [id]/
-│   │   │           └── like.ts
-│   │   ├── posts/
-│   │   │   ├── _error.tsx
-│   │   │   ├── index.tsx
-│   │   │   ├── new.tsx
-│   │   │   ├── [slug].tsx
-│   │   │   └── [slug]/
-│   │   │       └── edit.tsx
-│   │   ├── _error.tsx
-│   │   ├── _layout.tsx
-│   │   └── index.tsx
-│   ├── client.ts
-│   └── index.ts
+│   └── routes/
+│       ├── api/
+│       │   ├── health.ts
+│       │   └── posts/
+│       │       └── [id]/
+│       │           └── like.ts
+│       ├── posts/
+│       │   ├── _error.tsx
+│       │   ├── index.tsx
+│       │   ├── new.tsx
+│       │   ├── [slug].tsx
+│       │   └── [slug]/
+│       │       └── edit.tsx
+│       ├── _error.tsx
+│       ├── _layout.tsx
+│       └── index.tsx
 ├── public/
 │   ├── favicon.ico
 │   └── styles.css

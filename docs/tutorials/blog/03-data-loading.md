@@ -252,14 +252,14 @@ export const action = createAction(async ({ request, params }) => {
   return { success: true }
 })
 
-export function meta({ data }) {
+export function meta({ data }: { data: any }) {
   return [
     { title: `${data.post.title} | My Blog` },
     { name: 'description', content: data.post.excerpt }
   ]
 }
 
-export default function PostPage({ loaderData }) {
+export default function PostPage({ loaderData }: { loaderData: any }) {
   const { post, comments } = loaderData
   const actionData = useActionData()
   const navigation = useNavigation()

@@ -7,7 +7,7 @@ Build an analytics page with shared state between islands.
 Multiple islands can share state using signals:
 
 ```tsx
-// lib/analytics-store.ts
+// app/lib/analytics-store.ts
 import { signal, computed } from '@ereo/state'
 
 export interface DateRange {
@@ -31,11 +31,11 @@ export const dateRangeLabel = computed(() => {
 
 ## Date Range Picker Island
 
-Create `src/islands/DateRangePicker.tsx`:
+Create `app/components/DateRangePicker.tsx`:
 
 ```tsx
 import { useState, useEffect } from 'react'
-import { dateRange, type DateRange } from '../lib/analytics-store'
+import { dateRange, type DateRange } from '~/lib/analytics-store'
 
 const presets = [
   { label: 'Last 7 days', days: 7 },
@@ -143,11 +143,11 @@ export default function DateRangePicker({ initialRange }: { initialRange: DateRa
 
 ## Metric Selector Island
 
-Create `src/islands/MetricSelector.tsx`:
+Create `app/components/MetricSelector.tsx`:
 
 ```tsx
 import { useState, useEffect } from 'react'
-import { selectedMetric } from '../lib/analytics-store'
+import { selectedMetric } from '~/lib/analytics-store'
 
 const metrics = [
   { id: 'views', label: 'Page Views', icon: '👁' },
@@ -190,11 +190,11 @@ export default function MetricSelector({ initial }: { initial: 'views' | 'users'
 
 ## Analytics Chart Island
 
-Create `src/islands/AnalyticsChart.tsx`:
+Create `app/components/AnalyticsChart.tsx`:
 
 ```tsx
 import { useState, useEffect, useMemo } from 'react'
-import { dateRange, selectedMetric } from '../lib/analytics-store'
+import { dateRange, selectedMetric } from '~/lib/analytics-store'
 
 interface DataSet {
   views: Array<{ date: string; value: number }>
@@ -343,7 +343,7 @@ export const loader = createLoader(async () => {
   }
 })
 
-export default function AnalyticsPage({ loaderData }) {
+export default function AnalyticsPage({ loaderData }: { loaderData: any }) {
   const { data, initialRange } = loaderData
 
   return (

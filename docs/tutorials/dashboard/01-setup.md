@@ -19,14 +19,16 @@ A team dashboard with:
 ## Create the Project
 
 ```bash
-bunx create-ereo@latest dashboard-app
+bunx create-ereo@latest dashboard-app --template minimal
 cd dashboard-app
 ```
+
+> **Note:** We use `--template minimal` to start with a clean project structure.
 
 ## Install Dependencies
 
 ```bash
-bun add @ereo/auth bcrypt
+bun add bcrypt
 bun add -d @types/bcrypt
 ```
 
@@ -34,35 +36,33 @@ bun add -d @types/bcrypt
 
 ```
 dashboard-app/
-├── src/
+├── app/
 │   ├── routes/
+│   │   ├── _middleware.ts      # Auth middleware (all routes)
+│   │   ├── _layout.tsx         # Root layout
 │   │   ├── index.tsx           # Landing page
 │   │   ├── login.tsx           # Login page
 │   │   ├── register.tsx        # Registration
 │   │   └── dashboard/
-│   │       ├── _layout.tsx     # Protected layout
+│   │       ├── _middleware.ts  # Protected route middleware
+│   │       ├── _layout.tsx     # Dashboard layout
 │   │       ├── index.tsx       # Dashboard home
 │   │       ├── analytics.tsx   # Analytics page
 │   │       └── settings.tsx    # User settings
-│   ├── islands/
+│   ├── components/
 │   │   ├── StatsWidget.tsx     # Interactive stats
 │   │   ├── ActivityFeed.tsx    # Live activity
 │   │   └── ChartWidget.tsx     # Data visualization
-│   ├── middleware/
-│   │   └── auth.ts             # Auth middleware
-│   ├── lib/
-│   │   ├── auth.ts             # Auth utilities
-│   │   └── db.ts               # Database setup
-│   └── components/
-│       ├── Sidebar.tsx
-│       └── Header.tsx
+│   └── lib/
+│       ├── auth.ts             # Auth utilities
+│       └── db.ts               # Database setup
 ├── ereo.config.ts
 └── package.json
 ```
 
 ## Database Setup
 
-Create `src/lib/db.ts`:
+Create `app/lib/db.ts`:
 
 ```ts
 import { Database } from 'bun:sqlite'
@@ -105,7 +105,7 @@ export { db }
 
 ## Auth Utilities
 
-Create `src/lib/auth.ts`:
+Create `app/lib/auth.ts`:
 
 ```ts
 import { db } from './db'
@@ -182,13 +182,16 @@ export function deleteSession(sessionId: string): void {
 
 ## Auth Middleware
 
-Create `src/middleware/auth.ts`:
+EreoJS uses file-based middleware via `_middleware.ts` files in the routes directory. Middleware applies to all routes at the same level and below.
+
+Create `app/routes/_middleware.ts` to extract the session for all routes:
 
 ```ts
+// app/routes/_middleware.ts
 import type { MiddlewareHandler } from '@ereo/core'
-import { getSession } from '../lib/auth'
+import { getSession } from '~/lib/auth'
 
-export const authMiddleware: MiddlewareHandler = async (request, context, next) => {
+const authMiddleware: MiddlewareHandler = async (request, context, next) => {
   const cookies = request.headers.get('cookie') || ''
   const sessionId = cookies.match(/session=([^;]+)/)?.[1]
 
@@ -202,31 +205,26 @@ export const authMiddleware: MiddlewareHandler = async (request, context, next) 
   return next()
 }
 
-export const requireAuth: MiddlewareHandler = async (request, context, next) => {
+export default authMiddleware
+```
+
+Create `app/routes/dashboard/_middleware.ts` to protect all dashboard routes:
+
+```ts
+// app/routes/dashboard/_middleware.ts
+import type { MiddlewareHandler } from '@ereo/core'
+
+const requireAuth: MiddlewareHandler = async (request, context, next) => {
   const user = context.get('user')
 
   if (!user) {
-    return Response.redirect('/login?redirect=' + encodeURIComponent(request.url))
+    return Response.redirect('/login?redirect=' + encodeURIComponent(new URL(request.url).pathname))
   }
 
   return next()
 }
-```
 
-## Configuration
-
-Update `ereo.config.ts`:
-
-```ts
-import { defineConfig } from '@ereo/core'
-import { authMiddleware } from './src/middleware/auth'
-
-export default defineConfig({
-  middleware: [authMiddleware],
-  build: {
-    target: 'bun'
-  }
-})
+export default requireAuth
 ```
 
 ## Next Steps
