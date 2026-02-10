@@ -297,7 +297,7 @@ Here are ways to extend TaskFlow:
 - [Architecture: Performance](/architecture/performance) — optimization strategies for production
 - [Architecture: Security](/architecture/security) — security hardening checklist
 - [Guide: Testing](/guides/testing) — how to test loaders, actions, islands, and RPC procedures
-- [API: @ereo/rpc](/api/rpc/procedures) — full RPC API reference
+- [API: @ereo/rpc](/api/rpc/procedure) — full RPC API reference
 - [API: @ereo/forms](/api/forms/use-form) — full forms API reference
 
 [← Previous: RPC & Real-time](/tutorials/saas/06-rpc-realtime)

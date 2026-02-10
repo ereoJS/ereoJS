@@ -376,7 +376,7 @@ Across these 5 chapters, you built a real-time chat app that demonstrates the fu
 
 - [Guide: RPC](/guides/rpc) — detailed guide covering advanced patterns
 - [Guide: Real-time](/guides/real-time) — SSE and WebSocket patterns
-- [API: RPC Procedures](/api/rpc/procedures) — full procedure API reference
+- [API: RPC Procedures](/api/rpc/procedure) — full procedure API reference
 - [API: RPC Middleware](/api/rpc/middleware) — all built-in middleware
 - [API: RPC Client](/api/rpc/client) — client configuration and hooks
 - [Tutorial: SaaS App](/tutorials/saas/) — uses RPC in a full-stack context with auth, database, and forms
