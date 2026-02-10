@@ -28,9 +28,11 @@ cd dashboard-app
 ## Install Dependencies
 
 ```bash
-bun add bcrypt
+bun add bcrypt @ereo/state
 bun add -d @types/bcrypt
 ```
+
+> **Note:** We install `@ereo/state` for shared signals between dashboard islands (used in Chapter 3 and 4).
 
 ## Project Structure
 

@@ -37,7 +37,7 @@ Add rate limiting to prevent message spam. `@ereo/rpc` includes a built-in rate 
 
 ```ts
 // app/rpc/middleware.ts (continued)
-import { rateLimit } from '@ereo/rpc/middleware'
+import { rateLimit } from '@ereo/rpc'
 
 // 30 messages per minute per user
 export const messageRateLimit = rateLimit({

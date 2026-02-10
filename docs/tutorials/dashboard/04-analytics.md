@@ -34,7 +34,10 @@ export const dateRangeLabel = computed(() => {
 Create `app/components/DateRangePicker.tsx`:
 
 ```tsx
+'use client'
+
 import { useState, useEffect } from 'react'
+import { createIsland } from '@ereo/client'
 import { dateRange, type DateRange } from '~/lib/analytics-store'
 
 const presets = [
@@ -44,7 +47,7 @@ const presets = [
   { label: 'This year', days: 365 }
 ]
 
-export default function DateRangePicker({ initialRange }: { initialRange: DateRange }) {
+function DateRangePicker({ initialRange }: { initialRange: DateRange }) {
   const [range, setRange] = useState(initialRange)
   const [showCustom, setShowCustom] = useState(false)
 
@@ -79,9 +82,6 @@ export default function DateRangePicker({ initialRange }: { initialRange: DateRa
         onClick={() => setShowCustom(!showCustom)}
         className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
         <span>
           {range.start.toLocaleDateString()} - {range.end.toLocaleDateString()}
         </span>
@@ -139,6 +139,8 @@ export default function DateRangePicker({ initialRange }: { initialRange: DateRa
     </div>
   )
 }
+
+export default createIsland(DateRangePicker, 'DateRangePicker')
 ```
 
 ## Metric Selector Island
@@ -146,7 +148,10 @@ export default function DateRangePicker({ initialRange }: { initialRange: DateRa
 Create `app/components/MetricSelector.tsx`:
 
 ```tsx
+'use client'
+
 import { useState, useEffect } from 'react'
+import { createIsland } from '@ereo/client'
 import { selectedMetric } from '~/lib/analytics-store'
 
 const metrics = [
@@ -155,7 +160,7 @@ const metrics = [
   { id: 'revenue', label: 'Revenue', icon: '💰' }
 ] as const
 
-export default function MetricSelector({ initial }: { initial: 'views' | 'users' | 'revenue' }) {
+function MetricSelector({ initial }: { initial: 'views' | 'users' | 'revenue' }) {
   const [selected, setSelected] = useState(initial)
 
   useEffect(() => {
@@ -186,6 +191,8 @@ export default function MetricSelector({ initial }: { initial: 'views' | 'users'
     </div>
   )
 }
+
+export default createIsland(MetricSelector, 'MetricSelector')
 ```
 
 ## Analytics Chart Island
@@ -193,7 +200,10 @@ export default function MetricSelector({ initial }: { initial: 'views' | 'users'
 Create `app/components/AnalyticsChart.tsx`:
 
 ```tsx
+'use client'
+
 import { useState, useEffect, useMemo } from 'react'
+import { createIsland } from '@ereo/client'
 import { dateRange, selectedMetric } from '~/lib/analytics-store'
 
 interface DataSet {
@@ -202,7 +212,7 @@ interface DataSet {
   revenue: Array<{ date: string; value: number }>
 }
 
-export default function AnalyticsChart({ data }: { data: DataSet }) {
+function AnalyticsChart({ data }: { data: DataSet }) {
   const [range, setRange] = useState(dateRange.get())
   const [metric, setMetric] = useState(selectedMetric.get())
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null)
@@ -308,6 +318,8 @@ export default function AnalyticsChart({ data }: { data: DataSet }) {
     </div>
   )
 }
+
+export default createIsland(AnalyticsChart, 'AnalyticsChart')
 ```
 
 ## Analytics Page
@@ -316,6 +328,9 @@ Create `app/routes/dashboard/analytics.tsx`:
 
 ```tsx
 import { createLoader } from '@ereo/data'
+import DateRangePicker from '~/components/DateRangePicker'
+import MetricSelector from '~/components/MetricSelector'
+import AnalyticsChart from '~/components/AnalyticsChart'
 
 export const loader = createLoader(async () => {
   // Generate mock analytics data
@@ -352,52 +367,20 @@ export default function AnalyticsPage({ loaderData }: { loaderData: any }) {
         <h2 className="text-2xl font-bold">Analytics</h2>
 
         {/* Date Range Picker */}
-        <div
-          data-island="DateRangePicker"
-          data-hydrate="load"
-          data-props={JSON.stringify({
-            initialRange: {
-              start: initialRange.start,
-              end: initialRange.end
-            }
-          })}
-        >
-          <button className="px-4 py-2 bg-white border rounded-lg">
-            {new Date(initialRange.start).toLocaleDateString()} - {new Date(initialRange.end).toLocaleDateString()}
-          </button>
-        </div>
+        <DateRangePicker
+          client:load
+          initialRange={{
+            start: new Date(initialRange.start),
+            end: new Date(initialRange.end)
+          }}
+        />
       </div>
 
       {/* Metric Selector */}
-      <div
-        data-island="MetricSelector"
-        data-hydrate="load"
-        data-props={JSON.stringify({ initial: 'views' })}
-      >
-        <div className="flex gap-2">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">
-            👁 Page Views
-          </button>
-          <button className="px-4 py-2 bg-white border rounded-lg">
-            👤 Active Users
-          </button>
-          <button className="px-4 py-2 bg-white border rounded-lg">
-            💰 Revenue
-          </button>
-        </div>
-      </div>
+      <MetricSelector client:load initial="views" />
 
       {/* Main Chart */}
-      <div
-        data-island="AnalyticsChart"
-        data-hydrate="load"
-        data-props={JSON.stringify({ data })}
-      >
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="font-semibold mb-4">Page Views</h3>
-          <div className="h-64 bg-gray-100 rounded animate-pulse" />
-        </div>
-      </div>
+      <AnalyticsChart client:load data={data} />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-6">

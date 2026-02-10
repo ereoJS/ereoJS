@@ -96,11 +96,12 @@ const authed = procedure.use(async ({ ctx, next }) => {
 
 export const dashboardQuery = authed.query(async ({ user, teamId }) => {
   const stats = getDashboardStats(teamId)
+  const { tasks, projects } = await import('~/lib/schema')
   const allTasks = db
-    .select({ id: (await import('~/lib/schema')).tasks.id, title: (await import('~/lib/schema')).tasks.title, status: (await import('~/lib/schema')).tasks.status, priority: (await import('~/lib/schema')).tasks.priority })
-    .from((await import('~/lib/schema')).tasks)
-    .innerJoin((await import('~/lib/schema')).projects, eq((await import('~/lib/schema')).projects.id, (await import('~/lib/schema')).tasks.projectId))
-    .where(eq((await import('~/lib/schema')).projects.teamId, teamId))
+    .select({ id: tasks.id, title: tasks.title, status: tasks.status, priority: tasks.priority })
+    .from(tasks)
+    .innerJoin(projects, eq(projects.id, tasks.projectId))
+    .where(eq(projects.teamId, teamId))
     .all()
   const recentActivity = getRecentActivity(teamId, 20)
   return { stats, tasks: allTasks, recentActivity }
@@ -256,6 +257,7 @@ Replace the raw `fetch` calls with the type-safe RPC client. The subscription pr
 'use client'
 import { useState, useEffect } from 'react'
 import { useSignal, batch } from '@ereo/state'
+import { createIsland } from '@ereo/client'
 import { createClient } from '@ereo/rpc/client'
 import { dashboardData, tasksByStatus } from '~/lib/dashboard-state'
 import type { DashboardData, TaskSummary } from '~/lib/dashboard-state'
@@ -284,7 +286,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'bg-red-100 text-red-700',
 }
 
-export default function TaskBoard({ projectId, initialData }: TaskBoardProps) {
+function TaskBoardComponent({ projectId, initialData }: TaskBoardProps) {
   if (!dashboardData.get()) {
     dashboardData.set(initialData)
   }
@@ -421,6 +423,8 @@ function TaskCard({ task, onMove }: { task: TaskSummary; onMove: (id: string, st
     </div>
   )
 }
+
+export default createIsland(TaskBoardComponent, 'TaskBoard')
 ```
 
 ## Understanding the RPC Flow

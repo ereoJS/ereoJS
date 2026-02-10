@@ -92,6 +92,7 @@ Build the statistics cards. They read from the shared signal and animate when va
 // app/components/DashboardStats.tsx
 'use client'
 import { useSignal } from '@ereo/state'
+import { createIsland } from '@ereo/client'
 import { dashboardData, completionRate } from '~/lib/dashboard-state'
 import type { DashboardData } from '~/lib/dashboard-state'
 
@@ -99,7 +100,7 @@ interface DashboardStatsProps {
   initialData: DashboardData
 }
 
-export default function DashboardStats({ initialData }: DashboardStatsProps) {
+function DashboardStatsComponent({ initialData }: DashboardStatsProps) {
   // Initialize the shared signal if this is the first island to render
   if (!dashboardData.get()) {
     dashboardData.set(initialData)
@@ -134,6 +135,8 @@ export default function DashboardStats({ initialData }: DashboardStatsProps) {
     </div>
   )
 }
+
+export default createIsland(DashboardStatsComponent, 'DashboardStats')
 ```
 
 ## Activity Feed Island
@@ -144,6 +147,7 @@ The activity feed subscribes to the same signal and renders recent events. In th
 // app/components/ActivityFeed.tsx
 'use client'
 import { useSignal } from '@ereo/state'
+import { createIsland } from '@ereo/client'
 import { dashboardData } from '~/lib/dashboard-state'
 import type { DashboardData } from '~/lib/dashboard-state'
 
@@ -159,7 +163,7 @@ const ACTION_VERBS: Record<string, string> = {
   assigned: 'assigned',
 }
 
-export default function ActivityFeed({ initialData }: ActivityFeedProps) {
+function ActivityFeedComponent({ initialData }: ActivityFeedProps) {
   if (!dashboardData.get()) {
     dashboardData.set(initialData)
   }
@@ -212,6 +216,8 @@ function formatRelativeTime(dateStr: string): string {
   const diffDay = Math.floor(diffHr / 24)
   return `${diffDay}d ago`
 }
+
+export default createIsland(ActivityFeedComponent, 'ActivityFeed')
 ```
 
 ## Task Board Island
@@ -222,6 +228,7 @@ The task board renders tasks in columns and allows changing status via buttons. 
 // app/components/TaskBoard.tsx
 'use client'
 import { useSignal, batch } from '@ereo/state'
+import { createIsland } from '@ereo/client'
 import { dashboardData, tasksByStatus } from '~/lib/dashboard-state'
 import type { DashboardData, TaskSummary } from '~/lib/dashboard-state'
 
@@ -243,7 +250,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'bg-red-100 text-red-700',
 }
 
-export default function TaskBoard({ projectId, initialData }: TaskBoardProps) {
+function TaskBoardComponent({ projectId, initialData }: TaskBoardProps) {
   if (!dashboardData.get()) {
     dashboardData.set(initialData)
   }
@@ -356,6 +363,8 @@ function TaskCard({ task, onMove }: { task: TaskSummary; onMove: (id: string, st
     </div>
   )
 }
+
+export default createIsland(TaskBoardComponent, 'TaskBoard')
 ```
 
 ## Dashboard Route
@@ -369,9 +378,12 @@ import { Link } from '@ereo/client'
 import { getDashboardStats, getTasksForProject, getRecentActivity, getProjectsForTeam } from '~/lib/queries'
 import { getUser } from '@ereo/auth'
 import { db } from '~/lib/db'
-import { teamMembers, tasks } from '~/lib/schema'
+import { teamMembers, tasks, projects as projectsTable } from '~/lib/schema'
 import { eq } from 'drizzle-orm'
 import type { RouteComponentProps } from '@ereo/core'
+import DashboardStats from '~/components/DashboardStats'
+import TaskBoard from '~/components/TaskBoard'
+import ActivityFeed from '~/components/ActivityFeed'
 
 export const loader = createLoader(async ({ context }) => {
   const user = getUser(context)!
@@ -382,7 +394,7 @@ export const loader = createLoader(async ({ context }) => {
   const projects = getProjectsForTeam(teamId)
   const recentActivity = getRecentActivity(teamId, 10)
 
-  // Load tasks from the first project for the board (or all tasks)
+  // Load all tasks across the team's projects
   const allTasks = db
     .select({
       id: tasks.id,
@@ -391,11 +403,8 @@ export const loader = createLoader(async ({ context }) => {
       priority: tasks.priority,
     })
     .from(tasks)
-    .innerJoin(
-      (await import('~/lib/schema')).projects,
-      eq((await import('~/lib/schema')).projects.id, tasks.projectId)
-    )
-    .where(eq((await import('~/lib/schema')).projects.teamId, teamId))
+    .innerJoin(projectsTable, eq(projectsTable.id, tasks.projectId))
+    .where(eq(projectsTable.teamId, teamId))
     .all()
 
   const dashboardData = {
@@ -411,8 +420,7 @@ export const loader = createLoader(async ({ context }) => {
 })
 
 export default function Dashboard({ loaderData }: RouteComponentProps) {
-  const { dashboardData, projects } = loaderData
-  const propsJson = JSON.stringify({ initialData: dashboardData })
+  const { dashboardData } = loaderData
 
   return (
     <div className="p-8 space-y-6">
@@ -421,52 +429,16 @@ export default function Dashboard({ loaderData }: RouteComponentProps) {
       </div>
 
       {/* Stats cards island */}
-      <div data-island="DashboardStats" data-hydrate="load" data-props={propsJson}>
-        {/* SSR fallback */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border p-5">
-            <p className="text-2xl font-bold">{dashboardData.stats.projects}</p>
-            <p className="text-sm text-gray-500">Projects</p>
-          </div>
-          <div className="bg-white rounded-lg border p-5">
-            <p className="text-2xl font-bold">{dashboardData.stats.tasks.total}</p>
-            <p className="text-sm text-gray-500">Total Tasks</p>
-          </div>
-          <div className="bg-white rounded-lg border p-5">
-            <p className="text-2xl font-bold">{dashboardData.stats.tasks.in_progress}</p>
-            <p className="text-sm text-gray-500">In Progress</p>
-          </div>
-          <div className="bg-white rounded-lg border p-5">
-            <p className="text-2xl font-bold">
-              {dashboardData.stats.tasks.total > 0
-                ? Math.round((dashboardData.stats.tasks.done / dashboardData.stats.tasks.total) * 100)
-                : 0}%
-            </p>
-            <p className="text-sm text-gray-500">Completed</p>
-          </div>
-        </div>
-      </div>
+      <DashboardStats client:load initialData={dashboardData} />
 
       {/* Task board + Activity feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <h2 className="font-semibold mb-4">Task Board</h2>
-          <div
-            data-island="TaskBoard"
-            data-hydrate="load"
-            data-props={JSON.stringify({ projectId: 'all', initialData: dashboardData })}
-          >
-            <p className="text-gray-500">Loading task board...</p>
-          </div>
+          <TaskBoard client:load projectId="all" initialData={dashboardData} />
         </div>
         <div>
-          <div
-            data-island="ActivityFeed"
-            data-hydrate="load"
-            data-props={propsJson}
-          >
-            <p className="text-gray-500">Loading activity...</p>
-          </div>
+          <ActivityFeed client:load initialData={dashboardData} />
         </div>
       </div>
     </div>
@@ -508,7 +480,7 @@ Because `computed` signals derive from `dashboardData`, updating the parent sign
 - Built three interactive islands: DashboardStats, TaskBoard, ActivityFeed
 - Used `computed` signals for derived data (completion rate, tasks by status)
 - Implemented optimistic updates with `batch()` for instant UI feedback
-- Server-rendered the dashboard with SSR fallbacks inside island markers
+- Used `createIsland()` to wrap components for automatic SSR rendering and client hydration
 - All islands share state — changing a task status in TaskBoard updates DashboardStats automatically
 
 ## Next Step

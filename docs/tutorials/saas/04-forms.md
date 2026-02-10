@@ -24,6 +24,7 @@ First, build the form island:
 'use client'
 import { useForm, useField, useFieldArray, useFormStatus } from '@ereo/forms'
 import { required, minLength, maxLength, oneOf } from '@ereo/forms'
+import { createIsland } from '@ereo/client'
 
 interface TaskFormProps {
   projectId: string
@@ -34,7 +35,7 @@ interface TaskFormProps {
 const STATUSES = ['todo', 'in_progress', 'done'] as const
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const
 
-export default function TaskForm({ projectId, members, onSuccess }: TaskFormProps) {
+function TaskFormComponent({ projectId, members, onSuccess }: TaskFormProps) {
   const form = useForm({
     defaultValues: {
       title: '',
@@ -225,6 +226,8 @@ function SubtaskInput({ form, index }: { form: any; index: number }) {
     />
   )
 }
+
+export default createIsland(TaskFormComponent, 'TaskForm')
 ```
 
 ## Task API Route
@@ -300,6 +303,7 @@ import { db } from '~/lib/db'
 import { teamMembers } from '~/lib/schema'
 import { eq } from 'drizzle-orm'
 import type { RouteComponentProps } from '@ereo/core'
+import TaskForm from '~/components/TaskForm'
 
 export const loader = createLoader(async ({ params, context }) => {
   const user = getUser(context)!
@@ -323,14 +327,7 @@ export default function NewTask({ loaderData }: RouteComponentProps) {
         <h1 className="text-2xl font-bold mt-2">New Task</h1>
       </div>
 
-      <div
-        data-island="TaskForm"
-        data-hydrate="load"
-        data-props={JSON.stringify({ projectId: project.id, members })}
-      >
-        {/* SSR fallback — a basic form without client-side validation */}
-        <p className="text-gray-500">Loading form...</p>
-      </div>
+      <TaskForm client:load projectId={project.id} members={members} />
     </div>
   )
 }
@@ -345,6 +342,7 @@ Reuse the same form island for editing. The pattern is: load existing data in th
 'use client'
 import { useForm, useField, useFormStatus } from '@ereo/forms'
 import { required, minLength, maxLength, oneOf } from '@ereo/forms'
+import { createIsland } from '@ereo/client'
 
 interface TaskEditFormProps {
   taskId: string
@@ -360,7 +358,7 @@ interface TaskEditFormProps {
   }
 }
 
-export default function TaskEditForm({ taskId, projectId, members, defaultValues }: TaskEditFormProps) {
+function TaskEditFormComponent({ taskId, projectId, members, defaultValues }: TaskEditFormProps) {
   const form = useForm({
     defaultValues,
     validators: {
@@ -457,6 +455,8 @@ export default function TaskEditForm({ taskId, projectId, members, defaultValues
     </form>
   )
 }
+
+export default createIsland(TaskEditFormComponent, 'TaskEditForm')
 ```
 
 ## Understanding useForm vs useField

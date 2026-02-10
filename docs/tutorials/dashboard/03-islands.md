@@ -8,15 +8,18 @@ Dashboards typically have:
 - **Static content**: Headers, navigation, labels
 - **Interactive widgets**: Charts, live feeds, filters
 
-Islands let us hydrate only the interactive parts.
+Islands let us hydrate only the interactive parts. We use `createIsland()` to wrap interactive components, and hydration directives (`client:load`, `client:visible`, `client:idle`) to control when they hydrate.
 
 ## Stats Widget Island
 
 Create `app/components/StatsWidget.tsx`:
 
 ```tsx
+'use client'
+
 import { useState, useEffect } from 'react'
 import { signal } from '@ereo/state'
+import { createIsland } from '@ereo/client'
 
 interface Stat {
   label: string
@@ -28,7 +31,7 @@ interface Stat {
 // Shared signal for real-time updates
 export const statsSignal = signal<Stat[]>([])
 
-export default function StatsWidget({ initialStats }: { initialStats: Stat[] }) {
+function StatsWidget({ initialStats }: { initialStats: Stat[] }) {
   const [stats, setStats] = useState(initialStats)
   const [isLive, setIsLive] = useState(false)
 
@@ -74,14 +77,21 @@ export default function StatsWidget({ initialStats }: { initialStats: Stat[] }) 
     </div>
   )
 }
+
+export default createIsland(StatsWidget, 'StatsWidget')
 ```
+
+> **Key pattern:** The `'use client'` directive marks this as a client component. `createIsland()` wraps it for selective hydration — the component renders on the server, then hydrates on the client when triggered.
 
 ## Activity Feed Island
 
 Create `app/components/ActivityFeed.tsx`:
 
 ```tsx
+'use client'
+
 import { useState, useEffect, useRef } from 'react'
+import { createIsland } from '@ereo/client'
 
 interface Activity {
   id: number
@@ -90,7 +100,7 @@ interface Activity {
   timestamp: string
 }
 
-export default function ActivityFeed({ initialActivities }: { initialActivities: Activity[] }) {
+function ActivityFeed({ initialActivities }: { initialActivities: Activity[] }) {
   const [activities, setActivities] = useState(initialActivities)
   const [autoScroll, setAutoScroll] = useState(true)
   const feedRef = useRef<HTMLDivElement>(null)
@@ -155,6 +165,8 @@ export default function ActivityFeed({ initialActivities }: { initialActivities:
     </div>
   )
 }
+
+export default createIsland(ActivityFeed, 'ActivityFeed')
 ```
 
 ## Chart Widget Island
@@ -162,7 +174,10 @@ export default function ActivityFeed({ initialActivities }: { initialActivities:
 Create `app/components/ChartWidget.tsx`:
 
 ```tsx
+'use client'
+
 import { useState, useMemo } from 'react'
+import { createIsland } from '@ereo/client'
 
 interface DataPoint {
   date: string
@@ -174,7 +189,7 @@ interface ChartWidgetProps {
   title: string
 }
 
-export default function ChartWidget({ data, title }: ChartWidgetProps) {
+function ChartWidget({ data, title }: ChartWidgetProps) {
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('7d')
 
   const filteredData = useMemo(() => {
@@ -261,6 +276,8 @@ export default function ChartWidget({ data, title }: ChartWidgetProps) {
     </div>
   )
 }
+
+export default createIsland(ChartWidget, 'ChartWidget')
 ```
 
 ## Dashboard Page with Islands
@@ -270,6 +287,9 @@ Update `app/routes/dashboard/index.tsx`:
 ```tsx
 import { createLoader } from '@ereo/data'
 import { db } from '~/lib/db'
+import StatsWidget from '~/components/StatsWidget'
+import ChartWidget from '~/components/ChartWidget'
+import ActivityFeed from '~/components/ActivityFeed'
 
 export const loader = createLoader(async ({ context }) => {
   const user = context.get('user')
@@ -310,82 +330,40 @@ export default function DashboardHome({ loaderData }: { loaderData: any }) {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Overview</h2>
 
-      {/* Interactive Stats Widget */}
-      <div
-        data-island="StatsWidget"
-        data-hydrate="load"
-        data-props={JSON.stringify({ initialStats: stats })}
-      >
-        {/* SSR fallback */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="p-4 bg-gray-50 rounded">
-                <p className="text-sm text-gray-500">{stat.label}</p>
-                <p className="text-2xl font-bold">{stat.value.toLocaleString()}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Interactive Stats Widget - hydrates immediately */}
+      <StatsWidget client:load initialStats={stats} />
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Chart Widget */}
-        <div
-          data-island="ChartWidget"
-          data-hydrate="visible"
-          data-props={JSON.stringify({ data: chartData, title: 'Revenue' })}
-        >
-          {/* SSR placeholder */}
-          <div className="bg-white rounded-lg shadow p-6 h-64">
-            <h3 className="font-semibold mb-4">Revenue</h3>
-            <div className="animate-pulse bg-gray-100 h-48 rounded" />
-          </div>
-        </div>
+        {/* Chart Widget - hydrates when scrolled into view */}
+        <ChartWidget client:visible data={chartData} title="Revenue" />
 
-        {/* Activity Feed */}
-        <div
-          data-island="ActivityFeed"
-          data-hydrate="idle"
-          data-props={JSON.stringify({
-            initialActivities: activities.map(a => ({
-              id: a.id,
-              user: a.user_name,
-              action: a.action,
-              timestamp: a.created_at
-            }))
-          })}
-        >
-          {/* SSR fallback */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold">Activity Feed</h3>
-            </div>
-            <div className="h-64 overflow-y-auto">
-              {activities.slice(0, 5).map((activity) => (
-                <div key={activity.id} className="px-4 py-3 border-b">
-                  <span className="font-medium">{activity.user_name}</span>
-                  <p className="text-sm text-gray-600">{activity.action}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Activity Feed - hydrates during idle time */}
+        <ActivityFeed
+          client:idle
+          initialActivities={activities.map((a: any) => ({
+            id: a.id,
+            user: a.user_name,
+            action: a.action,
+            timestamp: a.created_at
+          }))}
+        />
       </div>
     </div>
   )
 }
 ```
 
+> **Note:** With `createIsland()`, the component renders its full content during SSR — no need for manual SSR fallback HTML. The hydration directive controls when the client-side JavaScript activates.
+
 ## Hydration Strategies
 
-We're using different hydration strategies:
+We're using different hydration strategies via JSX directives:
 
-| Widget | Strategy | Why |
-|--------|----------|-----|
-| StatsWidget | `load` | Critical metrics, hydrate immediately |
-| ChartWidget | `visible` | Below fold, hydrate when scrolled into view |
-| ActivityFeed | `idle` | Non-critical, hydrate during idle time |
+| Widget | Directive | Why |
+|--------|-----------|-----|
+| StatsWidget | `client:load` | Critical metrics, hydrate immediately |
+| ChartWidget | `client:visible` | Below fold, hydrate when scrolled into view |
+| ActivityFeed | `client:idle` | Non-critical, hydrate during idle time |
 
 ## Next Steps
 

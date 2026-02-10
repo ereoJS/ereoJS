@@ -236,7 +236,7 @@ export class RouteTree {
    * Middleware stored by path prefix.
    * Separate from route nodes since middleware can exist without a route at that path.
    */
-  private middlewareByPath: Map<string, { file: string; module?: { middleware?: any } }> = new Map();
+  private middlewareByPath: Map<string, { file: string; module?: { middleware?: any; default?: any } }> = new Map();
 
   /**
    * Attach middleware to a route segment.
@@ -250,12 +250,12 @@ export class RouteTree {
   /**
    * Get the middleware chain for a route (from root to leaf).
    */
-  getMiddlewareChain(routeId: string): Array<{ file: string; module?: { middleware?: any } }> {
+  getMiddlewareChain(routeId: string): Array<{ file: string; module?: { middleware?: any; default?: any } }> {
     const node = this.findById(routeId);
     if (!node) return [];
 
     const routePath = node.path;
-    const middlewares: Array<{ file: string; module?: { middleware?: any } }> = [];
+    const middlewares: Array<{ file: string; module?: { middleware?: any; default?: any } }> = [];
 
     // Get all middleware paths, sorted by length (shortest first = root first)
     const sortedPaths = Array.from(this.middlewareByPath.keys()).sort(

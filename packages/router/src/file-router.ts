@@ -373,10 +373,12 @@ export class FileRouter {
         }
       }
 
-      if (mw.module?.middleware) {
+      // Support both named `middleware` export and default export
+      const middlewareFn = mw.module?.middleware || mw.module?.default;
+      if (middlewareFn) {
         result.push({
           file: mw.file,
-          middleware: mw.module.middleware,
+          middleware: middlewareFn,
         });
       }
     }

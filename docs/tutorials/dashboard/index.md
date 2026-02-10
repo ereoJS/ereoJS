@@ -82,11 +82,11 @@ Before starting this tutorial, you should have:
 
 ```bash
 # Create new project
-bunx create-ereo@latest dashboard-app
+bunx create-ereo@latest dashboard-app --template minimal
 cd dashboard-app
 
 # Install dependencies
-bun add @ereo/auth bcrypt
+bun add bcrypt @ereo/state
 bun add -d @types/bcrypt
 
 # Start development

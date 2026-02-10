@@ -21,6 +21,7 @@ This is the main island — it loads message history, subscribes to live events,
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useSubscription } from '@ereo/rpc/client'
+import { createIsland } from '@ereo/client'
 import { rpc } from '~/lib/rpc-client'
 import type { ChatEvent } from '~/lib/events'
 
@@ -36,7 +37,7 @@ interface Message {
   timestamp: number
 }
 
-export default function ChatRoom({ roomId, username }: ChatRoomProps) {
+function ChatRoom({ roomId, username }: ChatRoomProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [typingUsers, setTypingUsers] = useState<string[]>([])
@@ -202,6 +203,8 @@ export default function ChatRoom({ roomId, username }: ChatRoomProps) {
   )
 }
 
+export default createIsland(ChatRoom, 'ChatRoom')
+
 function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
   const time = new Date(message.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
@@ -238,13 +241,14 @@ A sidebar that shows available rooms with live online counts:
 // app/components/RoomList.tsx
 'use client'
 import { useQuery } from '@ereo/rpc/client'
+import { createIsland } from '@ereo/client'
 import { rpc } from '~/lib/rpc-client'
 
 interface RoomListProps {
   currentRoomId: string
 }
 
-export default function RoomList({ currentRoomId }: RoomListProps) {
+function RoomList({ currentRoomId }: RoomListProps) {
   const { data: rooms, isLoading } = useQuery(rpc.rooms.list.query, {
     refetchInterval: 5000, // Refresh every 5 seconds for online counts
   })
@@ -282,6 +286,8 @@ export default function RoomList({ currentRoomId }: RoomListProps) {
     </nav>
   )
 }
+
+export default createIsland(RoomList, 'RoomList')
 ```
 
 ## Chat Layout
@@ -292,6 +298,7 @@ Create the chat layout with a sidebar and main content area:
 // app/routes/chat/_layout.tsx
 import { createLoader, redirect } from '@ereo/data'
 import { Outlet } from '@ereo/client'
+import RoomList from '~/components/RoomList'
 import type { RouteComponentProps } from '@ereo/core'
 
 export const loader = createLoader(async ({ request }) => {
@@ -317,13 +324,7 @@ export default function ChatLayout({ loaderData, children }: RouteComponentProps
           <p className="text-sm text-gray-500">{username}</p>
         </div>
         <div className="flex-1 p-3 overflow-y-auto">
-          <div
-            data-island="RoomList"
-            data-hydrate="load"
-            data-props={JSON.stringify({ currentRoomId: '' })}
-          >
-            <p className="text-sm text-gray-600 p-2">Loading rooms...</p>
-          </div>
+          <RoomList client:load currentRoomId="" />
         </div>
         <div className="p-3 border-t border-gray-800">
           <a href="/" className="text-xs text-gray-600 hover:text-gray-400">Change username</a>
@@ -347,6 +348,7 @@ Wire the ChatRoom island into the route:
 // app/routes/chat/[room].tsx
 import { createLoader, redirect } from '@ereo/data'
 import { store } from '~/lib/store'
+import ChatRoom from '~/components/ChatRoom'
 import type { RouteComponentProps } from '@ereo/core'
 
 export const loader = createLoader(async ({ params, request }) => {
@@ -374,17 +376,8 @@ export default function ChatRoomPage({ loaderData }: RouteComponentProps) {
       </header>
 
       {/* Chat island */}
-      <div className="flex-1 min-h-0">
-        <div
-          data-island="ChatRoom"
-          data-hydrate="load"
-          data-props={JSON.stringify({ roomId: room.id, username })}
-          style={{ height: '100%' }}
-        >
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">Connecting to chat...</p>
-          </div>
-        </div>
+      <div className="flex-1 min-h-0" style={{ height: '100%' }}>
+        <ChatRoom client:load roomId={room.id} username={username} />
       </div>
     </div>
   )

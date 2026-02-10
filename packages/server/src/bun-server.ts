@@ -340,7 +340,7 @@ export class BunServer {
 
       next = async () => {
         try {
-          return await mw.middleware(request, currentNext, context);
+          return await mw.middleware(request, context, currentNext);
         } catch (error) {
           console.error(`Middleware error (${mw.file}):`, error);
           throw error;
