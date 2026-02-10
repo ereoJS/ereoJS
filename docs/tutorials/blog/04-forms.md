@@ -269,14 +269,14 @@ Now create a LikeButton component at `app/components/LikeButton.tsx`:
 // app/components/LikeButton.tsx
 'use client';
 
-import { useFetcher } from '@ereo/client'
+import { createIsland, useFetcher } from '@ereo/client'
 
 interface LikeButtonProps {
   postId: number
   initialLikes: number
 }
 
-export default function LikeButton({ postId, initialLikes }: LikeButtonProps) {
+function LikeButton({ postId, initialLikes }: LikeButtonProps) {
   const fetcher = useFetcher<{ likes: number }>()
 
   // Optimistic update: show +1 immediately while submitting
@@ -298,16 +298,21 @@ export default function LikeButton({ postId, initialLikes }: LikeButtonProps) {
     </fetcher.Form>
   )
 }
+
+// Wrap with createIsland for selective hydration
+export default createIsland(LikeButton, 'LikeButton')
 ```
 
-Use it in the post page:
+> **Why `createIsland`?** The `useFetcher` hook requires client-side JavaScript to intercept form submissions. Wrapping the component with `createIsland()` marks it as an **island** — only this component gets hydrated on the client, keeping the rest of the page as static HTML. See [Islands Architecture](/concepts/islands) for details.
+
+Use it in the post page with the `client:load` directive:
 
 ```tsx
 // In app/routes/posts/[slug].tsx
 import LikeButton from '~/components/LikeButton'
 
 // In the component, after the title
-<LikeButton postId={post.id} initialLikes={post.likes || 0} />
+<LikeButton client:load postId={post.id} initialLikes={post.likes || 0} />
 ```
 
 Add styles:

@@ -6,7 +6,7 @@
 
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import {
   createApp,
@@ -198,6 +198,38 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     server.use(middleware);
   }
 
+  // Scan for island components ('use client' files) in the app directory
+  async function scanForIslands(projectRoot: string): Promise<string> {
+    const appDir = join(projectRoot, 'app');
+    const imports: string[] = [];
+
+    async function scanDir(dir: string): Promise<void> {
+      try {
+        const entries = await readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = join(dir, entry.name);
+          if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+            await scanDir(fullPath);
+          } else if (entry.isFile() && /\.(tsx?|jsx?)$/.test(entry.name)) {
+            try {
+              const content = await readFile(fullPath, 'utf-8');
+              if (/^['"]use client['"]/m.test(content)) {
+                imports.push(`import '${fullPath}';`);
+              }
+            } catch {
+              // Skip unreadable files
+            }
+          }
+        }
+      } catch {
+        // Directory might not exist
+      }
+    }
+
+    await scanDir(appDir);
+    return imports.join('\n');
+  }
+
   // Build client entry for dev mode
   // In production, `ereo build` creates this. In dev, we build on-demand.
   const clientBuildDir = await mkdtemp(join(tmpdir(), 'ereo-dev-client-'));
@@ -217,15 +249,21 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     } else if (hasCustomAlt) {
       entrypoint = customEntryAlt;
     } else {
+      // Scan for island components ('use client' files)
+      const islandImports = await scanForIslands(root);
+
       // Generate default client entry
+      // Write to project root so Bun can resolve @ereo/client from node_modules
       const defaultEntrySource = `
 import { initClient } from '@ereo/client';
+
+${islandImports}
 
 // Initialize the EreoJS client runtime (hydrates islands, sets up navigation, prefetching)
 initClient();
 `.trim();
 
-      const defaultEntryPath = join(clientBuildDir, '_entry.client.tsx');
+      const defaultEntryPath = join(root, 'node_modules', '.cache', 'ereo', '_entry.client.tsx');
       await Bun.write(defaultEntryPath, defaultEntrySource);
       entrypoint = defaultEntryPath;
     }

@@ -5,7 +5,7 @@
  * Static content stays static, only islands get hydrated.
  */
 
-import type { ComponentType } from 'react';
+import { createElement, type ComponentType } from 'react';
 import type { HydrationStrategy } from '@ereo/core';
 import {
   parseHydrationDirective,
@@ -254,20 +254,17 @@ export function createIsland<P extends Record<string, unknown>>(
     // During SSR, we'll render the component with data attributes
     // The actual hydration happens on the client
 
-    return {
-      type: 'div',
-      props: {
+    return createElement(
+      'div',
+      {
         'data-island': islandId,
         'data-component': name,
         'data-props': JSON.stringify(cleanProps),
         'data-strategy': strategy,
         'data-media': media || undefined,
-        children: {
-          type: component,
-          props: cleanProps,
-        },
       },
-    } as any;
+      createElement(component, cleanProps as P)
+    ) as any;
   };
 }
 

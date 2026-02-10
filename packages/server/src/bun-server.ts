@@ -518,7 +518,25 @@ export class BunServer {
       );
     }
 
-    const loaderResults = await Promise.all(loaderPromises);
+    let loaderResults: unknown[];
+    try {
+      loaderResults = await Promise.all(loaderPromises);
+    } catch (thrownError) {
+      // Handle thrown Responses from loaders (e.g., throw new Response('Not Found', { status: 404 }))
+      if (thrownError instanceof Response) {
+        // Redirects pass through
+        if (thrownError.status >= 300 && thrownError.status < 400) {
+          return thrownError;
+        }
+        // For 4xx/5xx errors, try to render the nearest error boundary
+        const errorRoute = await this.findErrorBoundary(match);
+        if (errorRoute) {
+          return this.renderErrorBoundaryPage(request, match, context, thrownError, errorRoute);
+        }
+        return thrownError;
+      }
+      throw thrownError;
+    }
 
     // First result is the route loader data
     const loaderData = loaderResults[0];
@@ -531,7 +549,7 @@ export class BunServer {
     for (let i = 0; i < layouts.length; i++) {
       const layoutData = loaderResults[i + 1];
       if (layoutData instanceof Response) {
-        return layoutData; // Layout loader threw a Response (e.g., redirect)
+        return layoutData; // Layout loader returned a Response (e.g., redirect)
       }
       if (layoutData !== null) {
         layoutLoaderData.set(layouts[i].id, layoutData);
@@ -1246,6 +1264,123 @@ export class BunServer {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  /**
+   * Find the nearest _error route for a given match.
+   * Searches from the matched route's directory upward to root.
+   */
+  private async findErrorBoundary(match: MatchResult): Promise<Route | null> {
+    if (!this.router || typeof this.router.getRoutes !== 'function') return null;
+
+    // Flatten the route tree since getRoutes() returns nested structure
+    const flattenRoutes = (routes: Route[]): Route[] => {
+      const result: Route[] = [];
+      for (const route of routes) {
+        result.push(route);
+        if (route.children) {
+          result.push(...flattenRoutes(route.children));
+        }
+      }
+      return result;
+    };
+
+    const allRoutes = flattenRoutes(this.router.getRoutes());
+    const matchPath = match.route.path;
+
+    // Build candidate paths: from most specific to root
+    // e.g., for /posts/[slug] → try /posts/_error, then /_error
+    const segments = matchPath.split('/').filter(Boolean);
+    const candidates: string[] = [];
+    for (let i = segments.length; i >= 0; i--) {
+      const prefix = '/' + segments.slice(0, i).join('/');
+      candidates.push(prefix === '/' ? '/_error' : prefix + '/_error');
+    }
+
+    for (const candidate of candidates) {
+      const errorRoute = allRoutes.find((r: Route) => {
+        // Match by path
+        if (r.path === candidate) return true;
+        // Also check file path for _error in the matching directory
+        if (r.file?.includes('_error')) {
+          const normalizedCandidate = candidate.replace('/_error', '') || '/';
+          const normalizedRoutePath = r.path.replace('/_error', '') || '/';
+          return normalizedRoutePath === normalizedCandidate;
+        }
+        return false;
+      });
+      if (errorRoute) {
+        if (typeof this.router.loadModule === 'function') {
+          await this.router.loadModule(errorRoute);
+        }
+        if (errorRoute.module?.default) {
+          return errorRoute;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Render an error page using the nearest _error boundary component.
+   */
+  private async renderErrorBoundaryPage(
+    request: Request,
+    match: MatchResult,
+    context: RequestContext,
+    errorResponse: Response,
+    errorRoute: Route
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    const ErrorComponent = errorRoute.module!.default!;
+
+    // Create an error object that satisfies both Error type and isRouteErrorResponse() check
+    const bodyText = await errorResponse.clone().text();
+    const routeError = Object.assign(new Error(bodyText || errorResponse.statusText), {
+      status: errorResponse.status,
+      statusText: errorResponse.statusText || (errorResponse.status === 404 ? 'Not Found' : 'Error'),
+      data: bodyText,
+    });
+
+    // Build element with error prop
+    let element: ReactElement = createElement(ErrorComponent as any, { error: routeError });
+
+    // Wrap with EreoProvider with error context so useRouteError() works
+    element = createElement(EreoProvider, {
+      loaderData: null,
+      actionData: undefined,
+      params: match.params,
+      location: { pathname: url.pathname, search: url.search, hash: '', state: null, key: 'ssr' },
+      error: routeError,
+      children: element,
+    });
+
+    // Compose with layouts (error pages still render inside layouts)
+    const layouts = match.layouts || [];
+    for (let i = layouts.length - 1; i >= 0; i--) {
+      const layout = layouts[i];
+      if (layout.module?.default) {
+        const LayoutComponent = layout.module.default;
+        const childElement = element;
+        // Match the same pattern as normal page rendering
+        element = createElement(
+          OutletProvider,
+          { element: childElement } as any,
+          createElement(LayoutComponent, {
+            loaderData: null,
+            params: match.params,
+            children: childElement,
+          })
+        );
+      }
+    }
+
+    const { renderToString: reactRenderToString } = await import('react-dom/server');
+    const content = reactRenderToString(element);
+    return new Response(content, {
+      status: errorResponse.status,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
   }
 
   /**

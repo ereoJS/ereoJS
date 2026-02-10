@@ -329,7 +329,7 @@ export default function PostPage({ loaderData }: { loaderData: any }) {
 
       {/* Like Button */}
       <div className="mb-12">
-        <LikeButton postId={post.id} initialLikes={post.likes || 0} />
+        <LikeButton client:load postId={post.id} initialLikes={post.likes || 0} />
       </div>
 
       {/* Comments Section */}
