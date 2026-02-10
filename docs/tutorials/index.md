@@ -34,15 +34,36 @@ Learn advanced patterns by building an authenticated dashboard with interactive 
 
 **Time:** ~3 hours
 
-### Dashboard Tutorial Chapters
+### [Build a SaaS App](/tutorials/saas/)
 
-| Chapter | Topic | Duration |
-|---------|-------|----------|
-| [1. Setup](/tutorials/dashboard/01-setup) | Project and database setup | 20 min |
-| [2. Authentication](/tutorials/dashboard/02-authentication) | Login, registration, sessions | 30 min |
-| [3. Islands](/tutorials/dashboard/03-islands) | Interactive widgets | 35 min |
-| [4. Analytics](/tutorials/dashboard/04-analytics) | Shared state between islands | 30 min |
-| [5. Deployment](/tutorials/dashboard/05-deployment) | Production deployment | 25 min |
+Build a full-featured project management app (TaskFlow) that covers the complete EreoJS stack — authentication, database with Drizzle ORM, forms with validation, islands, RPC, and deployment.
+
+**What you'll learn:**
+- Drizzle ORM with SQLite
+- Multi-table relational schema
+- Form validation and error handling
+- Islands with shared state
+- RPC procedures and real-time subscriptions
+- Production deployment with tracing
+
+**Prerequisites:** Completed Blog tutorial
+
+**Time:** ~4 hours
+
+### [Real-time Chat (RPC)](/tutorials/realtime-chat/)
+
+Build a real-time chat application using `@ereo/rpc` with WebSocket subscriptions, focusing on RPC procedures, real-time data flow, and reactive client components.
+
+**What you'll learn:**
+- RPC router and procedure definitions
+- Query, mutation, and subscription patterns
+- WebSocket-based real-time updates
+- Reactive client components with signals
+- Rate limiting and error handling
+
+**Prerequisites:** Basic understanding of [RPC](/guides/rpc)
+
+**Time:** ~2 hours
 
 ## Tutorial Structure
 
@@ -72,6 +93,38 @@ Each tutorial is broken into manageable sections:
 | [4. Forms](/tutorials/blog/04-forms) | Actions and mutations | 25 min |
 | [5. Styling](/tutorials/blog/05-styling) | Tailwind CSS | 20 min |
 | [6. Deployment](/tutorials/blog/06-deployment) | Going live | 15 min |
+
+### Dashboard Tutorial Chapters
+
+| Chapter | Topic | Duration |
+|---------|-------|----------|
+| [1. Setup](/tutorials/dashboard/01-setup) | Project and database setup | 20 min |
+| [2. Authentication](/tutorials/dashboard/02-authentication) | Login, registration, sessions | 30 min |
+| [3. Islands](/tutorials/dashboard/03-islands) | Interactive widgets | 35 min |
+| [4. Analytics](/tutorials/dashboard/04-analytics) | Shared state between islands | 30 min |
+| [5. Deployment](/tutorials/dashboard/05-deployment) | Production deployment | 25 min |
+
+### SaaS Tutorial Chapters
+
+| Chapter | Topic | Duration |
+|---------|-------|----------|
+| [1. Setup](/tutorials/saas/01-setup) | Project scaffolding and schema | 20 min |
+| [2. Authentication](/tutorials/saas/02-authentication) | Auth plugin, sessions, middleware | 30 min |
+| [3. Database](/tutorials/saas/03-database) | Queries, CRUD, Drizzle ORM | 35 min |
+| [4. Forms](/tutorials/saas/04-forms) | Validation, error handling | 30 min |
+| [5. Islands](/tutorials/saas/05-islands) | Interactive components, shared state | 35 min |
+| [6. RPC & Real-time](/tutorials/saas/06-rpc-realtime) | Procedures, subscriptions | 30 min |
+| [7. Deployment](/tutorials/saas/07-deploy) | Production build, tracing, Docker | 20 min |
+
+### Real-time Chat Tutorial Chapters
+
+| Chapter | Topic | Duration |
+|---------|-------|----------|
+| [1. Setup](/tutorials/realtime-chat/01-setup) | Project, store, RPC router | 20 min |
+| [2. Procedures](/tutorials/realtime-chat/02-procedures) | Queries, mutations, events | 25 min |
+| [3. Real-time](/tutorials/realtime-chat/03-realtime) | Subscriptions, WebSocket client | 25 min |
+| [4. Client](/tutorials/realtime-chat/04-client) | Chat UI, room list, islands | 25 min |
+| [5. Polish](/tutorials/realtime-chat/05-polish) | Rate limiting, reconnection, typing | 20 min |
 
 ## Example Code
 

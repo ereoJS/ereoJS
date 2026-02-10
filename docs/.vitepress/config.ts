@@ -84,6 +84,8 @@ export default defineConfig({
             { text: 'Overview', link: '/tutorials/' },
             { text: 'Build a Blog', link: '/tutorials/blog/01-setup' },
             { text: 'Build a Dashboard', link: '/tutorials/dashboard/' },
+            { text: 'Build a SaaS App', link: '/tutorials/saas/' },
+            { text: 'Real-time Chat (RPC)', link: '/tutorials/realtime-chat/' },
           ]
         }
       ],
@@ -114,6 +116,30 @@ export default defineConfig({
             { text: '3. Islands', link: '/tutorials/dashboard/03-islands' },
             { text: '4. Analytics', link: '/tutorials/dashboard/04-analytics' },
             { text: '5. Deployment', link: '/tutorials/dashboard/05-deployment' },
+          ]
+        },
+        {
+          text: 'Build a SaaS App',
+          items: [
+            { text: 'Overview', link: '/tutorials/saas/' },
+            { text: '1. Setup', link: '/tutorials/saas/01-setup' },
+            { text: '2. Authentication', link: '/tutorials/saas/02-authentication' },
+            { text: '3. Database', link: '/tutorials/saas/03-database' },
+            { text: '4. Forms', link: '/tutorials/saas/04-forms' },
+            { text: '5. Islands', link: '/tutorials/saas/05-islands' },
+            { text: '6. RPC & Real-time', link: '/tutorials/saas/06-rpc-realtime' },
+            { text: '7. Deployment', link: '/tutorials/saas/07-deploy' },
+          ]
+        },
+        {
+          text: 'Real-time Chat (RPC)',
+          items: [
+            { text: 'Overview', link: '/tutorials/realtime-chat/' },
+            { text: '1. Setup', link: '/tutorials/realtime-chat/01-setup' },
+            { text: '2. Procedures', link: '/tutorials/realtime-chat/02-procedures' },
+            { text: '3. Real-time', link: '/tutorials/realtime-chat/03-realtime' },
+            { text: '4. Client', link: '/tutorials/realtime-chat/04-client' },
+            { text: '5. Polish', link: '/tutorials/realtime-chat/05-polish' },
           ]
         }
       ],
