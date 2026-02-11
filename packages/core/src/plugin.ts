@@ -119,11 +119,18 @@ export class PluginRegistry {
 
   /**
    * Configure the dev server with all plugins.
+   * Also collects runtimeMiddleware from plugins and adds them to the server.
    */
   async configureServer(server: DevServer): Promise<void> {
     for (const plugin of this.plugins) {
       if (plugin.configureServer) {
         await plugin.configureServer(server);
+      }
+      // Collect runtimeMiddleware defined on the plugin
+      if (plugin.runtimeMiddleware) {
+        for (const mw of plugin.runtimeMiddleware) {
+          server.middlewares.push(mw);
+        }
       }
     }
   }
