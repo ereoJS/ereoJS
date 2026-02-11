@@ -599,11 +599,10 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
 
       if (!validationResult.success) {
         batch(() => {
-          if (validationResult.errors) {
-            for (const [path, errors] of Object.entries(validationResult.errors)) {
-              this.setErrors(path, errors);
-            }
-          }
+          // Note: validateAll() already writes errors to the store with proper
+          // source attribution ('sync', 'async', 'schema'). Do NOT re-set them
+          // here with setErrors() which would tag them as 'manual' and prevent
+          // subsequent field-level re-validation from clearing them.
           this.isSubmitting.set(false);
           this.submitState.set('error');
         });

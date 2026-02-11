@@ -59,10 +59,6 @@ export function useField<T extends Record<string, any>>(
   const optsRef = useRef(opts);
   const registered = useRef(false);
   if (!registered.current || optsRef.current !== opts) {
-    // Unregister previous options before re-registering
-    if (registered.current) {
-      f.unregister(name);
-    }
     optsRef.current = opts;
     if (opts) {
       f.register(name, opts);
