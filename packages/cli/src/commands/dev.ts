@@ -287,7 +287,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
   // Scan for island components ('use client' files) in the app directory.
   // Returns structured data with file paths and exported component names.
-  interface IslandExport { path: string; name: string; }
+  interface IslandExport { path: string; name: string; isDefault?: boolean; }
 
   async function scanForIslands(projectRoot: string): Promise<IslandExport[]> {
     const appDir = join(projectRoot, 'app');
@@ -311,7 +311,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                 // Default export with name
                 const defMatch = content.match(/export\s+default\s+(?:function|class)\s+(\w+)/);
                 if (defMatch && !islands.some(i => i.path === fullPath && i.name === defMatch[1])) {
-                  islands.push({ path: fullPath, name: defMatch[1] });
+                  islands.push({ path: fullPath, name: defMatch[1], isDefault: true });
                 }
               }
             } catch {
@@ -348,7 +348,11 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         const importAlias = `__Island_${island.name}`;
         if (!seenPaths.has(island.path + ':' + island.name)) {
           seenPaths.add(island.path + ':' + island.name);
-          importLines.push(`import { ${island.name} as ${importAlias} } from '${island.path}';`);
+          if (island.isDefault) {
+            importLines.push(`import ${importAlias} from '${island.path}';`);
+          } else {
+            importLines.push(`import { ${island.name} as ${importAlias} } from '${island.path}';`);
+          }
           registerLines.push(`registerIslandComponent('${island.name}', ${importAlias});`);
         }
       }
