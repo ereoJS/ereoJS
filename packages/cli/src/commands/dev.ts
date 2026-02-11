@@ -327,7 +327,7 @@ initClient();
       const code = clientBundleCache.get('client.js');
       if (code) {
         return new Response(code, {
-          headers: { 'Content-Type': 'text/javascript; charset=utf-8' },
+          headers: { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' },
         });
       }
     }
@@ -338,7 +338,7 @@ initClient();
       const code = clientBundleCache.get(chunkPath);
       if (code) {
         return new Response(code, {
-          headers: { 'Content-Type': 'text/javascript; charset=utf-8' },
+          headers: { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' },
         });
       }
     }
@@ -346,7 +346,7 @@ initClient();
     // Inject HMR client
     if (url.pathname === '/__hmr-client.js') {
       return new Response(HMR_CLIENT_CODE, {
-        headers: { 'Content-Type': 'text/javascript' },
+        headers: { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' },
       });
     }
 

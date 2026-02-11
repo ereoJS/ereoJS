@@ -45,7 +45,7 @@ function ChatRoom({ roomId, username }: ChatRoomProps) {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Load initial messages
-  const { data: roomData, isLoading } = useQuery(rpc.rooms.get.query, {
+  const { data: roomData, isLoading } = useQuery(rpc.rooms.get, {
     input: { roomId },
   })
 
@@ -57,8 +57,8 @@ function ChatRoom({ roomId, username }: ChatRoomProps) {
   }, [roomData])
 
   // Join room on mount
-  const joinMutation = useMutation(rpc.rooms.join.mutate)
-  const leaveMutation = useMutation(rpc.rooms.leave.mutate)
+  const joinMutation = useMutation(rpc.rooms.join)
+  const leaveMutation = useMutation(rpc.rooms.leave)
 
   useEffect(() => {
     joinMutation.mutate({ roomId, username })
@@ -68,7 +68,7 @@ function ChatRoom({ roomId, username }: ChatRoomProps) {
   }, [roomId, username])
 
   // Subscribe to real-time events
-  const subscription = useSubscription(rpc.events.subscribe, {
+  const subscription = useSubscription(rpc.events, {
     input: { roomId },
     enabled: true,
     onData: (event: ChatEvent) => {
@@ -101,9 +101,9 @@ function ChatRoom({ roomId, username }: ChatRoomProps) {
   })
 
   // Send message mutation
-  const sendMutation = useMutation(rpc.messages.send.mutate)
-  const typingMutation = useMutation(rpc.typing.start.mutate)
-  const stopTypingMutation = useMutation(rpc.typing.stop.mutate)
+  const sendMutation = useMutation(rpc.messages.send)
+  const typingMutation = useMutation(rpc.typing.start)
+  const stopTypingMutation = useMutation(rpc.typing.stop)
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -249,7 +249,7 @@ interface RoomListProps {
 }
 
 function RoomList({ currentRoomId }: RoomListProps) {
-  const { data: rooms, isLoading } = useQuery(rpc.rooms.list.query, {
+  const { data: rooms, isLoading } = useQuery(rpc.rooms.list, {
     refetchInterval: 5000, // Refresh every 5 seconds for online counts
   })
 
@@ -391,15 +391,15 @@ Here's what happens when the ChatRoom island mounts:
 ```
 1. ChatRoom mounts
    │
-   ├── useQuery(rpc.rooms.get.query, { input: { roomId } })
+   ├── useQuery(rpc.rooms.get, { input: { roomId } })
    │   └── HTTP POST /api/rpc → returns room + messages
    │       └── setMessages(roomData.messages) → initial render
    │
-   ├── useMutation(rpc.rooms.join.mutate)
+   ├── useMutation(rpc.rooms.join)
    │   └── useEffect → joinMutation.mutate({ roomId, username })
    │       └── HTTP POST /api/rpc → server adds user to room → emits 'user_joined'
    │
-   └── useSubscription(rpc.events.subscribe, { input: { roomId } })
+   └── useSubscription(rpc.events, { input: { roomId } })
        └── Opens WebSocket → sends { type: 'subscribe', path: ['events'], input: { roomId } }
            │
            ├── Server yields 'user_joined' → onData callback → (handled)
@@ -422,7 +422,7 @@ const {
   history,       // Array of all received events
   error,         // Error if subscription failed
   status,        // 'idle' | 'connecting' | 'connected' | 'error' | 'closed'
-  isActive,      // true when status === 'connected'
+  isActive,      // true when status is 'connected' or 'connecting'
   unsubscribe,   // Manually unsubscribe
   resubscribe,   // Reconnect after unsubscribe
 } = useSubscription(...)
