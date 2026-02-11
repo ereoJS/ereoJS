@@ -46,6 +46,11 @@ export function useQuery<TInput, TOutput>(
   const inputRef = useRef(input);
   inputRef.current = input;
 
+  // Use ref for procedure to avoid infinite re-fetching.
+  // The RPC client uses Proxy objects that create new references on each property access.
+  const procedureRef = useRef(procedure);
+  procedureRef.current = procedure;
+
   const fetchData = useCallback(async () => {
     if (!enabled) return;
 
@@ -53,14 +58,14 @@ export function useQuery<TInput, TOutput>(
     setError(undefined);
 
     try {
-      const result = await (procedure as any).query(inputRef.current);
+      const result = await (procedureRef.current as any).query(inputRef.current);
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsLoading(false);
     }
-  }, [procedure, enabled]);
+  }, [enabled]);
 
   useEffect(() => {
     fetchData();
@@ -118,6 +123,17 @@ export function useMutation<TInput, TOutput>(
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Use refs for procedure and callbacks to avoid re-creating mutateAsync on every render.
+  // The RPC client uses Proxy objects that create new references on each property access.
+  const procedureRef = useRef(procedure);
+  procedureRef.current = procedure;
+  const onSuccessRef = useRef(onSuccess);
+  onSuccessRef.current = onSuccess;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+  const onSettledRef = useRef(onSettled);
+  onSettledRef.current = onSettled;
+
   const mutateAsync = useCallback(
     async (input?: TInput): Promise<TOutput> => {
       setIsPending(true);
@@ -125,22 +141,22 @@ export function useMutation<TInput, TOutput>(
       setIsSuccess(false);
 
       try {
-        const result = await (procedure as any).mutate(input);
+        const result = await (procedureRef.current as any).mutate(input);
         setData(result);
         setIsSuccess(true);
-        onSuccess?.(result);
+        onSuccessRef.current?.(result);
         return result;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
-        onError?.(error);
+        onErrorRef.current?.(error);
         throw error;
       } finally {
         setIsPending(false);
-        onSettled?.();
+        onSettledRef.current?.();
       }
     },
-    [procedure, onSuccess, onError, onSettled]
+    []
   );
 
   const mutate = useCallback(
@@ -218,6 +234,16 @@ export function useSubscription<TInput, TOutput>(
   const inputRef = useRef(input);
   inputRef.current = input;
 
+  // Use refs for procedure and callbacks to avoid re-subscribing on every render.
+  // The RPC client uses Proxy objects that create new references on each property access,
+  // so we must not include procedure in useCallback/useEffect dependency arrays.
+  const procedureRef = useRef(procedure);
+  procedureRef.current = procedure;
+  const onDataRef = useRef(onData);
+  onDataRef.current = onData;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
   const subscribe = useCallback(() => {
     if (!enabled) return;
 
@@ -233,12 +259,12 @@ export function useSubscription<TInput, TOutput>(
           // Cap history at 1000 entries to prevent unbounded memory growth
           return next.length > 1000 ? next.slice(-1000) : next;
         });
-        onData?.(value);
+        onDataRef.current?.(value);
       },
       onError: (err) => {
         setStatus('error');
         setError(err);
-        onError?.(err);
+        onErrorRef.current?.(err);
       },
       onComplete: () => {
         setStatus('closed');
@@ -247,11 +273,11 @@ export function useSubscription<TInput, TOutput>(
 
     // Handle both input and no-input cases
     if (inputRef.current !== undefined) {
-      unsubscribeRef.current = (procedure as any).subscribe(inputRef.current, callbacks);
+      unsubscribeRef.current = (procedureRef.current as any).subscribe(inputRef.current, callbacks);
     } else {
-      unsubscribeRef.current = (procedure as any).subscribe(callbacks);
+      unsubscribeRef.current = (procedureRef.current as any).subscribe(callbacks);
     }
-  }, [procedure, enabled, onData, onError]);
+  }, [enabled]);
 
   const unsubscribe = useCallback(() => {
     unsubscribeRef.current?.();
