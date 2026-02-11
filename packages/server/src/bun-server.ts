@@ -126,7 +126,26 @@ export interface ServerOptions {
   /** Default shell template */
   shell?: ShellTemplate;
   /** Enable request tracing (dev only). Pass a Tracer instance or true for auto-creation. */
-  trace?: boolean | { tracer: unknown; middleware: MiddlewareHandler; viewerHandler?: (req: Request) => Response; tracesAPIHandler?: (req: Request) => Response };
+  trace?: boolean | {
+    tracer: unknown;
+    middleware: MiddlewareHandler;
+    viewerHandler?: (req: Request) => Response;
+    tracesAPIHandler?: (req: Request) => Response;
+    /** WebSocket handler for live trace streaming */
+    traceWebSocket?: {
+      websocket: {
+        open: (ws: any) => void;
+        close: (ws: any) => void;
+        message: (ws: any, message: string | Buffer) => void;
+      };
+    };
+    /** Auto-instrumentation functions from @ereo/trace */
+    instrumentors?: {
+      getActiveSpan: (ctx: any) => any;
+      traceRouteMatch: <T>(span: any, fn: () => T) => T;
+      traceLoader: <T>(span: any, key: string, fn: () => T | Promise<T>) => T | Promise<T>;
+    };
+  };
 }
 
 /**
@@ -222,6 +241,23 @@ export class BunServer {
     }
   }
 
+  /** Get auto-instrumentation helpers if tracing is enabled */
+  private get traceInstrumentors() {
+    if (this.options.trace && typeof this.options.trace === 'object' && this.options.trace.instrumentors) {
+      return this.options.trace.instrumentors;
+    }
+    return null;
+  }
+
+  /** Generate a <script> tag to inject the trace ID into the page for client tracing */
+  private getTraceIdScript(context: RequestContext): string {
+    const inst = this.traceInstrumentors;
+    if (!inst) return '';
+    const span = inst.getActiveSpan(context);
+    if (!span?.traceId) return '';
+    return `<script>window.__EREO_TRACE_ID__="${span.traceId}"</script>`;
+  }
+
   /**
    * Register a WebSocket upgrade handler for a specific path.
    * Plugins can use this to add WebSocket support alongside HMR.
@@ -288,7 +324,12 @@ export class BunServer {
           if (typeof this.router.getRoutes === 'function') {
             // Full FileRouter - use matchWithLayouts for layout support
             const routes = this.router.getRoutes();
-            const matchResult = matchWithLayouts(pathname, routes);
+            const inst = this.traceInstrumentors;
+            const activeSpan = inst?.getActiveSpan(context);
+
+            const matchResult = activeSpan
+              ? inst!.traceRouteMatch(activeSpan, () => matchWithLayouts(pathname, routes))
+              : matchWithLayouts(pathname, routes);
 
             if (!matchResult) {
               return new Response('Not Found', { status: 404 });
@@ -536,20 +577,36 @@ export class BunServer {
     // Run all loaders in parallel: route loader + layout loaders
     // (layouts already declared above for beforeLoad guards)
     const loaderArgs = { request, params: match.params, context };
+    const inst = this.traceInstrumentors;
+    const activeSpan = inst?.getActiveSpan(context);
 
     // Build array of loader promises: [route, ...layouts]
     const loaderPromises: Promise<unknown>[] = [];
 
-    // Route loader
-    loaderPromises.push(
-      module.loader ? Promise.resolve(module.loader(loaderArgs)) : Promise.resolve(null)
-    );
+    // Route loader (with optional tracing)
+    if (module.loader) {
+      const loaderFn = () => module.loader!(loaderArgs);
+      loaderPromises.push(
+        activeSpan
+          ? Promise.resolve(inst!.traceLoader(activeSpan, match.route.id || 'route', loaderFn))
+          : Promise.resolve(loaderFn())
+      );
+    } else {
+      loaderPromises.push(Promise.resolve(null));
+    }
 
     // Layout loaders (run in parallel with route loader)
     for (const layout of layouts) {
-      loaderPromises.push(
-        layout.module?.loader ? Promise.resolve(layout.module.loader(loaderArgs)) : Promise.resolve(null)
-      );
+      if (layout.module?.loader) {
+        const layoutLoaderFn = () => layout.module!.loader!(loaderArgs);
+        loaderPromises.push(
+          activeSpan
+            ? Promise.resolve(inst!.traceLoader(activeSpan, `layout:${layout.id}`, layoutLoaderFn))
+            : Promise.resolve(layoutLoaderFn())
+        );
+      } else {
+        loaderPromises.push(Promise.resolve(null));
+      }
     }
 
     let loaderResults: unknown[];
@@ -636,7 +693,20 @@ export class BunServer {
     }
 
     // Full page render - render React component to HTML with layouts
-    const htmlResponse = await this.renderPage(request, match, context, loaderData, layoutLoaderData);
+    let htmlResponse: Response;
+    if (activeSpan) {
+      const renderSpan = activeSpan.child('render', 'custom');
+      try {
+        htmlResponse = await this.renderPage(request, match, context, loaderData, layoutLoaderData);
+        renderSpan.end();
+      } catch (err) {
+        renderSpan.error(err);
+        renderSpan.end();
+        throw err;
+      }
+    } else {
+      htmlResponse = await this.renderPage(request, match, context, loaderData, layoutLoaderData);
+    }
     return this.applyRouteHeaders(htmlResponse, routeHeaders);
   }
 
@@ -651,10 +721,11 @@ export class BunServer {
     layoutLoaderData: Map<string, unknown> = new Map(),
     actionData?: unknown
   ): Promise<Response> {
+    const traceScript = this.getTraceIdScript(context);
     const module = match.route.module;
     if (!module?.default) {
       // No component to render, return a minimal HTML page with just the data
-      return this.renderMinimalPage(match, loaderData);
+      return this.renderMinimalPage(match, loaderData, traceScript);
     }
 
     const url = new URL(request.url);
@@ -730,17 +801,17 @@ export class BunServer {
       // Layout provides the full HTML document structure.
       // Pass meta descriptors so they can be injected into the layout's <head>.
       if (this.options.renderMode === 'streaming') {
-        return this.renderStreamingPageDirect(element, allLoaderData, metaDescriptors);
+        return this.renderStreamingPageDirect(element, allLoaderData, metaDescriptors, traceScript);
       } else {
-        return this.renderStringPageDirect(element, allLoaderData, metaDescriptors);
+        return this.renderStringPageDirect(element, allLoaderData, metaDescriptors, traceScript);
       }
     }
 
     // No layout - use shell template wrapper
     if (this.options.renderMode === 'streaming') {
-      return this.renderStreamingPage(element, shell, allLoaderData);
+      return this.renderStreamingPage(element, shell, allLoaderData, traceScript);
     } else {
-      return this.renderStringPage(element, shell, allLoaderData);
+      return this.renderStringPage(element, shell, allLoaderData, traceScript);
     }
   }
 
@@ -755,7 +826,8 @@ export class BunServer {
   private async renderStreamingPage(
     element: ReactElement,
     shell: ShellTemplate,
-    loaderData: unknown
+    loaderData: unknown,
+    traceScript: string = ''
   ): Promise<Response> {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -763,7 +835,7 @@ export class BunServer {
 
       // If renderToReadableStream is not available, fallback to string rendering
       if (!renderToReadableStream) {
-        return this.renderStringPage(element, shell, loaderData);
+        return this.renderStringPage(element, shell, loaderData, traceScript);
       }
 
       const hasDeferred = hasDeferredData(loaderData);
@@ -828,7 +900,7 @@ export class BunServer {
                     console.error('Deferred data resolution failed:', error);
                     resolvedData = null;
                   }
-                  const loaderScript = `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`;
+                  const loaderScript = `${traceScript}<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`;
                   const resolvedTail = `</div>\n    ${loaderScript}\n</body>\n</html>`;
                   controller.enqueue(encoder.encode(resolvedTail));
                 } else {
@@ -860,7 +932,7 @@ export class BunServer {
       clearTimeout(timeoutId);
       console.error('Streaming render failed:', error);
       // Fallback to string rendering on error
-      return this.renderStringPage(element, shell, loaderData);
+      return this.renderStringPage(element, shell, loaderData, traceScript);
     }
   }
 
@@ -870,7 +942,8 @@ export class BunServer {
   private async renderStringPage(
     element: ReactElement,
     shell: ShellTemplate,
-    loaderData: unknown
+    loaderData: unknown,
+    traceScript: string = ''
   ): Promise<Response> {
     try {
       const { renderToString: reactRenderToString } = await import('react-dom/server');
@@ -884,7 +957,7 @@ export class BunServer {
       const { head, tail } = createShell({ shell, scripts, loaderData: resolvedData });
 
       const content = reactRenderToString(element);
-      const html = head + content + tail;
+      const html = head + content + (traceScript ? tail.replace('</body>', `${traceScript}</body>`) : tail);
       const encoder = new TextEncoder();
       const htmlBytes = encoder.encode(html);
 
@@ -912,7 +985,8 @@ export class BunServer {
   private async renderStreamingPageDirect(
     element: ReactElement,
     loaderData: unknown,
-    metaDescriptors: MetaDescriptor[] = []
+    metaDescriptors: MetaDescriptor[] = [],
+    traceScript: string = ''
   ): Promise<Response> {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -920,7 +994,7 @@ export class BunServer {
 
       // If renderToReadableStream is not available, fallback to string rendering
       if (!renderToReadableStream) {
-        return this.renderStringPageDirect(element, loaderData, metaDescriptors);
+        return this.renderStringPageDirect(element, loaderData, metaDescriptors, traceScript);
       }
 
       const hasDeferred = hasDeferredData(loaderData);
@@ -944,8 +1018,8 @@ export class BunServer {
       // Pre-build loader script if no deferred data (fast path).
       // Client entry is NOT included here — React handles it via bootstrapModules.
       const loaderScript = (!hasDeferred && loaderData)
-        ? encoder.encode(`<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`)
-        : null;
+        ? encoder.encode(`${traceScript}<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`)
+        : (traceScript ? encoder.encode(traceScript) : null);
 
       // Build meta injection HTML for streaming
       const metaHtml = metaDescriptors.length > 0
@@ -984,7 +1058,7 @@ export class BunServer {
               }
               // Always emit __EREO_DATA__ (even null) so the client has a consistent contract.
               controller.enqueue(encoder.encode(
-                `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
+                `${traceScript}<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
               ));
             } else if (loaderScript) {
               controller.enqueue(loaderScript);
@@ -1021,7 +1095,7 @@ export class BunServer {
     } catch (error) {
       clearTimeout(timeoutId);
       console.error('Streaming render failed:', error);
-      return this.renderStringPageDirect(element, loaderData, metaDescriptors);
+      return this.renderStringPageDirect(element, loaderData, metaDescriptors, traceScript);
     }
   }
 
@@ -1031,7 +1105,8 @@ export class BunServer {
   private async renderStringPageDirect(
     element: ReactElement,
     loaderData: unknown,
-    metaDescriptors: MetaDescriptor[] = []
+    metaDescriptors: MetaDescriptor[] = [],
+    traceScript: string = ''
   ): Promise<Response> {
     try {
       const { renderToString: reactRenderToString } = await import('react-dom/server');
@@ -1052,8 +1127,8 @@ export class BunServer {
 
       // Inject loader data and client script before closing body tag
       const loaderScript = resolvedData
-        ? `<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
-        : '';
+        ? `${traceScript}<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
+        : traceScript;
       const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
       if (html.includes('</body>')) {
         html = html.replace('</body>', `${loaderScript}${clientScript}</body>`);
@@ -1080,7 +1155,7 @@ export class BunServer {
   /**
    * Render a minimal HTML page when no component is available.
    */
-  private async renderMinimalPage(match: RouteMatch, loaderData: unknown): Promise<Response> {
+  private async renderMinimalPage(match: RouteMatch, loaderData: unknown, traceScript: string = ''): Promise<Response> {
     // Resolve any deferred data before serialization
     const resolvedData = hasDeferredData(loaderData)
       ? await resolveAllDeferred(loaderData)
@@ -1100,7 +1175,7 @@ export class BunServer {
 </head>
 <body>
   <div id="root"></div>
-  <script>window.__EREO_DATA__=${serializedData}</script>
+  ${traceScript}<script>window.__EREO_DATA__=${serializedData}</script>
   <script type="module" src="${this.options.clientEntry}"></script>
 </body>
 </html>`;
@@ -1572,6 +1647,19 @@ export class BunServer {
         // Handle WebSocket upgrade for HMR
         if (websocket && url.pathname === '/__hmr') {
           if (server.upgrade(request, { data: { _wsType: 'hmr' } })) return undefined as any;
+        }
+
+        // Handle WebSocket upgrade for trace streaming
+        if (url.pathname === '/__ereo/trace-ws' && typeof this.options.trace === 'object' && this.options.trace.traceWebSocket) {
+          const traceWsType = '__ereo_trace_ws';
+          if (!upgradeHandlers.some(h => h.path === traceWsType)) {
+            upgradeHandlers.push({
+              path: traceWsType,
+              upgrader: () => true,
+              wsConfig: this.options.trace.traceWebSocket.websocket,
+            });
+          }
+          if (server.upgrade(request, { data: { _wsType: traceWsType } })) return undefined as any;
         }
 
         // Handle plugin WebSocket upgrades

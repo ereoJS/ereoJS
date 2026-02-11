@@ -1,0 +1,16 @@
+---
+import Root from '../../layouts/Root.astro';
+import SearchBar from '../../components/SearchBar';
+import { getProducts } from '../../data';
+
+const page = parseInt(Astro.url.searchParams.get('page') ?? '1', 10);
+const data = await getProducts(page, 50);
+---
+
+<Root title="Products - Astro Benchmark">
+  <div>
+    <h1>Products</h1>
+    <p>Total: {data.total} products | Page {data.page} of {data.totalPages}</p>
+    <SearchBar client:load products={data.products} />
+  </div>
+</Root>

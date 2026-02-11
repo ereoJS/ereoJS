@@ -1,0 +1,34 @@
+---
+import Root from '../../layouts/Root.astro';
+import { getProduct, getRelated } from '../../data';
+
+const { id } = Astro.params;
+const product = await getProduct(parseInt(id!, 10));
+
+if (!product) {
+  return Astro.redirect('/404');
+}
+
+const related = await getRelated(product.category, product.id);
+---
+
+<Root title={`${product.name} - Astro Benchmark`}>
+  <div>
+    <h1>{product.name}</h1>
+    <p>{product.description}</p>
+    <div>
+      <span>Price: ${product.price.toFixed(2)}</span>
+      <span> | Category: {product.category}</span>
+      <span> | Rating: {product.rating}/5</span>
+      <span> | In Stock: {product.stock}</span>
+    </div>
+    <h2>Related Products</h2>
+    <ul>
+      {related.map((r) => (
+        <li>
+          <a href={`/products/${r.id}`}>{r.name}</a> - ${r.price.toFixed(2)}
+        </li>
+      ))}
+    </ul>
+  </div>
+</Root>

@@ -1,0 +1,20 @@
+---
+import Root from './Root.astro';
+---
+
+<Root title="Dashboard - Astro Benchmark">
+  <div style="display: flex;">
+    <aside style="width: 200px; padding: 16px; border-right: 1px solid #ddd;">
+      <h2>Dashboard</h2>
+      <nav>
+        <ul>
+          <li><a href="/dashboard">Overview</a></li>
+          <li><a href="/products">Products</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <div style="flex: 1; padding: 16px;">
+      <slot />
+    </div>
+  </div>
+</Root>

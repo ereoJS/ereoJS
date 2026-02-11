@@ -1,0 +1,15 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+import DataTable from '../../components/DataTable';
+import { getProducts } from '../../data';
+
+const data = await getProducts(1, 100);
+---
+
+<Dashboard>
+  <div>
+    <h1>Dashboard</h1>
+    <p>Interactive data table with sorting and pagination</p>
+    <DataTable client:load products={data.products} />
+  </div>
+</Dashboard>

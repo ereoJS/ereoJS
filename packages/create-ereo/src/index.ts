@@ -1285,7 +1285,25 @@ export default function RootLayout({ children }${ts ? ': RootLayoutProps' : ''})
   // ============================================================================
   // Client Entry Point
   // ============================================================================
-  const clientEntry = `
+  const clientEntry = options.trace ? `
+/**
+ * Client Entry Point
+ *
+ * This file initializes the client-side runtime:
+ * - Hydrates island components marked with 'use client'
+ * - Sets up client-side navigation
+ * - Enables link prefetching
+ * - Enables client-side tracing (sends spans to the server)
+ */
+import { initClient } from '@ereo/client';
+import { initClientTracing } from '@ereo/trace/client';
+
+// Initialize the EreoJS client runtime
+initClient();
+
+// Initialize client-side tracing
+initClientTracing();
+`.trim() : `
 /**
  * Client Entry Point
  *

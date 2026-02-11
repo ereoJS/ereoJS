@@ -176,7 +176,7 @@ export function generateViewerHTML(traces: TraceData[]): string {
       if (method) t = t.filter(x => x.metadata.method === method);
       if (path) t = t.filter(x => (x.metadata.pathname||'').includes(path));
       if (status) {
-        const base = parseInt(status);
+        const base = parseInt(status) * 100;
         t = t.filter(x => { const s = x.metadata.statusCode||200; return s >= base && s < base+100; });
       }
       return t.reverse();

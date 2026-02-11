@@ -199,16 +199,24 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   let traceConfig: import('@ereo/server').ServerOptions['trace'] = undefined;
   if (options.trace) {
     try {
-      const { createTracer, traceMiddleware, createCLIReporter, createViewerHandler, createTracesAPIHandler } = await import('@ereo/trace');
+      const {
+        createTracer, traceMiddleware, createCLIReporter, createViewerHandler, createTracesAPIHandler,
+        createTraceWebSocket, getActiveSpan, traceRouteMatch, traceLoader,
+      } = await import('@ereo/trace');
       const tracer = createTracer();
       const middleware = traceMiddleware(tracer);
       const viewerHandler = createViewerHandler(tracer);
       const tracesAPIHandler = createTracesAPIHandler(tracer);
+      const traceWs = createTraceWebSocket(tracer);
 
       // Start CLI reporter
       createCLIReporter(tracer);
 
-      traceConfig = { tracer, middleware, viewerHandler, tracesAPIHandler };
+      traceConfig = {
+        tracer, middleware, viewerHandler, tracesAPIHandler,
+        traceWebSocket: traceWs,
+        instrumentors: { getActiveSpan, traceRouteMatch, traceLoader },
+      };
       console.log('  \x1b[35m⬡\x1b[0m Tracing enabled — view at /__ereo/traces\n');
     } catch {
       console.warn('  \x1b[33m⚠\x1b[0m @ereo/trace not installed, tracing disabled\n');

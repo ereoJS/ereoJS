@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "packages/examples/*"
+    "packages/examples/*",
+    "benchmarks/apps/ereo-bench"
   ],
   "scripts": {
     "dev": "bun run --cwd packages/cli dev",

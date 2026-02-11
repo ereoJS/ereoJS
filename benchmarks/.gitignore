@@ -1,0 +1,9 @@
+results/
+node_modules/
+apps/*/node_modules/
+apps/*/.next/
+apps/*/build/
+apps/*/dist/
+apps/*/.ereo/
+apps/*/.astro/
+apps/*/.cache/
