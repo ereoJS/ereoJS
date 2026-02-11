@@ -777,7 +777,7 @@ async function buildClient(options: {
       sourcemap: sourcemap ? 'external' : 'none',
       splitting,
       naming: {
-        entry: 'index.[ext]',
+        entry: 'client.[ext]',
         chunk: 'chunks/[name]-[hash].[ext]',
         asset: '../assets/[name]-[hash].[ext]',
       },
@@ -822,7 +822,7 @@ async function buildClient(options: {
   return {
     outputs,
     errors,
-    entryFile: '.ereo/client/index.js',
+    entryFile: '.ereo/client/client.js',
     chunks,
   };
 }
