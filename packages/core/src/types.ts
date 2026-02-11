@@ -447,6 +447,16 @@ export interface RouteModule {
   /** HTTP HEAD handler */
   HEAD?: MethodHandlerFunction;
 
+  // --- WebSocket ---
+
+  /** WebSocket handler for route-level WebSocket support (Bun native) */
+  websocket?: {
+    open?: (ws: any) => void | Promise<void>;
+    message?: (ws: any, message: string | Buffer) => void | Promise<void>;
+    close?: (ws: any) => void | Promise<void>;
+    drain?: (ws: any) => void;
+  };
+
   // --- Route Guards ---
 
   /** Runs before the loader; throw a Response to redirect or an Error to short-circuit */

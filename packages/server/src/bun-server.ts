@@ -233,8 +233,24 @@ export class BunServer {
   /**
    * Handle incoming request.
    */
-  private async handleRequest(request: Request): Promise<Response> {
+  private async handleRequest(request: Request, wsType?: string): Promise<Response> {
     const context = createContext(request);
+
+    // Make the Bun server available to route handlers for WebSocket upgrades.
+    // If wsType is provided, wrap the server to inject _wsType automatically.
+    if (this.server) {
+      if (wsType) {
+        const actualServer = this.server;
+        context.set('server', {
+          upgrade(req: Request, opts?: { data?: Record<string, any> }) {
+            const data = { ...opts?.data, _wsType: wsType };
+            return actualServer.upgrade(req, { ...opts, data });
+          },
+        });
+      } else {
+        context.set('server', this.server);
+      }
+    }
 
     try {
       // Handle trace endpoints (dev only)
@@ -440,6 +456,11 @@ export class BunServer {
         if (result instanceof Response) {
           const routeHeaders = this.buildRouteHeaders(match);
           return this.applyRouteHeaders(result, routeHeaders);
+        }
+        // If the handler returned undefined/null (e.g., after WebSocket upgrade), return empty response.
+        // Bun ignores the response after a successful upgrade, so this is safe.
+        if (result === undefined || result === null) {
+          return new Response(null, { status: 200 });
         }
         const jsonResponse = new Response(JSON.stringify(result), {
           headers: { 'Content-Type': 'application/json' },
@@ -1524,59 +1545,28 @@ export class BunServer {
    */
   async start(): Promise<Server<unknown>> {
     const { port, hostname, tls, websocket } = this.options;
-    const pluginUpgradeHandlers = this.wsUpgradeHandlers;
+    const upgradeHandlers = this.wsUpgradeHandlers;
 
-    // Build a multiplexed WebSocket handler that routes to the right handler
-    const hasPluginWs = pluginUpgradeHandlers.length > 0;
-    let mergedWebSocket: any = websocket || undefined;
+    // Always build a unified multiplexed WebSocket handler.
+    // This routes events to HMR, plugin, or route-level handlers based on ws.data._wsType.
+    // Route-level handlers can be registered dynamically after server start.
+    const resolveHandler = (ws: any) => {
+      const type = ws.data?._wsType;
+      if (type === 'hmr' && websocket) return websocket;
+      return upgradeHandlers.find(h => h.path === type)?.wsConfig;
+    };
 
-    if (hasPluginWs && websocket) {
-      // Merge HMR and plugin WebSocket handlers via multiplexing
-      mergedWebSocket = {
-        message(ws: any, message: any) {
-          // Route to the appropriate handler based on data._wsType
-          const handler = ws.data?._wsType === 'hmr' ? websocket : pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.message?.(ws, message);
-        },
-        open(ws: any) {
-          const handler = ws.data?._wsType === 'hmr' ? websocket : pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.open?.(ws);
-        },
-        close(ws: any) {
-          const handler = ws.data?._wsType === 'hmr' ? websocket : pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.close?.(ws);
-        },
-        drain(ws: any) {
-          const handler = ws.data?._wsType === 'hmr' ? websocket : pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.drain?.(ws);
-        },
-      };
-    } else if (hasPluginWs) {
-      // Only plugin WebSocket handlers (no HMR)
-      mergedWebSocket = {
-        message(ws: any, message: any) {
-          const handler = pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.message?.(ws, message);
-        },
-        open(ws: any) {
-          const handler = pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.open?.(ws);
-        },
-        close(ws: any) {
-          const handler = pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.close?.(ws);
-        },
-        drain(ws: any) {
-          const handler = pluginUpgradeHandlers.find(h => h.path === ws.data?._wsType)?.wsConfig;
-          handler?.drain?.(ws);
-        },
-      };
-    }
+    const mergedWebSocket: any = {
+      message(ws: any, message: any) { resolveHandler(ws)?.message?.(ws, message); },
+      open(ws: any) { resolveHandler(ws)?.open?.(ws); },
+      close(ws: any) { resolveHandler(ws)?.close?.(ws); },
+      drain(ws: any) { resolveHandler(ws)?.drain?.(ws); },
+    };
 
     const serverOptions: Parameters<typeof Bun.serve>[0] = {
       port,
       hostname,
-      fetch: (request: Request, server: Server<unknown>) => {
+      fetch: async (request: Request, server: Server<unknown>) => {
         const url = new URL(request.url);
 
         // Handle WebSocket upgrade for HMR
@@ -1585,13 +1575,41 @@ export class BunServer {
         }
 
         // Handle plugin WebSocket upgrades
-        if (hasPluginWs) {
-          const upgradeHeader = request.headers.get('Upgrade');
-          if (upgradeHeader?.toLowerCase() === 'websocket') {
-            for (const handler of pluginUpgradeHandlers) {
-              if (url.pathname === handler.path) {
-                const data = { _wsType: handler.path, subscriptions: new Map(), ctx: {}, originalRequest: request };
-                if (server.upgrade(request, { data })) return undefined as any;
+        const upgradeHeader = request.headers.get('Upgrade');
+        if (upgradeHeader?.toLowerCase() === 'websocket') {
+          for (const handler of upgradeHandlers) {
+            if (url.pathname === handler.path) {
+              const data = { _wsType: handler.path, subscriptions: new Map(), ctx: {}, originalRequest: request };
+              if (server.upgrade(request, { data })) return undefined as any;
+            }
+          }
+
+          // Handle route-level WebSocket upgrades
+          if (this.router && typeof this.router.getRoutes === 'function') {
+            const routes = this.router.getRoutes();
+            const matchResult = matchWithLayouts(url.pathname, routes);
+            if (matchResult) {
+              await this.router.loadModule(matchResult.route);
+              const mod = matchResult.route.module;
+              if (mod?.websocket) {
+                const wsType = 'route:' + url.pathname;
+                // Register the handler dynamically if not already registered
+                if (!upgradeHandlers.some(h => h.path === wsType)) {
+                  upgradeHandlers.push({
+                    path: wsType,
+                    upgrader: () => true,
+                    wsConfig: mod.websocket,
+                  });
+                }
+                // If route has a GET handler, let it handle the upgrade with custom data
+                if (typeof mod.GET === 'function') {
+                  return this.handleRequest(request, wsType);
+                }
+                // Auto-upgrade without GET handler
+                if (server.upgrade(request, { data: { _wsType: wsType } })) {
+                  return undefined as any;
+                }
+                return new Response('WebSocket upgrade failed', { status: 400 });
               }
             }
           }
@@ -1606,9 +1624,8 @@ export class BunServer {
       serverOptions.tls = tls;
     }
 
-    if (mergedWebSocket) {
-      (serverOptions as any).websocket = mergedWebSocket;
-    }
+    // Always set WebSocket handler for multiplexing support
+    (serverOptions as any).websocket = mergedWebSocket;
 
     this.server = Bun.serve(serverOptions);
 

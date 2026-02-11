@@ -224,9 +224,12 @@ async function handleSubscribe(
     return;
   }
 
-  const procedure = resolveProcedure(def, path);
+  // Normalize path to array (clients should send string[], but handle string for robustness)
+  const normalizedPath = Array.isArray(path) ? path : typeof path === 'string' ? [path] : [];
+
+  const procedure = resolveProcedure(def, normalizedPath);
   if (!procedure) {
-    sendError(ws, id, 'NOT_FOUND', `Procedure not found: ${path.join('.')}`);
+    sendError(ws, id, 'NOT_FOUND', `Procedure not found: ${normalizedPath.join('.')}`);
     return;
   }
 
