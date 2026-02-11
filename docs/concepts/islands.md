@@ -89,9 +89,9 @@ export default function Home() {
 
 > **This is the approach used in the `create-ereo` starter templates.** It's the simplest way to add interactivity and works well for most applications.
 
-### Approach 2: `data-island` / `data-hydrate` Attributes (Advanced)
+### Approach 2: `createIsland()` Wrapper (Advanced)
 
-For fine-grained control over **when** an island hydrates (immediately, on idle, when visible, etc.), use the explicit `data-island` and `data-hydrate` attributes. This approach requires registering your components.
+For fine-grained control over **when** an island hydrates (immediately, on idle, when visible, etc.), use `createIsland()` to wrap your component and `client:*` directives to control hydration timing.
 
 ```tsx
 // app/components/SearchBox.tsx
@@ -103,21 +103,14 @@ export default function SearchBox({ placeholder }) {
 }
 ```
 
-Register the island in your client entry point:
-
-```tsx
-// app/entry.client.ts
-import { registerIslandComponent } from '@ereo/client'
-import SearchBox from './components/SearchBox'
-
-registerIslandComponent('SearchBox', SearchBox)
-```
-
-Then use it in a route with hydration attributes:
+Wrap the component with `createIsland()` and use `client:*` directives in your route:
 
 ```tsx
 // app/routes/index.tsx
-import SearchBox from '~/components/SearchBox'
+import { createIsland } from '@ereo/client'
+import SearchBoxBase from '~/components/SearchBox'
+
+const SearchBox = createIsland(SearchBoxBase, 'SearchBox')
 
 export default function Home() {
   return (
@@ -128,11 +121,7 @@ export default function Home() {
       </header>
 
       {/* Island - hydrated only when the browser is idle */}
-      <SearchBox
-        data-island="SearchBox"
-        data-hydrate="idle"
-        placeholder="Search..."
-      />
+      <SearchBox client:idle placeholder="Search..." />
 
       {/* Static content */}
       <article>
@@ -144,70 +133,68 @@ export default function Home() {
 }
 ```
 
+`createIsland()` automatically registers the component and produces the `data-island` markers needed for client-side hydration.
+
 ### When to Use Which Approach
 
-| | `'use client'` | `data-island` / `data-hydrate` |
+| | `'use client'` | `createIsland()` |
 |---|---|---|
-| **Setup** | Add directive to file | Register component + add attributes |
-| **Hydration timing** | Automatic (hydrates on load) | You choose: `load`, `idle`, `visible`, `media`, `never` |
+| **Setup** | Add directive to file | Wrap component with `createIsland()` |
+| **Hydration timing** | Uses `client:load` by default, supports all `client:*` directives | You choose: `client:load`, `client:idle`, `client:visible`, `client:media` |
 | **Best for** | Most interactive components | Performance-critical pages, below-fold content, conditional hydration |
 
-> **Tip:** Start with `'use client'`. If you need to defer hydration for performance (e.g., a comment section that should only hydrate when scrolled into view), switch that component to the `data-island` approach.
+> **Tip:** Start with `'use client'`. If you need to defer hydration for performance (e.g., a comment section that should only hydrate when scrolled into view), switch that component to the `createIsland()` approach.
 
 ## Hydration Strategies
 
-The `data-hydrate` attribute controls when an island hydrates:
+The `client:*` directives control when an island hydrates. These work with both `'use client'` components and `createIsland()` wrapped components:
 
-### `load`
+### `client:load`
 
 Hydrate immediately when the page loads:
 
 ```tsx
-<Counter data-island="Counter" data-hydrate="load" />
+<Counter client:load />
 ```
 
-Use for: Critical interactive elements, above-the-fold content
+Use for: Critical interactive elements, above-the-fold content. This is the default for `'use client'` components.
 
-### `idle`
+### `client:idle`
 
 Hydrate when the browser is idle (requestIdleCallback):
 
 ```tsx
-<SearchBox data-island="SearchBox" data-hydrate="idle" />
+<SearchBox client:idle />
 ```
 
 Use for: Important but not critical interactivity
 
-### `visible`
+### `client:visible`
 
 Hydrate when the element enters the viewport (IntersectionObserver):
 
 ```tsx
-<CommentSection data-island="CommentSection" data-hydrate="visible" />
+<CommentSection client:visible />
 ```
 
 Use for: Below-the-fold content, lazy-loaded sections
 
-### `media`
+### `client:media`
 
 Hydrate based on a media query:
 
 ```tsx
-<MobileMenu
-  data-island="MobileMenu"
-  data-hydrate="media"
-  data-media="(max-width: 768px)"
-/>
+<MobileMenu client:media="(max-width: 768px)" />
 ```
 
 Use for: Device-specific interactions
 
-### `never`
+### No directive
 
-Never hydrate (useful for SSR-only interactivity):
+Omitting all `client:*` directives means the component will be server-rendered but never hydrated on the client:
 
 ```tsx
-<StaticWidget data-island="StaticWidget" data-hydrate="never" />
+<StaticWidget />
 ```
 
 ## Passing Props to Islands
@@ -215,10 +202,9 @@ Never hydrate (useful for SSR-only interactivity):
 Props are serialized to JSON and passed to the client:
 
 ```tsx
-// Server-rendered route
+// Server-rendered route — UserCard uses 'use client' or createIsland()
 <UserCard
-  data-island="UserCard"
-  data-hydrate="visible"
+  client:visible
   user={{ id: 1, name: 'Alice' }}
   showBio={true}
 />
@@ -283,30 +269,22 @@ export default function ShoppingCart() {
 Islands can contain other islands:
 
 ```tsx
-// islands/Dashboard.tsx
-import Chart from './Chart'
-import FilterPanel from './FilterPanel'
+// app/routes/dashboard.tsx
+// FilterPanel and Chart both use 'use client'
+import { FilterPanel } from '~/components/FilterPanel'
+import { Chart } from '~/components/Chart'
 
-export default function Dashboard({ data }) {
-  const [filters, setFilters] = useState({})
-
+export default function Dashboard({ loaderData }) {
   return (
     <div>
-      <FilterPanel
-        data-island="FilterPanel"
-        data-hydrate="load"
-        onChange={setFilters}
-      />
-      <Chart
-        data-island="Chart"
-        data-hydrate="visible"
-        data={data}
-        filters={filters}
-      />
+      <FilterPanel client:load />
+      <Chart client:visible data={loaderData.chartData} />
     </div>
   )
 }
 ```
+
+> **Note:** Since each island has its own React tree, you cannot pass functions (like `onChange`) between islands. Use `@ereo/state` signals for cross-island communication instead.
 
 ## Islands with Forms
 
@@ -396,37 +374,37 @@ export const config = {
 
 ```tsx
 // Good: Small, focused island
-<LikeButton data-island="LikeButton" data-hydrate="visible" postId={post.id} />
+<LikeButton client:visible postId={post.id} />
 
 // Avoid: Large island with mostly static content
-<EntireArticle data-island="EntireArticle" data-hydrate="load" />
+<EntireArticle client:load />
 ```
 
 ### 2. Defer Non-Critical Islands
 
 ```tsx
 {/* Critical - hydrate immediately */}
-<SearchBox data-island="SearchBox" data-hydrate="load" />
+<SearchBox client:load />
 
 {/* Non-critical - wait for idle */}
-<Newsletter data-island="Newsletter" data-hydrate="idle" />
+<Newsletter client:idle />
 
 {/* Below fold - wait for visible */}
-<RelatedPosts data-island="RelatedPosts" data-hydrate="visible" />
+<RelatedPosts client:visible />
 ```
 
 ### 3. Avoid Hydration Waterfalls
 
 ```tsx
 // Bad: Parent hydrates, then children
-<Dashboard data-island="Dashboard" data-hydrate="load">
-  <Chart data-island="Chart" data-hydrate="load" />
+<Dashboard client:load>
+  <Chart client:load />
 </Dashboard>
 
 // Good: Independent islands
 <DashboardLayout>
-  <Chart data-island="Chart" data-hydrate="load" />
-  <Stats data-island="Stats" data-hydrate="load" />
+  <Chart client:load />
+  <Stats client:load />
 </DashboardLayout>
 ```
 
@@ -436,11 +414,7 @@ Show meaningful content before hydration:
 
 ```tsx
 // The server renders the initial state
-<Counter
-  data-island="Counter"
-  data-hydrate="visible"
-  initialCount={0}
-/>
+<Counter client:visible initialCount={0} />
 ```
 
 ```tsx
@@ -517,9 +491,9 @@ A single large island hydrates all its JavaScript at once. Split into smaller is
 <DashboardIsland />
 
 // Good: separate islands with different hydration strategies
-<DashboardHeader />           {/* 'use client' — hydrates on load */}
-<DashboardCharts />           {/* data-island="visible" — hydrates when scrolled into view */}
-<DashboardNotifications />    {/* data-island="idle" — hydrates when idle */}
+<DashboardHeader client:load />       {/* hydrates on load */}
+<DashboardCharts client:visible />   {/* hydrates when scrolled into view */}
+<DashboardNotifications client:idle />  {/* hydrates when idle */}
 ```
 
 ## Edge Cases

@@ -2,7 +2,7 @@
 
 APIs for working with the islands architecture - selective hydration for interactive components.
 
-> **Note:** For most use cases, you can use the `'use client'` directive to mark components for hydration without manual registration. The APIs below are for the advanced `data-island` approach, which gives you control over hydration timing (idle, visible, media, etc.). See [Islands Architecture](/concepts/islands) for when to use each approach.
+> **Note:** For most use cases, you can use the `'use client'` directive to mark components for hydration without manual registration. The APIs below are for the advanced `createIsland()` approach, which gives you control over hydration timing (idle, visible, media, etc.). See [Islands Architecture](/concepts/islands) for when to use each approach.
 
 ## Import
 
@@ -312,64 +312,103 @@ export default function Counter({ initialCount = 0 }) {
 
 ### Using in Routes
 
+There are two approaches:
+
+**Approach 1: `'use client'` directive (recommended)**
+
 ```tsx
-// routes/index.tsx
-import Counter from '../islands/Counter'
+// app/components/Counter.tsx
+'use client'
+import { useState } from 'react'
+
+export default function Counter({ initialCount = 0 }) {
+  const [count, setCount] = useState(initialCount)
+  return <button onClick={() => setCount(c => c + 1)}>Count: {count}</button>
+}
+
+// app/routes/index.tsx
+import Counter from '~/components/Counter'
 
 export default function Home() {
   return (
     <div>
       <h1>Welcome</h1>
-
-      {/* This island will hydrate when visible */}
-      <Counter
-        data-island="Counter"
-        data-hydrate="visible"
-        initialCount={5}
-      />
+      <Counter client:load initialCount={5} />
     </div>
   )
 }
 ```
 
-## Hydration Attributes
-
-### data-island
-
-Specifies the component name to hydrate.
+**Approach 2: `createIsland()` wrapper**
 
 ```tsx
-<Counter data-island="Counter" />
+// app/routes/index.tsx
+import { createIsland } from '@ereo/client'
+import CounterBase from '~/components/Counter'
+
+const Counter = createIsland(CounterBase, 'Counter')
+
+export default function Home() {
+  return (
+    <div>
+      <h1>Welcome</h1>
+      <Counter client:visible initialCount={5} />
+    </div>
+  )
+}
 ```
 
-### data-hydrate
+## Hydration Directives
 
-Specifies when to hydrate.
+### client:load
+
+Hydrate immediately on page load.
 
 ```tsx
-// Hydrate immediately on load
-<Counter data-island="Counter" data-hydrate="load" />
-
-// Hydrate when browser is idle
-<Counter data-island="Counter" data-hydrate="idle" />
-
-// Hydrate when visible in viewport
-<Counter data-island="Counter" data-hydrate="visible" />
-
-// Hydrate on media query match
-<Counter data-island="Counter" data-hydrate="media" data-media="(max-width: 768px)" />
-
-// Never hydrate (SSR only)
-<Counter data-island="Counter" data-hydrate="never" />
+<Counter client:load />
 ```
 
-### data-props
+### client:idle
 
-Pass serialized props (used internally).
+Hydrate when the browser is idle (requestIdleCallback).
 
 ```tsx
-<div data-island="Counter" data-props='{"initialCount":5}'></div>
+<Counter client:idle />
 ```
+
+### client:visible
+
+Hydrate when the element enters the viewport (IntersectionObserver with 200px margin).
+
+```tsx
+<Counter client:visible />
+```
+
+### client:media
+
+Hydrate when a media query matches.
+
+```tsx
+<Counter client:media="(max-width: 768px)" />
+```
+
+### No directive
+
+Omitting directives means the component is server-rendered only (never hydrated).
+
+```tsx
+<Counter />
+```
+
+### Internal data attributes
+
+`createIsland()` and the `'use client'` plugin produce these attributes on the wrapper `<div>` during SSR. You don't write these yourself:
+
+- `data-island` — unique island ID (e.g., `"island-1"`)
+- `data-component` — component name (e.g., `"Counter"`)
+- `data-strategy` — hydration strategy (e.g., `"visible"`)
+- `data-props` — serialized JSON props
+- `data-media` — media query (for `client:media`)
 
 ## Advanced Patterns
 

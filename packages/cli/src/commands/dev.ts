@@ -69,6 +69,81 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     },
   });
 
+  // Register Bun plugin to transform 'use client' files for SSR.
+  // Wraps exported components with createIsland() so server rendering
+  // produces <div data-island="..."> markers that the client can hydrate.
+  // Note: Bun runtime plugins MUST return a value from onLoad when the filter matches.
+  const { plugin } = await import('bun');
+  const { createIsland } = await import('@ereo/client');
+  const islandModuleCache = new Map<string, Record<string, unknown>>();
+  const appDir = join(root, 'app');
+
+  plugin({
+    name: 'ereo:use-client',
+    setup(build) {
+      // Loader for raw (unwrapped) island files — uses .ereo-raw extension to avoid recursion
+      build.onLoad({ filter: /\.ereo-raw$/ }, async (args) => {
+        return { contents: await Bun.file(args.path).text(), loader: 'tsx' };
+      });
+
+      // Intercept tsx/jsx files — Bun requires onLoad to always return a value when filter matches.
+      // Only tsx/jsx because 'use client' components are React files, and matching .js/.ts would
+      // break CJS modules in node_modules (e.g., postcss).
+      build.onLoad({ filter: /\.(tsx|jsx)$/ }, async (args) => {
+        // Return cached island module if already processed
+        if (islandModuleCache.has(args.path)) {
+          return { exports: islandModuleCache.get(args.path)!, loader: 'object' };
+        }
+
+        const text = await Bun.file(args.path).text();
+        const ext = args.path.endsWith('.tsx') ? 'tsx' : 'jsx';
+
+        // Files outside app/ or without 'use client': pass through unchanged
+        if (!args.path.startsWith(appDir) || !/^['"]use client['"]/m.test(text)) {
+          return { contents: text, loader: ext };
+        }
+
+        // Extract named export names
+        const namedExports: string[] = [];
+        for (const match of text.matchAll(/export\s+(?:function|const|class)\s+(\w+)/g)) {
+          namedExports.push(match[1]);
+        }
+
+        // Mark as processing (prevents recursion)
+        islandModuleCache.set(args.path, {});
+
+        // Write raw version (without 'use client') using .ereo-raw extension to bypass this filter
+        const cleanCode = text.replace(/^['"]use client['"];?\s*\r?\n?/m, '');
+        const tmpPath = args.path + '.ereo-raw';
+        await Bun.write(tmpPath, cleanCode);
+        const rawModule = await import(tmpPath);
+        try { (await import('node:fs')).unlinkSync(tmpPath); } catch {}
+
+        // Wrap each exported function component with createIsland()
+        const wrappedExports: Record<string, unknown> = {};
+        for (const name of namedExports) {
+          if (typeof rawModule[name] === 'function') {
+            wrappedExports[name] = createIsland(rawModule[name], name);
+          } else {
+            wrappedExports[name] = rawModule[name];
+          }
+        }
+        // Preserve default export if present
+        if (rawModule.default !== undefined) {
+          if (typeof rawModule.default === 'function') {
+            const defName = text.match(/export\s+default\s+(?:function|class)\s+(\w+)/)?.[1] || 'default';
+            wrappedExports.default = createIsland(rawModule.default, defName);
+          } else {
+            wrappedExports.default = rawModule.default;
+          }
+        }
+
+        islandModuleCache.set(args.path, wrappedExports);
+        return { exports: wrappedExports, loader: 'object' };
+      });
+    },
+  });
+
   // Initialize router
   const router = await initFileRouter({
     routesDir: config.routesDir || 'app/routes',
@@ -210,10 +285,13 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     }
   }
 
-  // Scan for island components ('use client' files) in the app directory
-  async function scanForIslands(projectRoot: string): Promise<string> {
+  // Scan for island components ('use client' files) in the app directory.
+  // Returns structured data with file paths and exported component names.
+  interface IslandExport { path: string; name: string; }
+
+  async function scanForIslands(projectRoot: string): Promise<IslandExport[]> {
     const appDir = join(projectRoot, 'app');
-    const imports: string[] = [];
+    const islands: IslandExport[] = [];
 
     async function scanDir(dir: string): Promise<void> {
       try {
@@ -226,7 +304,15 @@ export async function dev(options: DevOptions = {}): Promise<void> {
             try {
               const content = await readFile(fullPath, 'utf-8');
               if (/^['"]use client['"]/m.test(content)) {
-                imports.push(`import '${fullPath}';`);
+                // Extract named exports
+                for (const match of content.matchAll(/export\s+(?:function|const|class)\s+(\w+)/g)) {
+                  islands.push({ path: fullPath, name: match[1] });
+                }
+                // Default export with name
+                const defMatch = content.match(/export\s+default\s+(?:function|class)\s+(\w+)/);
+                if (defMatch && !islands.some(i => i.path === fullPath && i.name === defMatch[1])) {
+                  islands.push({ path: fullPath, name: defMatch[1] });
+                }
               }
             } catch {
               // Skip unreadable files
@@ -239,7 +325,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     }
 
     await scanDir(appDir);
-    return imports.join('\n');
+    return islands;
   }
 
   // Build client entry for dev mode
@@ -248,41 +334,79 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   const clientBundleCache = new Map<string, string>();
 
   async function buildDevClient(): Promise<void> {
+    // Always scan for island components ('use client' files)
+    const islands = await scanForIslands(root);
+
+    // Generate island registration code for the client bundle
+    let islandRegistrationCode = '';
+    if (islands.length > 0) {
+      const importLines: string[] = [];
+      const registerLines: string[] = [];
+      const seenPaths = new Set<string>();
+
+      for (const island of islands) {
+        const importAlias = `__Island_${island.name}`;
+        if (!seenPaths.has(island.path + ':' + island.name)) {
+          seenPaths.add(island.path + ':' + island.name);
+          importLines.push(`import { ${island.name} as ${importAlias} } from '${island.path}';`);
+          registerLines.push(`registerIslandComponent('${island.name}', ${importAlias});`);
+        }
+      }
+
+      islandRegistrationCode = [
+        `import { registerIslandComponent } from '@ereo/client';`,
+        ...importLines,
+        ...registerLines,
+      ].join('\n');
+    }
+
     // Check for custom client entry
     const customEntry = join(root, 'app/entry.client.tsx');
     const customEntryAlt = join(root, 'app/entry.client.ts');
     const hasCustom = await Bun.file(customEntry).exists();
     const hasCustomAlt = await Bun.file(customEntryAlt).exists();
 
-    let entrypoint: string;
+    let entrySource: string;
 
     if (hasCustom) {
-      entrypoint = customEntry;
+      entrySource = await Bun.file(customEntry).text();
     } else if (hasCustomAlt) {
-      entrypoint = customEntryAlt;
+      entrySource = await Bun.file(customEntryAlt).text();
     } else {
-      // Scan for island components ('use client' files)
-      const islandImports = await scanForIslands(root);
-
-      // Generate default client entry
-      // Write to project root so Bun can resolve @ereo/client from node_modules
-      const defaultEntrySource = `
-import { initClient } from '@ereo/client';
-
-${islandImports}
-
-// Initialize the EreoJS client runtime (hydrates islands, sets up navigation, prefetching)
-initClient();
-`.trim();
-
-      const defaultEntryPath = join(root, 'node_modules', '.cache', 'ereo', '_entry.client.tsx');
-      await Bun.write(defaultEntryPath, defaultEntrySource);
-      entrypoint = defaultEntryPath;
+      entrySource = `import { initClient } from '@ereo/client';\n\n// Initialize the EreoJS client runtime (hydrates islands, sets up navigation, prefetching)\ninitClient();`;
     }
+
+    // Prepend island registration code so components are registered before initClient() hydrates
+    if (islandRegistrationCode) {
+      entrySource = islandRegistrationCode + '\n\n' + entrySource;
+    }
+
+    // Rewrite ~/ and @/ aliases to absolute paths before writing to cache
+    // (the cache dir is outside app/, so aliases won't resolve otherwise)
+    const appDir = join(root, 'app');
+    entrySource = entrySource.replace(
+      /from\s+['"]([~@]\/[^'"]+)['"]/g,
+      (_match, importPath) => {
+        const resolved = importPath.replace(/^[~@]\//, appDir + '/');
+        return `from '${resolved}'`;
+      }
+    );
+    // Also rewrite relative imports (./xxx) to be relative to app/ dir
+    entrySource = entrySource.replace(
+      /from\s+['"](\.\/.+?)['"]/g,
+      (_match, importPath) => {
+        const resolved = join(appDir, importPath);
+        return `from '${resolved}'`;
+      }
+    );
+
+    // Write combined entry to cache directory (in project root so Bun resolves node_modules)
+    const entryPath = join(root, 'node_modules', '.cache', 'ereo', '_entry.client.tsx');
+    await Bun.write(entryPath, entrySource);
 
     try {
       const result = await Bun.build({
-        entrypoints: [entrypoint],
+        entrypoints: [entryPath],
         outdir: clientBuildDir,
         target: 'browser',
         minify: false,
