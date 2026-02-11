@@ -140,9 +140,9 @@ export const islandRegistry = new IslandRegistry();
  * Hydrate all islands on the page.
  */
 export async function hydrateIslands(): Promise<void> {
-  // Dynamic import to avoid SSR issues
-  const { hydrateRoot } = await import('react-dom/client');
-  const { createElement } = await import('react');
+  // Dynamic import for react-dom/client to tree-shake from SSR bundle
+  const reactDomClient = await import('react-dom/client');
+  const hydrateRoot = reactDomClient.hydrateRoot ?? (reactDomClient as any).default?.hydrateRoot;
 
   // Find all island markers in the DOM
   const islandElements = document.querySelectorAll('[data-island]');
