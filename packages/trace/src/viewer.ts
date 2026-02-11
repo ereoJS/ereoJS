@@ -73,7 +73,7 @@ export function generateViewerHTML(traces: TraceData[]): string {
 <body>
   <div class="header">
     <h1>Ereo Trace Viewer</h1>
-    <span class="badge">${serialized.length} traces</span>
+    <span class="badge" id="trace-count">${serialized.length} traces</span>
   </div>
   <div class="filters">
     <select id="filter-method"><option value="">All Methods</option><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
@@ -184,6 +184,7 @@ export function generateViewerHTML(traces: TraceData[]): string {
 
     function render() {
       const filtered = getFiltered();
+      document.getElementById('trace-count').textContent = TRACES.length + ' traces';
       renderTraceList(filtered);
       const trace = selectedTraceId ? TRACES.find(t => t.id === selectedTraceId) : null;
       renderDetail(trace);

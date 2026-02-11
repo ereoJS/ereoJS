@@ -1285,7 +1285,7 @@ export default function RootLayout({ children }${ts ? ': RootLayoutProps' : ''})
   // ============================================================================
   // Client Entry Point
   // ============================================================================
-  const clientEntry = options.trace ? `
+  const clientEntry = trace ? `
 /**
  * Client Entry Point
  *

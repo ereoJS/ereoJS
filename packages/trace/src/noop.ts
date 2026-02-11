@@ -101,26 +101,27 @@ export function setActiveSpan(_ctx: any, _span: Span): void {}
 export function getActiveSpan(_ctx: any): Span | null { return null; }
 
 // Instrumentors — all pass-through
+// Signatures must match the real implementations so aliasing works as a drop-in replacement.
 export function traceRouteMatch<T>(_span: any, fn: () => T): T { return fn(); }
 export function recordRouteMatch(): void {}
 export function traceLoader<T>(_span: any, _key: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
 export function recordLoaderMetrics(): void {}
 export function traceCacheOperation(): void {}
-export function traceFormSubmit<T>(_span: any, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
+export function traceFormSubmit<T>(_span: any, _formName: string, fn: () => T | Promise<T>, _attrs?: any): T | Promise<T> { return fn(); }
 export function recordFormValidation(): void {}
 export function recordSignalUpdate(): void {}
 export function recordSignalBatch(): void {}
-export function traceRPCCall<T>(_span: any, _method: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
+export function traceRPCCall<T>(_span: any, _procedure: string, _type: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
 export function recordRPCValidation(): void {}
 export function tracedAdapter<T extends Record<string, any>>(adapter: T): T { return adapter; }
-export function traceQuery<T>(_span: any, _name: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
-export function traceAuthCheck<T>(_span: any, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
-export function traceHydration<T>(_span: any, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
+export function traceQuery<T>(_span: any, _operation: string, _sql: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
+export function traceAuthCheck<T>(_span: any, _operation: string, fn: () => T | Promise<T>, _attrs?: any): T | Promise<T> { return fn(); }
+export function traceHydration<T>(_span: any, _componentName: string, _strategy: string, fn: () => T | Promise<T>, _attrs?: any): T | Promise<T> { return fn(); }
 export function recordHydration(): void {}
-export function traceBuildStage<T>(_span: any, _name: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
-export function traceBuild<T>(_tracer: any, _name: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
+export function traceBuildStage<T>(_span: any, _stageName: string, fn: () => T | Promise<T>, _attrs?: any): T | Promise<T> { return fn(); }
+export function traceBuild(_tracer: any, _buildName?: string): Span { return NOOP_SPAN; }
 export function traceError(): void {}
-export function withErrorCapture<T>(fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
+export function withErrorCapture<T>(_span: any, _phase: string, fn: () => T | Promise<T>): T | Promise<T> { return fn(); }
 
 // Serialization — passthrough
 export function serializeTrace(trace: any): any { return trace; }
