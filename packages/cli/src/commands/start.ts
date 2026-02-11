@@ -81,6 +81,37 @@ export async function start(options: StartOptions = {}): Promise<void> {
   server.setApp(app);
   server.setRouter(router);
 
+  // Initialize plugins (e.g., RPC) and configure server
+  const pluginRegistry = app.getPluginRegistry();
+  await pluginRegistry.registerAll(config.plugins || []);
+
+  // Create production server interface for plugins
+  const prodServer = {
+    ws: { send: () => {}, on: () => {} },
+    restart: async () => {},
+    middlewares: [] as any[],
+    watcher: { add: () => {}, on: () => {} },
+  };
+
+  await pluginRegistry.configureServer(prodServer);
+
+  // Add plugin runtime middlewares to server
+  for (const middleware of prodServer.middlewares) {
+    server.use(middleware);
+  }
+
+  // Register plugin WebSocket handlers (e.g., RPC subscriptions)
+  for (const plugin of pluginRegistry.getPlugins()) {
+    const p = plugin as any;
+    if (typeof p.getWebSocketConfig === 'function' && typeof p.endpoint === 'string') {
+      server.addWebSocketUpgrade(
+        p.endpoint,
+        (srv: any, req: Request) => p.upgradeToWebSocket(srv, req, {}),
+        p.getWebSocketConfig()
+      );
+    }
+  }
+
   // Serve compiled Tailwind CSS in production
   const cssPath = join(buildDir, 'assets/styles.css');
   if (await Bun.file(cssPath).exists()) {
