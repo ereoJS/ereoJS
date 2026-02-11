@@ -198,6 +198,18 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     server.use(middleware);
   }
 
+  // Register plugin WebSocket handlers (e.g., RPC subscriptions)
+  for (const plugin of pluginRegistry.getPlugins()) {
+    const p = plugin as any;
+    if (typeof p.getWebSocketConfig === 'function' && typeof p.endpoint === 'string') {
+      server.addWebSocketUpgrade(
+        p.endpoint,
+        (srv: any, req: Request) => p.upgradeToWebSocket(srv, req, {}),
+        p.getWebSocketConfig()
+      );
+    }
+  }
+
   // Scan for island components ('use client' files) in the app directory
   async function scanForIslands(projectRoot: string): Promise<string> {
     const appDir = join(projectRoot, 'app');

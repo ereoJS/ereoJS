@@ -119,15 +119,7 @@ function createHttpHandler(def: RouterDef) {
       }, 400);
     }
 
-    // Execute middleware chain
-    const baseContext: BaseContext = { ctx, request };
-    const middlewareResult = await executeMiddleware(procedure.middlewares, baseContext);
-
-    if (!middlewareResult.ok) {
-      return jsonResponse({ ok: false, error: middlewareResult.error }, 400);
-    }
-
-    // Validate input
+    // Validate input before running middleware+handler chain
     let input = rpcRequest.input;
     if (procedure.inputSchema) {
       try {
@@ -142,10 +134,22 @@ function createHttpHandler(def: RouterDef) {
       }
     }
 
-    // Execute handler
+    // Execute middleware chain with handler nested inside (onion model).
+    // This allows middleware like catchErrors to catch handler errors.
+    const baseContext: BaseContext = { ctx, request };
+
     try {
-      const result = await procedure.handler({ ...middlewareResult.ctx, input });
-      return jsonResponse({ ok: true, data: result });
+      const result = await executeMiddleware(
+        procedure.middlewares,
+        baseContext,
+        (mwCtx) => procedure.handler({ ...mwCtx, input })
+      );
+
+      if (!result.ok) {
+        return jsonResponse({ ok: false, error: result.error }, 400);
+      }
+
+      return jsonResponse({ ok: true, data: result.data });
     } catch (error) {
       if (error instanceof RPCError) {
         return jsonResponse({ ok: false, error: { code: error.code, message: error.message } }, error.status);

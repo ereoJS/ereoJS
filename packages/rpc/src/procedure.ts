@@ -195,28 +195,63 @@ function createProcedureBuilder<TContext extends BaseContext>(
 export const procedure: ProcedureBuilder<BaseContext> = createProcedureBuilder();
 
 /**
- * Execute middleware chain and return final context
+ * Execute middleware chain and return final context.
+ *
+ * Without handlerFn: linear pipeline that transforms context (backward compatible).
+ * With handlerFn: onion model where middleware wraps the handler, allowing
+ * middleware like catchErrors to catch handler errors.
  */
 export async function executeMiddleware<TContext extends BaseContext>(
   middlewares: MiddlewareDef<any, any>[],
-  initialCtx: BaseContext
-): Promise<MiddlewareResult<TContext>> {
-  let currentCtx: any = initialCtx;
+  initialCtx: BaseContext,
+  handlerFn?: (ctx: any) => any | Promise<any>
+): Promise<MiddlewareResult<TContext> & { data?: any }> {
+  if (!handlerFn) {
+    // Linear execution (backward compatible)
+    let currentCtx: any = initialCtx;
 
-  for (const middleware of middlewares) {
-    const result = await middleware.fn({
-      ctx: currentCtx,
-      next: <T>(ctx: T): MiddlewareResult<T> => ({ ok: true, ctx }),
-    });
+    for (const middleware of middlewares) {
+      const result = await middleware.fn({
+        ctx: currentCtx,
+        next: <T>(ctx: T): MiddlewareResult<T> => ({ ok: true, ctx }),
+      });
 
-    if (!result.ok) {
-      return result;
+      if (!result.ok) {
+        return result;
+      }
+
+      currentCtx = result.ctx;
     }
 
-    currentCtx = result.ctx;
+    return { ok: true, ctx: currentCtx };
   }
 
-  return { ok: true, ctx: currentCtx };
+  // Onion execution: middleware wraps handler so errors propagate through chain
+  const handler = handlerFn;
+  let handlerData: any;
+
+  function buildNext(index: number): (ctx: any) => any {
+    if (index >= middlewares.length) {
+      // Terminal: run the handler
+      return async (ctx: any) => {
+        handlerData = await handler(ctx);
+        return { ok: true as const, ctx };
+      };
+    }
+
+    return (ctx: any) => {
+      return middlewares[index].fn({
+        ctx,
+        next: buildNext(index + 1) as any,
+      });
+    };
+  }
+
+  const result: MiddlewareResult<any> = await buildNext(0)(initialCtx);
+  if (result.ok) {
+    return { ...result, data: handlerData };
+  }
+  return result;
 }
 
 // =============================================================================

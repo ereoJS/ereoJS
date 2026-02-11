@@ -43,6 +43,8 @@ export interface RPCPluginOptions<T extends RouterDef = RouterDef> {
 }
 
 export interface RPCPluginResult extends RPCPlugin {
+  /** The endpoint path this plugin handles */
+  endpoint: string;
   /** Get WebSocket handler config for Bun.serve() */
   getWebSocketConfig(): BunWebSocketConfig<WSConnectionData>;
   /** Upgrade a request to WebSocket (call from your server setup) */
@@ -85,6 +87,7 @@ export function rpcPlugin<T extends RouterDef>(
 
   return {
     name: '@ereo/rpc',
+    endpoint,
 
     runtimeMiddleware: [rpcMiddleware],
 
