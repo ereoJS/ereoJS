@@ -249,9 +249,6 @@ const { data, isLoading, error, refetch } = useQuery(rpc.posts.list, {
   // Auto-refetch on interval (milliseconds)
   refetchInterval: 30000,
 
-  // Initial data (avoids loading state)
-  initialData: [],
-
   // Whether the query should execute
   enabled: true,
 })
@@ -260,11 +257,14 @@ const { data, isLoading, error, refetch } = useQuery(rpc.posts.list, {
 ### useMutation Options
 
 ```ts
-const { mutate, isPending, error, data } = useMutation(rpc.posts.create, {
+const { mutate, mutateAsync, isPending, error, data } = useMutation(rpc.posts.create, {
   onSuccess: (data) => { /* handle success */ },
   onError: (error) => { /* handle error */ },
+  onSettled: () => { /* runs after success or error */ },
 })
 ```
+
+Use `mutateAsync` when you need a promise (e.g. inside an async handler).
 
 ## Middleware
 
@@ -364,7 +364,7 @@ try {
 }
 ```
 
-Error codes include `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `BAD_REQUEST`, `INTERNAL_SERVER_ERROR`, and `VALIDATION_ERROR`.
+Error codes include `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `BAD_REQUEST`, `PARSE_ERROR`, and `VALIDATION_ERROR`.
 
 ## Related
 

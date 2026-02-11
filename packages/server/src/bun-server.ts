@@ -693,11 +693,12 @@ export class BunServer {
     const hasRootLayout = layouts.length > 0 && layouts[0].module?.default;
 
     if (hasRootLayout) {
-      // Layout provides the full HTML document structure
+      // Layout provides the full HTML document structure.
+      // Pass meta descriptors so they can be injected into the layout's <head>.
       if (this.options.renderMode === 'streaming') {
-        return this.renderStreamingPageDirect(element, allLoaderData);
+        return this.renderStreamingPageDirect(element, allLoaderData, metaDescriptors);
       } else {
-        return this.renderStringPageDirect(element, allLoaderData);
+        return this.renderStringPageDirect(element, allLoaderData, metaDescriptors);
       }
     }
 
@@ -876,7 +877,8 @@ export class BunServer {
    */
   private async renderStreamingPageDirect(
     element: ReactElement,
-    loaderData: unknown
+    loaderData: unknown,
+    metaDescriptors: MetaDescriptor[] = []
   ): Promise<Response> {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -884,7 +886,7 @@ export class BunServer {
 
       // If renderToReadableStream is not available, fallback to string rendering
       if (!renderToReadableStream) {
-        return this.renderStringPageDirect(element, loaderData);
+        return this.renderStringPageDirect(element, loaderData, metaDescriptors);
       }
 
       const hasDeferred = hasDeferredData(loaderData);
@@ -911,10 +913,18 @@ export class BunServer {
         ? encoder.encode(`<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`)
         : null;
 
+      // Build meta injection HTML for streaming
+      const metaHtml = metaDescriptors.length > 0
+        ? this.buildMetaHtml(metaDescriptors)
+        : '';
+      let metaInjected = metaHtml.length === 0;
+      const decoder = new TextDecoder();
+
       // Pipe progressively: React content (with $RC scripts) → loader data
       // Do NOT await allReady — stream bytes to the client as React renders.
       const reader = reactStream.getReader();
       let done = false;
+      const self = this;
 
       const stream = new ReadableStream<Uint8Array>({
         async pull(controller) {
@@ -949,6 +959,16 @@ export class BunServer {
             controller.close();
             done = true;
           } else {
+            // Inject route meta tags into the layout's <head> on first matching chunk
+            if (!metaInjected) {
+              const chunk = decoder.decode(result.value, { stream: true });
+              if (chunk.includes('</head>')) {
+                const injected = self.injectMetaIntoHtml(chunk, metaDescriptors);
+                controller.enqueue(encoder.encode(injected));
+                metaInjected = true;
+                return;
+              }
+            }
             controller.enqueue(result.value);
           }
         },
@@ -967,7 +987,7 @@ export class BunServer {
     } catch (error) {
       clearTimeout(timeoutId);
       console.error('Streaming render failed:', error);
-      return this.renderStringPageDirect(element, loaderData);
+      return this.renderStringPageDirect(element, loaderData, metaDescriptors);
     }
   }
 
@@ -976,7 +996,8 @@ export class BunServer {
    */
   private async renderStringPageDirect(
     element: ReactElement,
-    loaderData: unknown
+    loaderData: unknown,
+    metaDescriptors: MetaDescriptor[] = []
   ): Promise<Response> {
     try {
       const { renderToString: reactRenderToString } = await import('react-dom/server');
@@ -987,6 +1008,13 @@ export class BunServer {
         : loaderData;
 
       let html = reactRenderToString(element);
+
+      // Inject route meta tags into the layout's <head>.
+      // This handles the case where the root layout provides <html>/<head>/<body>
+      // but the route defines a meta() function for SEO tags.
+      if (metaDescriptors.length > 0) {
+        html = this.injectMetaIntoHtml(html, metaDescriptors);
+      }
 
       // Inject loader data and client script before closing body tag
       const loaderScript = resolvedData
@@ -1145,6 +1173,56 @@ export class BunServer {
     }
 
     return tags;
+  }
+
+  /**
+   * Build HTML string for meta tags from descriptors.
+   */
+  private buildMetaHtml(meta: MetaDescriptor[]): string {
+    let html = '';
+    for (const descriptor of meta) {
+      if (descriptor.name && descriptor.content) {
+        const name = descriptor.name.replace(/"/g, '&quot;');
+        const content = descriptor.content.replace(/"/g, '&quot;');
+        html += `<meta name="${name}" content="${content}"/>`;
+      } else if (descriptor.property && descriptor.content) {
+        const property = descriptor.property.replace(/"/g, '&quot;');
+        const content = descriptor.content.replace(/"/g, '&quot;');
+        html += `<meta property="${property}" content="${content}"/>`;
+      } else if (descriptor['script:ld+json']) {
+        html += `<script type="application/ld+json">${descriptor['script:ld+json']}</script>`;
+      } else if (descriptor.tagName === 'link') {
+        const attrs = Object.entries(descriptor)
+          .filter(([k]) => k !== 'tagName')
+          .map(([k, v]) => `${k}="${String(v).replace(/"/g, '&quot;')}"`)
+          .join(' ');
+        html += `<link ${attrs}/>`;
+      }
+    }
+    return html;
+  }
+
+  /**
+   * Inject route meta tags into layout-rendered HTML.
+   * Replaces the <title> if a meta title is provided, and inserts
+   * meta/link tags before </head>.
+   */
+  private injectMetaIntoHtml(html: string, meta: MetaDescriptor[]): string {
+    const title = this.extractTitle(meta);
+    const metaHtml = this.buildMetaHtml(meta);
+
+    // Replace existing <title> with the route's meta title
+    if (title) {
+      const escapedTitle = title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapedTitle}</title>`);
+    }
+
+    // Inject meta tags before </head>
+    if (metaHtml) {
+      html = html.replace('</head>', `${metaHtml}</head>`);
+    }
+
+    return html;
   }
 
   /**

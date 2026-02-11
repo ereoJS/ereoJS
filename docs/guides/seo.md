@@ -10,7 +10,11 @@ Export a `meta` function from any route to set page metadata. It receives the lo
 // routes/posts/[id].tsx
 import type { MetaArgs } from '@ereo/core'
 
-export function meta({ data, params }: MetaArgs) {
+interface PostData {
+  post: { title: string; excerpt: string }
+}
+
+export function meta({ data, params }: MetaArgs<PostData>) {
   return [
     { title: data.post.title },
     { name: 'description', content: data.post.excerpt },
@@ -18,10 +22,16 @@ export function meta({ data, params }: MetaArgs) {
 }
 ```
 
+`MetaArgs` accepts a generic type parameter for the loader data. This gives you full type safety when accessing `data` inside the function.
+
 The `meta` function returns an array of objects. Each object maps to an HTML `<meta>` tag or a `<title>` element:
 
 ```tsx
-export function meta({ data }: MetaArgs) {
+interface PostData {
+  post: { title: string; excerpt: string; author: { name: string } }
+}
+
+export function meta({ data }: MetaArgs<PostData>) {
   return [
     // <title>
     { title: `${data.post.title} | My Blog` },
@@ -39,7 +49,7 @@ export function meta({ data }: MetaArgs) {
 Add Open Graph tags for social media previews:
 
 ```tsx
-export function meta({ data }: MetaArgs) {
+export function meta({ data }: MetaArgs<PostData>) {
   const post = data.post
 
   return [
@@ -67,7 +77,7 @@ export function meta({ data }: MetaArgs) {
 Set a canonical URL to prevent duplicate content issues:
 
 ```tsx
-export function meta({ data, location }: MetaArgs) {
+export function meta({ data, location }: MetaArgs<{ page: { title: string } }>) {
   return [
     { title: data.page.title },
     { tagName: 'link', rel: 'canonical', href: `https://example.com${location.pathname}` },
@@ -80,7 +90,7 @@ export function meta({ data, location }: MetaArgs) {
 Add structured data to help search engines understand your content. Return a `<script>` tag in the meta function:
 
 ```tsx
-export function meta({ data }: MetaArgs) {
+export function meta({ data }: MetaArgs<PostData>) {
   const post = data.post
 
   const jsonLd = {

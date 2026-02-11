@@ -6,7 +6,29 @@ This guide covers styling approaches in EreoJS.
 
 The recommended approach for EreoJS applications.
 
-### Setup
+### Using the Plugin (Recommended)
+
+The easiest way to add Tailwind CSS is with `@ereo/plugin-tailwind`. This is what `create-ereo` uses by default:
+
+```bash
+bun add -D @ereo/plugin-tailwind tailwindcss
+```
+
+```ts
+// ereo.config.ts
+import { defineConfig } from '@ereo/core'
+import tailwind from '@ereo/plugin-tailwind'
+
+export default defineConfig({
+  plugins: [tailwind()],
+})
+```
+
+The plugin handles PostCSS processing and serves `/__tailwind.css` automatically. No `postcss.config.js` needed.
+
+### Manual Setup
+
+If you prefer to configure Tailwind yourself without the plugin:
 
 ```bash
 bun add tailwindcss postcss autoprefixer
@@ -14,6 +36,8 @@ bunx tailwindcss init -p
 ```
 
 ### Configuration
+
+Create or customize `tailwind.config.js`:
 
 ```js
 // tailwind.config.js
