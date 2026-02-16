@@ -381,9 +381,231 @@ Component calls getUser('123')
   → Proxy returns the data
 ```
 
+## `server$` — Declarative Server Functions
+
+`server$` is a higher-level wrapper around `createServerFn` that adds declarative config for rate limiting, CORS, auth, and caching. IDs are auto-generated.
+
+```ts
+import { server$ } from '@ereo/rpc';
+
+export const getMetrics = server$(async (timeRange: string, ctx) => {
+  return db.metrics.findMany({ where: { range: timeRange } });
+}, {
+  rateLimit: { max: 30, window: '1m' },
+  cache: { maxAge: 60 },
+});
+
+// Call it the same way as createServerFn:
+const data = await getMetrics('7d');
+```
+
+### `ServerFnConfig`
+
+All config keys are optional:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `rateLimit` | `{ max: number, window: string, keyFn? }` | In-memory rate limiting per client IP |
+| `cache` | `{ maxAge: number, public?: boolean, staleWhileRevalidate?: number }` | Sets `Cache-Control` header on success |
+| `cors` | `{ origins: string \| string[], credentials?, methods?, headers?, maxAge? }` | Sets `Access-Control-*` headers |
+| `auth` | `{ getUser: (ctx) => user \| null, message? }` | Throws 401 if `getUser` returns null |
+| `middleware` | `ServerFnMiddleware[]` | Additional middleware (runs after config-generated middleware) |
+| `input` | `Schema<T>` | Zod-compatible input validation schema |
+| `allowPublic` | `boolean` | Skip `defaultMiddleware` from the handler |
+| `id` | `string` | Explicit ID override (default: auto-generated `server$_{name}_{counter}`) |
+| `method` | `'GET' \| 'POST'` | Method hint (accepted but not yet wired — Phase 2) |
+
+### Window Format
+
+The `window` field in `rateLimit` accepts duration strings:
+
+- `'30s'` — 30 seconds
+- `'1m'` — 1 minute
+- `'5m'` — 5 minutes
+- `'1h'` — 1 hour
+- `'1d'` — 1 day
+
+### Config Middleware Order
+
+When config is compiled to middleware, it runs in this order:
+
+```
+CORS → Rate Limit → Auth → Cache → User Middleware → Handler
+```
+
+### Rate Limiting
+
+Each `server$` function gets its own isolated rate limit store. Two functions with identical rate limit config do **not** share counters — Function A's traffic never affects Function B.
+
+```ts
+// These have independent rate limits:
+const fnA = server$(async () => 'a', { rateLimit: { max: 10, window: '1m' } });
+const fnB = server$(async () => 'b', { rateLimit: { max: 10, window: '1m' } });
+```
+
+Rate limiting uses `x-forwarded-for` by default. Provide a custom `keyFn` to change the key:
+
+```ts
+const fn = server$(handler, {
+  rateLimit: {
+    max: 100,
+    window: '1h',
+    keyFn: (ctx) => ctx.request.headers.get('X-Api-Key') ?? 'anonymous',
+  },
+});
+```
+
+When exceeded, throws `ServerFnError('RATE_LIMITED', 'Too many requests', { statusCode: 429 })`.
+
+### Auth
+
+```ts
+const fn = server$(handler, {
+  auth: {
+    getUser: async (ctx) => {
+      const token = ctx.request.headers.get('Authorization');
+      return token ? verifyToken(token) : null;
+    },
+    message: 'Please log in first', // optional, default: 'Unauthorized'
+  },
+});
+```
+
+When `getUser` returns `null` or `undefined`, throws `ServerFnError('UNAUTHORIZED', message, { statusCode: 401 })`.
+
+### Caching
+
+Sets `Cache-Control` on the response after the handler succeeds. Does **not** set the header on error responses.
+
+```ts
+const fn = server$(handler, {
+  cache: {
+    maxAge: 300,                // max-age=300
+    public: true,               // public (default: private)
+    staleWhileRevalidate: 60,   // stale-while-revalidate=60
+  },
+});
+// Produces: Cache-Control: public, max-age=300, stale-while-revalidate=60
+```
+
+### CORS
+
+```ts
+const fn = server$(handler, {
+  cors: {
+    origins: ['https://app.com', 'https://admin.com'], // or '*' for wildcard
+    credentials: true,
+    methods: ['GET', 'POST'],                          // default: ['GET', 'POST']
+    headers: ['Content-Type', 'Authorization'],        // default includes X-Ereo-RPC
+    maxAge: 3600,                                      // preflight cache
+  },
+});
+```
+
+For non-wildcard origins, the middleware checks the `Origin` request header against the allowlist.
+
+## `createServerBlock` — Grouped Functions
+
+`createServerBlock` creates multiple server functions that share config. Useful for building API modules.
+
+```ts
+import { createServerBlock } from '@ereo/rpc';
+
+const api = createServerBlock({
+  rateLimit: { max: 30, window: '1m' },
+  middleware: [authMiddleware],
+}, {
+  getMetrics: async (timeRange: string, ctx) => {
+    return db.metrics.findMany({ where: { range: timeRange } });
+  },
+
+  deleteUser: {
+    handler: async (userId: string, ctx) => {
+      return db.users.delete({ where: { id: userId } });
+    },
+    rateLimit: { max: 5, window: '1m' }, // overrides block's rate limit
+  },
+});
+
+await api.getMetrics('7d');
+await api.deleteUser('user-123');
+```
+
+### Config Merge Rules
+
+- **Config objects** (`rateLimit`, `cache`, `cors`, `auth`) — per-function overrides **replace** the block-level value entirely. Set to `undefined` to remove a block-level config.
+- **Middleware arrays** — **concatenated**: block middleware runs first, then per-function middleware.
+- **IDs** — auto-generated from the function key name (`server$_{keyName}_{counter}`), or set an explicit `id` per function.
+
+```ts
+const api = createServerBlock(
+  { auth: { getUser: checkAuth } },
+  {
+    // Inherits auth from block
+    secret: async () => 'protected',
+
+    // Removes auth — this function is public
+    health: {
+      handler: async () => ({ ok: true }),
+      auth: undefined,
+    },
+  }
+);
+```
+
+## Standalone Middleware Builders
+
+The individual middleware builders are exported for advanced use:
+
+```ts
+import {
+  buildRateLimitMiddleware,
+  buildCacheMiddleware,
+  buildCorsMiddleware,
+  buildAuthMiddleware,
+  compileConfigMiddleware,
+  parseWindow,
+} from '@ereo/rpc';
+```
+
+- `parseWindow(str)` — converts `'30s'`, `'1m'`, `'1h'`, `'1d'` to milliseconds
+- `buildRateLimitMiddleware(config)` — returns a `ServerFnMiddleware`
+- `buildCacheMiddleware(config)` — returns a `ServerFnMiddleware`
+- `buildCorsMiddleware(config)` — returns a `ServerFnMiddleware`
+- `buildAuthMiddleware(config)` — returns a `ServerFnMiddleware`
+- `compileConfigMiddleware(config)` — converts a full `ServerFnConfig` to an ordered middleware array
+
 ## Best Practices
 
-**Use descriptive, namespaced IDs:**
+**Use `server$` for most cases, `createServerFn` when you need explicit IDs:**
+```ts
+// server$ — auto-generated ID, declarative config
+const getUser = server$(async (id: string) => db.users.find(id), {
+  rateLimit: { max: 100, window: '1m' },
+});
+
+// createServerFn — explicit ID, manual middleware
+const getUser = createServerFn('users.getById', async (id: string) => {
+  return db.users.find(id);
+});
+```
+
+**Use `createServerBlock` to group related functions:**
+```ts
+const usersApi = createServerBlock({
+  auth: { getUser: verifyAuth },
+  rateLimit: { max: 60, window: '1m' },
+}, {
+  getById: async (id: string) => db.users.find(id),
+  list: async () => db.users.findMany(),
+  delete: {
+    handler: async (id: string) => db.users.delete(id),
+    rateLimit: { max: 5, window: '1m' }, // stricter limit for destructive ops
+  },
+});
+```
+
+**Use descriptive, namespaced IDs (with `createServerFn`):**
 ```ts
 // Good
 createServerFn('users.getById', ...)
@@ -404,16 +626,6 @@ app/
     auth.ts       # Auth server functions
   components/
     UserProfile.tsx
-```
-
-**Use middleware for cross-cutting concerns:**
-```ts
-const protectedFn = (id: string, handler: Function) =>
-  createServerFn({
-    id,
-    middleware: [authMiddleware, rateLimitMiddleware],
-    handler,
-  });
 ```
 
 **Throw `ServerFnError` for expected errors:**

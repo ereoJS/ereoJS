@@ -98,6 +98,21 @@
         "typescript": "^5.4.0",
       },
     },
+    "packages/config-test": {
+      "name": "config-test",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ereo/cli": "workspace:*",
+        "@ereo/client": "workspace:*",
+        "@ereo/core": "workspace:*",
+        "@ereo/data": "workspace:*",
+        "@ereo/router": "workspace:*",
+        "@ereo/rpc": "workspace:*",
+        "@ereo/server": "workspace:*",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+      },
+    },
     "packages/core": {
       "name": "@ereo/core",
       "version": "0.2.29",
@@ -468,6 +483,27 @@
         "react": "^18.0.0",
       },
     },
+    "packages/todo-test": {
+      "name": "todo-test",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ereo/cli": "workspace:*",
+        "@ereo/client": "workspace:*",
+        "@ereo/core": "workspace:*",
+        "@ereo/data": "workspace:*",
+        "@ereo/router": "workspace:*",
+        "@ereo/rpc": "workspace:*",
+        "@ereo/server": "workspace:*",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.1.0",
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "typescript": "^5.4.0",
+      },
+    },
     "packages/trace": {
       "name": "@ereo/trace",
       "version": "0.2.29",
@@ -682,6 +718,8 @@
     "colord": ["colord@2.9.3", "", {}, "sha512-jeC1axXpnb0/2nn/Y1LPuLdgXBLH7aDcHu4KEKfqw3CUhX7ZpfBSlPKyqXE6btIgEzfWtrX3/tyBCaCvXvMkOw=="],
 
     "commander": ["commander@4.1.1", "", {}, "sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA=="],
+
+    "config-test": ["config-test@workspace:packages/config-test"],
 
     "create-ereo": ["create-ereo@workspace:packages/create-ereo"],
 
@@ -984,6 +1022,8 @@
     "tinyglobby": ["tinyglobby@0.2.15", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.3" } }, "sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ=="],
 
     "to-regex-range": ["to-regex-range@5.0.1", "", { "dependencies": { "is-number": "^7.0.0" } }, "sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ=="],
+
+    "todo-test": ["todo-test@workspace:packages/todo-test"],
 
     "ts-interface-checker": ["ts-interface-checker@0.1.13", "", {}, "sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA=="],
 

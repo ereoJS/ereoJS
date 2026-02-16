@@ -366,6 +366,36 @@ try {
 
 Error codes include `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `BAD_REQUEST`, `PARSE_ERROR`, and `VALIDATION_ERROR`.
 
+## Server Functions
+
+For standalone server operations that don't need a full router, use `server$` and `createServerBlock`. They add declarative rate limiting, auth, CORS, and caching with a simple config object:
+
+```ts
+import { server$, createServerBlock } from '@ereo/rpc'
+
+// Single function with rate limiting
+const getMetrics = server$(async (range: string) => {
+  return db.metrics.query(range)
+}, {
+  rateLimit: { max: 30, window: '1m' },
+  cache: { maxAge: 60 },
+})
+
+// Grouped functions with shared config
+const usersApi = createServerBlock({
+  rateLimit: { max: 60, window: '1m' },
+  auth: { getUser: verifyAuth },
+}, {
+  list: async () => db.users.findMany(),
+  delete: {
+    handler: async (id: string) => db.users.delete(id),
+    rateLimit: { max: 5, window: '1m' },
+  },
+})
+```
+
+See the [Server Functions guide](/guides/server-functions) for the full walkthrough.
+
 ## Related
 
 - [@ereo/rpc API Reference](/api/rpc/) — Full API documentation
@@ -373,3 +403,5 @@ Error codes include `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `BAD_REQUEST`, `PA
 - [Router](/api/rpc/router) — Combining procedures into an API
 - [React Hooks](/api/rpc/hooks) — useQuery, useMutation, useSubscription
 - [Context Bridge](/api/rpc/context-bridge) — Shared context between RPC and loaders
+- [Server Functions](/guides/server-functions) — Declarative server functions with `server$` and `createServerBlock`
+- [Server Functions API](/api/rpc/server-block) — Config types and middleware builders

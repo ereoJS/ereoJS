@@ -15,6 +15,7 @@ Typed RPC layer for EreoJS with chainable middleware and Bun WebSocket subscript
 - **React Hooks** - `useQuery`, `useMutation`, `useSubscription` for seamless React integration
 - **Input Validation** - Zod-compatible schema validation with secure error sanitization
 - **Built-in Middleware** - Rate limiting, authentication, logging, and more
+- **Server Functions** - `server$` and `createServerBlock` with declarative config for rate limiting, CORS, auth, and caching
 
 ## Installation
 
@@ -53,6 +54,10 @@ import {
   extend,
   timing,
   catchErrors,
+
+  // Server functions
+  server$,
+  createServerBlock,
 } from '@ereo/rpc'
 ```
 
@@ -329,6 +334,7 @@ function PostList() {
 - [Plugin](/api/rpc/plugin) - EreoJS plugin integration
 - [Context Bridge](/api/rpc/context-bridge) - Shared context between RPC and loaders
 - [Types](/api/rpc/types) - TypeScript type definitions
+- [Server Functions](/api/rpc/server-block) - `server$` and `createServerBlock` with declarative config
 - [Protocol](/api/rpc/protocol) - HTTP and WebSocket protocol specification
 
 ## Related

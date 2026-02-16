@@ -74,6 +74,26 @@ export type {
 export { createServerFnHandler } from './server-fn-handler';
 export type { ServerFnHandlerOptions, ServerFnRequestHandler } from './server-fn-handler';
 
+// Server Block (server$ + createServerBlock)
+export {
+  server$,
+  createServerBlock,
+  parseWindow,
+  buildRateLimitMiddleware,
+  buildCacheMiddleware,
+  buildCorsMiddleware,
+  buildAuthMiddleware,
+  compileConfigMiddleware,
+  clearServerFnRateLimitStore,
+} from './server-block';
+export type {
+  ServerFnConfig,
+  ServerFnRateLimitConfig,
+  ServerFnCacheConfig,
+  ServerFnCorsConfig,
+  ServerFnAuthConfig,
+} from './server-block';
+
 // Types
 export type {
   // Schema

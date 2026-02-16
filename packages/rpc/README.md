@@ -9,6 +9,7 @@ Typed RPC layer for EreoJS with chainable middleware and Bun WebSocket subscript
 - **WebSocket subscriptions** - Real-time data with Bun's native WebSocket support
 - **Auto-reconnect** - Client automatically reconnects with exponential backoff
 - **React hooks** - `useQuery`, `useMutation`, `useSubscription`
+- **`server$` & `createServerBlock`** - Declarative server functions with built-in rate limiting, auth, CORS, and caching
 
 ## Quick Start
 
@@ -345,6 +346,38 @@ POST /api/rpc { "path": ["posts", "create"], "type": "mutation", "input": {...} 
 { "type": "complete", "id": "sub_1" }
 ```
 
+## Server Functions (`server$` & `createServerBlock`)
+
+For quick server operations that don't need a full router setup, use `server$` with declarative config:
+
+```typescript
+import { server$, createServerBlock } from '@ereo/rpc';
+
+// Single function with rate limiting and caching
+export const getMetrics = server$(async (timeRange: string, ctx) => {
+  return db.metrics.findMany({ where: { range: timeRange } });
+}, {
+  rateLimit: { max: 30, window: '1m' },
+  cache: { maxAge: 60 },
+  auth: { getUser: verifyAuth },
+});
+
+// Group related functions with shared config
+const usersApi = createServerBlock({
+  rateLimit: { max: 60, window: '1m' },
+  auth: { getUser: verifyAuth },
+}, {
+  getById: async (id: string) => db.users.find(id),
+  list: async () => db.users.findMany(),
+  delete: {
+    handler: async (id: string) => db.users.delete(id),
+    rateLimit: { max: 5, window: '1m' }, // stricter limit
+  },
+});
+```
+
+See [Server Functions docs](./docs/server-functions.md) for the full API reference.
+
 ## Design Decisions
 
 | Decision | Rationale |
@@ -355,3 +388,5 @@ POST /api/rpc { "path": ["posts", "create"], "type": "mutation", "input": {...} 
 | GET for queries | Browser/CDN cacheable |
 | Separate client entry | Tree-shaking keeps server code out |
 | Auto-reconnect | Production-ready subscriptions out of the box |
+| Per-instance rate limit stores | `server$` functions get isolated counters — no cross-contamination |
+| Config compiles to middleware | Declarative config is sugar over `ServerFnMiddleware` arrays |

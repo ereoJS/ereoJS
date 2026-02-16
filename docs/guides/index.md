@@ -22,6 +22,8 @@ Build data layers, APIs, and real-time features for your application.
 
 - **[RPC](/guides/rpc)** — Call server functions directly from the client with full type safety using `@ereo/rpc`. No manual fetch calls or API routes needed — the compiler generates the bridge for you.
 
+- **[Server Functions](/guides/server-functions)** — Create server functions with declarative rate limiting, authentication, CORS, and caching using `server$` and `createServerBlock`. Group related operations with shared config and per-function overrides.
+
 - **[Real-Time](/guides/real-time)** — Implement live updates with WebSocket connections and Server-Sent Events (SSE). Covers pub/sub patterns, presence indicators, live dashboards, and reconnection handling.
 
 - **[File Uploads](/guides/file-uploads)** — Handle single and multi-file uploads with streaming. Covers multipart form data, progress tracking, file validation, cloud storage integration (S3, R2), and image processing.
@@ -69,7 +71,7 @@ Start with [Database Integration](/guides/database) to set up your data layer, t
 :::
 
 ::: tip Building an API?
-Start with [API Routes](/guides/api-routes) for REST endpoints. If your API consumers are also EreoJS apps (or any TypeScript client), consider [RPC](/guides/rpc) for type-safe server calls with zero boilerplate.
+Start with [API Routes](/guides/api-routes) for REST endpoints. If your API consumers are also EreoJS apps (or any TypeScript client), consider [RPC](/guides/rpc) for type-safe server calls with zero boilerplate. For quick server operations with built-in rate limiting and auth, try [Server Functions](/guides/server-functions).
 :::
 
 ::: tip Building a content site?

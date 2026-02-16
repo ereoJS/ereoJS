@@ -173,6 +173,7 @@ export default defineConfig({
             { text: 'Database Integration', link: '/guides/database' },
             { text: 'API Routes', link: '/guides/api-routes' },
             { text: 'RPC', link: '/guides/rpc' },
+            { text: 'Server Functions', link: '/guides/server-functions' },
             { text: 'Real-Time', link: '/guides/real-time' },
             { text: 'File Uploads', link: '/guides/file-uploads' },
           ]
@@ -450,6 +451,7 @@ export default defineConfig({
             { text: 'React Hooks', link: '/api/rpc/hooks' },
             { text: 'Plugin', link: '/api/rpc/plugin' },
             { text: 'Context Bridge', link: '/api/rpc/context-bridge' },
+            { text: 'Server Functions', link: '/api/rpc/server-block' },
             { text: 'Types', link: '/api/rpc/types' },
             { text: 'Protocol', link: '/api/rpc/protocol' }
           ]
