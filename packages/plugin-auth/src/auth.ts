@@ -241,7 +241,7 @@ async function verifyJWT(token: string, secret: string): Promise<JWTPayload | nu
     const isValid = await crypto.subtle.verify(
       'HMAC',
       key,
-      signature,
+      signature as BufferSource,
       encoder.encode(signingInput)
     );
 

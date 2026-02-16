@@ -61,7 +61,7 @@ export interface ZodLikeSchema<TOutput> {
     data: unknown
   ) =>
     | { success: true; data: TOutput }
-    | { success: false; error: { errors: Array<{ path: (string | number)[]; message: string }> } };
+    | { success: false; error: { errors: Array<{ path: (string | number)[]; message: string; code?: string }> } };
   _input?: unknown;
   _output?: TOutput;
 }

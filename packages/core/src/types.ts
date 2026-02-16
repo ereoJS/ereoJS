@@ -74,6 +74,8 @@ export interface Plugin {
   runtimeMiddleware?: MiddlewareHandler[];
   /** Virtual modules map */
   virtualModules?: Record<string, string>;
+  /** Called when the plugin is destroyed / server shuts down */
+  destroy?: () => void | Promise<void>;
 }
 
 export interface DevServer {
