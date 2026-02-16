@@ -4,7 +4,6 @@
  * Extracts and processes island components for selective hydration.
  */
 
-import { join, basename, dirname } from 'node:path';
 import type { Plugin } from '@ereo/core';
 
 /**
@@ -40,6 +39,7 @@ export function extractIslands(
 
   if (!isClientComponent) {
     // Also check for island directives
+    ISLAND_DIRECTIVE_PATTERN.lastIndex = 0;
     const hasDirectives = ISLAND_DIRECTIVE_PATTERN.test(content);
     if (!hasDirectives) {
       return islands;
@@ -56,8 +56,6 @@ export function extractIslands(
   }
 
   // Create island entry for client components
-  const fileName = basename(filePath, '.tsx').replace('.ts', '');
-
   if (isClientComponent && componentNames.length > 0) {
     islands.push({
       id: generateIslandId(filePath),
@@ -87,12 +85,15 @@ function generateIslandId(filePath: string): string {
 export function transformIslandJSX(code: string): string {
   // Add data attributes to components with hydration directives
   let transformed = code;
+  let counter = 0;
 
   // Simple regex-based transform (a proper implementation would use an AST)
   transformed = transformed.replace(
     /<(\w+)\s+([^>]*client:(load|idle|visible|media)[^>]*)>/g,
     (match, tag, props, strategy) => {
-      const id = `island-${Math.random().toString(36).slice(2, 8)}`;
+      // Use a deterministic ID based on the component tag and its position in the file.
+      // This ensures server and client builds produce identical IDs.
+      const id = `island-${tag}-${counter++}`;
       return `<${tag} data-island="${id}" data-strategy="${strategy}" ${props}>`;
     }
   );
@@ -150,10 +151,15 @@ initializeIslands();
  * Create island extraction plugin.
  */
 export function createIslandsPlugin(): Plugin {
-  const islands: IslandMeta[] = [];
+  let islands: IslandMeta[] = [];
 
   return {
     name: 'ereo:islands',
+
+    buildStart() {
+      // Clear accumulated islands from previous builds (e.g., in watch/dev mode)
+      islands = [];
+    },
 
     transform(code: string, id: string) {
       if (!id.endsWith('.tsx') && !id.endsWith('.jsx')) {
@@ -204,5 +210,6 @@ export function findIslandByName(
  * Check if a file contains islands.
  */
 export function hasIslands(content: string): boolean {
+  ISLAND_DIRECTIVE_PATTERN.lastIndex = 0;
   return USE_CLIENT_PATTERN.test(content) || ISLAND_DIRECTIVE_PATTERN.test(content);
 }

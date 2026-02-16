@@ -1,0 +1,40 @@
+{
+  "name": "ereo-stress-test",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --cwd ../cli dev",
+    "build": "bun run --cwd ../cli build",
+    "start": "bun run --cwd ../cli start",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ereo/core": "workspace:*",
+    "@ereo/router": "workspace:*",
+    "@ereo/server": "workspace:*",
+    "@ereo/client": "workspace:*",
+    "@ereo/data": "workspace:*",
+    "@ereo/cli": "workspace:*",
+    "@ereo/auth": "workspace:*",
+    "@ereo/runtime-bun": "workspace:*",
+    "@ereo/state": "workspace:*",
+    "@ereo/rpc": "workspace:*",
+    "@ereo/forms": "workspace:*",
+    "@ereo/client-sdk": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@ereo/bundler": "workspace:*",
+    "@ereo/testing": "workspace:*",
+    "@ereo/dev-inspector": "workspace:*",
+    "@ereo/plugin-tailwind": "workspace:*",
+    "tailwindcss": "^3.4.0",
+    "@types/bun": "^1.1.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.4.0"
+  }
+}

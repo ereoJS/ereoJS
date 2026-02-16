@@ -8,6 +8,8 @@ const NativeHeaders = globalThis.Headers;
 const NativeURL = globalThis.URL;
 const NativeURLSearchParams = globalThis.URLSearchParams;
 const nativeFetch = globalThis.fetch;
+const NativeFile = globalThis.File;
+const NativeBlob = globalThis.Blob;
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 
@@ -21,3 +23,6 @@ globalThis.Headers = NativeHeaders;
 globalThis.URL = NativeURL;
 globalThis.URLSearchParams = NativeURLSearchParams;
 globalThis.fetch = nativeFetch;
+globalThis.File = NativeFile;
+globalThis.Blob = NativeBlob;
+

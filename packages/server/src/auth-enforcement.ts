@@ -17,7 +17,7 @@ export function resolveAuthDenial(auth: AuthConfig, request: Request): Response 
     const pathname = new URL(request.url).pathname;
     const url = auth.redirect.replace('{pathname}', encodeURIComponent(pathname));
     return new Response(null, {
-      status: 302,
+      status: 303,
       headers: { Location: url },
     });
   }
@@ -37,14 +37,14 @@ export function resolveCheckResult(result: AuthCheckResult & { allowed: false })
   if ('response' in result) return result.response;
   if ('redirect' in result) {
     return new Response(null, {
-      status: 302,
+      status: 303,
       headers: { Location: result.redirect },
     });
   }
   return new Response(
     result.body !== undefined ? JSON.stringify(result.body) : 'Forbidden',
     {
-      status: result.status,
+      status: (result as any).status ?? 403,
       headers: result.body !== undefined ? { 'Content-Type': 'application/json' } : {},
     },
   );

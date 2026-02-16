@@ -211,7 +211,7 @@ export function env<T extends string = string>(key: string, defaultValue?: T): T
  */
 export function requireEnv(key: string): string {
   const value = Bun.env[key];
-  if (!value) {
+  if (value === undefined || value === null) {
     throw new Error(`Missing required environment variable: ${key}`);
   }
   return value;

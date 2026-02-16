@@ -94,7 +94,7 @@ export class MiddlewareChain {
     if (pattern === '*') return true;
     if (pattern.endsWith('/*')) {
       const prefix = pattern.slice(0, -2);
-      return pathname.startsWith(prefix);
+      return pathname === prefix || pathname.startsWith(prefix + '/');
     }
     return pathname === pattern;
   }
@@ -323,10 +323,14 @@ export function rateLimit(options: RateLimitOptions = {}): MiddlewareHandler {
     // Clean up expired entries deterministically every window period or when map is too large
     if (now - lastCleanup > windowMs || requests.size > MAX_ENTRIES) {
       lastCleanup = now;
+      const expired: string[] = [];
       for (const [k, v] of requests) {
         if (now > v.resetTime) {
-          requests.delete(k);
+          expired.push(k);
         }
+      }
+      for (const k of expired) {
+        requests.delete(k);
       }
     }
 

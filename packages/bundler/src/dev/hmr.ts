@@ -345,12 +345,16 @@ export class HMRServer {
     this.lastUpdate = update;
     const message = JSON.stringify(update);
 
+    const failed: ServerWebSocket<unknown>[] = [];
     for (const client of this.clients) {
       try {
         client.send(message);
       } catch {
-        this.clients.delete(client);
+        failed.push(client);
       }
+    }
+    for (const client of failed) {
+      this.clients.delete(client);
     }
   }
 

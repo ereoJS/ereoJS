@@ -33,6 +33,8 @@ export type {
   SessionConfig,
   AuthConfig,
   AuthContext,
+  OAuthRedirectResult,
+  OAuthCallbackResult,
 } from './auth';
 
 // Re-export AuthCheckResult from core so users can import from either package

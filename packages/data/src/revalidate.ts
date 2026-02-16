@@ -64,8 +64,24 @@ export async function revalidatePath(...paths: string[]): Promise<RevalidateResu
 
   for (const path of paths) {
     for (const key of allKeys) {
-      // Match path in cache key (format: METHOD:path)
-      if (key.includes(`:${path}`) || key.endsWith(path)) {
+      // Match path in cache key — supports both "METHOD:/path" and "/path" formats
+      // Use exact or segment-boundary matching to avoid "/use" matching "/users"
+      let matched = false;
+
+      // Case 1: key contains ":path" (e.g. "GET:/api/users")
+      const colonPath = `:${path}`;
+      const colonIdx = key.indexOf(colonPath);
+      if (colonIdx !== -1) {
+        const afterColon = colonIdx + colonPath.length;
+        matched = afterColon === key.length || key[afterColon] === '?' || key[afterColon] === '#';
+      }
+
+      // Case 2: key is the path itself or starts with path (exact match / query boundary)
+      if (!matched && (key === path || key.startsWith(path + '?') || key.startsWith(path + '#'))) {
+        matched = true;
+      }
+
+      if (matched) {
         await cache.delete(key);
         revalidatedPaths.push(path);
       }

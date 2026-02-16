@@ -546,7 +546,7 @@ export function jsonAction<TBody, TResult = TBody, P extends RouteParams = Route
  * Accepts a status code or full ResponseInit for custom headers.
  */
 export function redirect(url: string, init?: number | ResponseInit): Response {
-  const status = typeof init === 'number' ? init : (init?.status ?? 302);
+  const status = typeof init === 'number' ? init : (init?.status ?? 303);
   const headers = new Headers(typeof init === 'object' ? init?.headers : undefined);
   headers.set('Location', url);
   return new Response(null, {

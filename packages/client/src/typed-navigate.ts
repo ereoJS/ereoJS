@@ -341,7 +341,7 @@ export function typedRedirect<Path extends TypedRoutes>(
     hash: options?.hash,
   });
 
-  const status = options?.status ?? 302;
+  const status = options?.status ?? 303;
 
   return new Response(null, {
     status,

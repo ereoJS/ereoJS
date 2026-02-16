@@ -394,6 +394,11 @@ export function createClient<T extends Router<RouterDef>>(
             // Return unsubscribe function
             return () => {
               subscriptions.delete(id);
+              // Also remove from pending queue (if still connecting)
+              const pendingIdx = pendingSubscriptions.findIndex(p => p.id === id);
+              if (pendingIdx !== -1) {
+                pendingSubscriptions.splice(pendingIdx, 1);
+              }
               sendUnsubscribe(id);
 
               // Close WebSocket if no more subscriptions

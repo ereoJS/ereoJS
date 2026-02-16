@@ -1,0 +1,16 @@
+node_modules
+dist
+.ereo
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+Dockerfile
+*.log
+*.md
+.DS_Store
+.vscode
+.idea
+coverage
+*.tgz

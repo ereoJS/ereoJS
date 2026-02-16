@@ -55,9 +55,9 @@ describe('@ereo/data - Response Helpers', () => {
   // redirect()
   // =========================================================================
   describe('redirect()', () => {
-    test('defaults to 302 status', () => {
+    test('defaults to 303 status', () => {
       const response = redirect('/login');
-      expect(response.status).toBe(302);
+      expect(response.status).toBe(303);
       expect(response.headers.get('Location')).toBe('/login');
     });
 
@@ -110,7 +110,7 @@ describe('@ereo/data - Response Helpers', () => {
       }
       expect(thrown).toBeInstanceOf(Response);
       const response = thrown as Response;
-      expect(response.status).toBe(302);
+      expect(response.status).toBe(303);
       expect(response.headers.get('Location')).toBe('/login');
     });
 

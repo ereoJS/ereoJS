@@ -199,10 +199,10 @@ describe('@ereo/client - typed-navigate', () => {
   // typedRedirect
   // ==========================================================================
   describe('typedRedirect', () => {
-    it('returns a Response with 302 status by default', () => {
+    it('returns a Response with 303 status by default', () => {
       const response = typedRedirect('/login');
       expect(response).toBeInstanceOf(Response);
-      expect(response.status).toBe(302);
+      expect(response.status).toBe(303);
     });
 
     it('sets the Location header to the built URL', () => {

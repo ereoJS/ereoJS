@@ -255,7 +255,9 @@ export class BunServer {
     if (!inst) return '';
     const span = inst.getActiveSpan(context);
     if (!span?.traceId) return '';
-    return `<script>window.__EREO_TRACE_ID__="${span.traceId}"</script>`;
+    // Sanitize traceId to prevent XSS — allow only hex and dash characters
+    const safeTraceId = span.traceId.replace(/[^a-fA-F0-9\-]/g, '');
+    return `<script>window.__EREO_TRACE_ID__="${safeTraceId}"</script>`;
   }
 
   /**
@@ -1299,7 +1301,9 @@ export class BunServer {
         const content = descriptor.content.replace(/"/g, '&quot;');
         html += `<meta property="${property}" content="${content}"/>`;
       } else if (descriptor['script:ld+json']) {
-        html += `<script type="application/ld+json">${descriptor['script:ld+json']}</script>`;
+        // Escape closing script tags to prevent XSS breakout
+        const safeJsonLd = String(descriptor['script:ld+json']).replace(/<\//g, '<\\/');
+        html += `<script type="application/ld+json">${safeJsonLd}</script>`;
       } else if (descriptor.tagName === 'link') {
         const attrs = Object.entries(descriptor)
           .filter(([k]) => k !== 'tagName')
@@ -1322,7 +1326,7 @@ export class BunServer {
 
     // Replace existing <title> with the route's meta title
     if (title) {
-      const escapedTitle = title.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const escapedTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapedTitle}</title>`);
     }
 
@@ -1564,7 +1568,26 @@ export class BunServer {
 
     const { renderToString: reactRenderToString } = await import('react-dom/server');
     const content = reactRenderToString(element);
-    return new Response(content, {
+
+    // If layouts provided full HTML structure, content already has DOCTYPE/html/body.
+    // Otherwise wrap in a minimal HTML document so the browser renders correctly.
+    const hasHtmlTag = content.includes('<html') || content.includes('<!DOCTYPE') || content.includes('<!doctype');
+    const html = hasHtmlTag
+      ? content
+      : `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Error</title>
+</head>
+<body>
+  <div id="root">${content}</div>
+  <script type="module" src="${this.options.clientEntry}"></script>
+</body>
+</html>`;
+
+    return new Response(html, {
       status: errorResponse.status,
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
@@ -1628,12 +1651,21 @@ export class BunServer {
     const resolveHandler = (ws: any) => {
       const type = ws.data?._wsType;
       if (type === 'hmr' && websocket) return websocket;
-      return upgradeHandlers.find(h => h.path === type)?.wsConfig;
+      if (type) return upgradeHandlers.find(h => h.path === type)?.wsConfig;
+      return undefined;
     };
 
     const mergedWebSocket: any = {
-      message(ws: any, message: any) { resolveHandler(ws)?.message?.(ws, message); },
-      open(ws: any) { resolveHandler(ws)?.open?.(ws); },
+      message(ws: any, message: any) {
+        const handler = resolveHandler(ws);
+        if (!handler) { console.warn(`[ereo] WebSocket message with unknown _wsType: ${ws.data?._wsType ?? 'undefined'}`); return; }
+        handler.message?.(ws, message);
+      },
+      open(ws: any) {
+        const handler = resolveHandler(ws);
+        if (!handler) { console.warn(`[ereo] WebSocket open with unknown _wsType: ${ws.data?._wsType ?? 'undefined'}`); ws.close(); return; }
+        handler.open?.(ws);
+      },
       close(ws: any) { resolveHandler(ws)?.close?.(ws); },
       drain(ws: any) { resolveHandler(ws)?.drain?.(ws); },
     };

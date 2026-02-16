@@ -16,6 +16,8 @@ export interface RenderOptions {
   match: RouteMatch;
   /** Request context */
   context: AppContext;
+  /** The original request (passed to loaders) */
+  request?: Request;
   /** Shell template */
   shell?: ShellTemplate;
   /** Enable streaming */
@@ -67,15 +69,16 @@ export function createShell(options: {
 }): { head: string; tail: string } {
   const { shell = {}, scripts = [], styles = [], loaderData } = options;
 
+  const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
   const htmlAttrs = Object.entries(shell.htmlAttrs || {})
-    .map(([k, v]) => `${k}="${v}"`)
+    .map(([k, v]) => `${k}="${escapeAttr(v)}"`)
     .join(' ');
 
   const bodyAttrs = Object.entries(shell.bodyAttrs || {})
-    .map(([k, v]) => `${k}="${v}"`)
+    .map(([k, v]) => `${k}="${escapeAttr(v)}"`)
     .join(' ');
 
-  const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const metaTags = (shell.meta || [])
     .map((m) => {
       const key = m.name ? `name="${escapeAttr(m.name)}"` : `property="${escapeAttr(m.property || '')}"`;
@@ -84,7 +87,7 @@ export function createShell(options: {
     .join('\n    ');
 
   const styleLinks = styles
-    .map((href) => `<link rel="stylesheet" href="${href}">`)
+    .map((href) => `<link rel="stylesheet" href="${escapeAttr(href)}">`)
     .join('\n    ');
 
   const linkTags = (shell.links || [])
@@ -98,7 +101,7 @@ export function createShell(options: {
     .join('\n    ');
 
   const scriptTags = scripts
-    .map((src) => `<script type="module" src="${src}"></script>`)
+    .map((src) => `<script type="module" src="${escapeAttr(src)}"></script>`)
     .join('\n    ');
 
   const loaderScript = loaderData
@@ -110,7 +113,7 @@ export function createShell(options: {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    ${shell.title ? `<title>${shell.title}</title>` : ''}
+    ${shell.title ? `<title>${escapeAttr(shell.title)}</title>` : ''}
     ${metaTags}
     ${linkTags}
     ${styleLinks}
@@ -152,7 +155,7 @@ export async function renderToStream(
   let loaderData: unknown = null;
   if (options.match.route.module?.loader) {
     loaderData = await options.match.route.module.loader({
-      request: new Request('http://localhost'),
+      request: options.request ?? new Request('http://localhost'),
       params: options.match.params,
       context: options.context,
     });
@@ -278,7 +281,7 @@ export async function renderToString(
   let loaderData: unknown = null;
   if (options.match.route.module?.loader) {
     loaderData = await options.match.route.module.loader({
-      request: new Request('http://localhost'),
+      request: options.request ?? new Request('http://localhost'),
       params: options.match.params,
       context: options.context,
     });

@@ -47,16 +47,24 @@ class RateLimitStore {
   /** Run one cleanup cycle — removes expired entries and empty stores */
   runCleanupCycle() {
     const now = Date.now();
+    const emptyStoreKeys: string[] = [];
     for (const [windowMsStr, store] of this.stores) {
+      const expired: string[] = [];
       for (const [key, entry] of store) {
         if (entry.resetAt < now) {
-          store.delete(key);
+          expired.push(key);
         }
+      }
+      for (const key of expired) {
+        store.delete(key);
       }
       // Clean up empty stores
       if (store.size === 0) {
-        this.stores.delete(windowMsStr);
+        emptyStoreKeys.push(windowMsStr);
       }
+    }
+    for (const key of emptyStoreKeys) {
+      this.stores.delete(key);
     }
 
     // Stop cleanup if no stores remain
@@ -148,12 +156,28 @@ export function rateLimit(options: RateLimitOptions): MiddlewareFn<BaseContext, 
   // Use the shared store based on windowMs
   const store = globalRateLimitStore.getStore(windowMs);
 
+  const MAX_ENTRIES = 10_000;
+
   return async ({ ctx, next }) => {
     const key = keyFn(ctx);
     const now = Date.now();
 
     let entry = store.get(key);
     if (!entry || entry.resetAt < now) {
+      // Prevent unbounded growth from spoofed headers
+      if (store.size >= MAX_ENTRIES) {
+        const expired: string[] = [];
+        for (const [k, v] of store) {
+          if (v.resetAt < now) expired.push(k);
+        }
+        for (const k of expired) store.delete(k);
+
+        // If still at capacity after cleanup, fail open (allow request without tracking)
+        // to prevent legitimate traffic from being blocked by store exhaustion
+        if (store.size >= MAX_ENTRIES) {
+          return next(ctx);
+        }
+      }
       entry = { count: 0, resetAt: now + windowMs };
       store.set(key, entry);
     }

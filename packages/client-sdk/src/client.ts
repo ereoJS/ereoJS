@@ -218,10 +218,13 @@ export class ApiClient {
       ...config.headers,
     };
 
+    // Apply configured timeout when no external signal is provided
+    const signal = config.signal ?? (this.config.timeout ? AbortSignal.timeout(this.config.timeout) : undefined);
+
     const init: RequestInit = {
       method: config.method,
       headers,
-      signal: config.signal,
+      signal,
     };
 
     if (config.body !== undefined) {

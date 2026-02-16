@@ -300,6 +300,9 @@ export function setCache(storage: CacheStorage): void {
   globalCache = storage;
 }
 
+// In-flight request dedup to prevent thundering herd
+const inflight = new Map<string, Promise<any>>();
+
 /**
  * Cache function result with explicit options.
  */
@@ -323,25 +326,42 @@ export async function cached<T>(
 
     // Stale-while-revalidate: return stale and refresh in background
     if (entry.staleWhileRevalidate) {
-      // Fire and forget revalidation
-      revalidate(key, fn, options);
+      // Fire and forget revalidation (deduped)
+      if (!inflight.has(key)) {
+        const p = revalidate(key, fn, options).finally(() => inflight.delete(key));
+        inflight.set(key, p);
+      }
       return entry.value;
     }
   }
 
-  // Fetch fresh data
-  const value = await fn();
+  // Dedup concurrent fetches for the same key
+  const existing = inflight.get(key);
+  if (existing) {
+    return existing as Promise<T>;
+  }
 
-  // Store in cache
-  await cache.set(key, {
-    value,
-    timestamp: Date.now(),
-    maxAge: options.maxAge ?? 60,
-    staleWhileRevalidate: options.staleWhileRevalidate,
-    tags: options.tags ?? [],
-  });
+  const promise = (async () => {
+    try {
+      const value = await fn();
 
-  return value;
+      // Store in cache
+      await cache.set(key, {
+        value,
+        timestamp: Date.now(),
+        maxAge: options.maxAge ?? 60,
+        staleWhileRevalidate: options.staleWhileRevalidate,
+        tags: options.tags ?? [],
+      });
+
+      return value;
+    } finally {
+      inflight.delete(key);
+    }
+  })();
+
+  inflight.set(key, promise);
+  return promise;
 }
 
 /**

@@ -354,10 +354,12 @@ export function google(config: GoogleConfig): AuthProvider {
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
 
-      // Get user info
-      const userResponse = await oauthFetch(
-        `${userInfoUrl}?access_token=${tokenData.access_token}`
-      );
+      // Get user info (use Authorization header, not URL query parameter)
+      const userResponse = await oauthFetch(userInfoUrl, {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+        },
+      });
 
       const user = await userResponse.json() as Record<string, unknown>;
 
@@ -413,10 +415,12 @@ export function google(config: GoogleConfig): AuthProvider {
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
 
-      // Get user info
-      const userResponse = await oauthFetch(
-        `${userInfoUrl}?access_token=${tokenData.access_token}`
-      );
+      // Get user info (use Authorization header, not URL query parameter)
+      const userResponse = await oauthFetch(userInfoUrl, {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+        },
+      });
 
       const user = await userResponse.json() as Record<string, unknown>;
 

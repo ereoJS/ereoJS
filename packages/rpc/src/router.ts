@@ -255,8 +255,10 @@ async function handleSubscribe(
   if (procedure.inputSchema) {
     try {
       validatedInput = procedure.inputSchema.parse(input);
-    } catch {
-      sendError(ws, id, 'VALIDATION_ERROR', 'Input validation failed');
+    } catch (error) {
+      const details = sanitizeValidationError(error);
+      const detailsStr = JSON.stringify(details);
+      sendError(ws, id, 'VALIDATION_ERROR', `Input validation failed: ${detailsStr}`);
       return;
     }
   }
@@ -366,7 +368,7 @@ function resolveProcedure(def: RouterDef, path: string[]): AnyProcedure | null {
   let current: RouterDef | AnyProcedure = def;
 
   for (const segment of path) {
-    if (!current || typeof current !== 'object' || !(segment in current)) {
+    if (!current || typeof current !== 'object' || !Object.hasOwn(current, segment)) {
       return null;
     }
     current = (current as RouterDef)[segment];

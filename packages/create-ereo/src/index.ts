@@ -3172,7 +3172,7 @@ export async function action({ request, context }${ts ? ': { request: Request; c
     await auth.signIn('credentials', { email, password });
 
     return new Response(null, {
-      status: 302,
+      status: 303,
       headers: {
         Location: '/tasks',
         'Set-Cookie': auth.getCookieHeader() || '',
@@ -3313,7 +3313,7 @@ export async function action({ request, context }${ts ? ': { request: Request; c
     await auth.signIn('credentials', { email, password });
 
     return new Response(null, {
-      status: 302,
+      status: 303,
       headers: {
         Location: '/tasks',
         'Set-Cookie': auth.getCookieHeader() || '',
@@ -3321,7 +3321,7 @@ export async function action({ request, context }${ts ? ': { request: Request; c
     });
   } catch {
     // Account created but auto-login failed — redirect to login
-    return new Response(null, { status: 302, headers: { Location: '/login' } });
+    return new Response(null, { status: 303, headers: { Location: '/login' } });
   }
 }
 
@@ -3447,7 +3447,7 @@ export async function action({ context }${ts ? ': { context: any }' : ''}) {
   }
 
   return new Response(null, {
-    status: 302,
+    status: 303,
     headers: { Location: '/' },
   });
 }
@@ -3627,7 +3627,7 @@ export const config = { ...requireAuth({ redirect: '/login' }) };
 export async function action({ request, context }${ts ? ': { request: Request; context: any }' : ''}) {
   const auth = getAuth(context);
   if (!auth.isAuthenticated()) {
-    return new Response(null, { status: 302, headers: { Location: '/login' } });
+    return new Response(null, { status: 303, headers: { Location: '/login' } });
   }
   const user = auth.getUser()${ts ? '!' : ''};
   const userId = Number(user.id);
@@ -3650,7 +3650,7 @@ export async function action({ request, context }${ts ? ': { request: Request; c
   createTask(userId, title, description, 'todo', priority);
 
   return new Response(null, {
-    status: 302,
+    status: 303,
     headers: { Location: '/tasks' },
   });
 }
@@ -3762,7 +3762,7 @@ export async function loader({ params, context }${ts ? ': { params: { id: string
 export async function action({ request, params, context }${ts ? ': { request: Request; params: { id: string }; context: any }' : ''}) {
   const auth = getAuth(context);
   if (!auth.isAuthenticated()) {
-    return new Response(null, { status: 302, headers: { Location: '/login' } });
+    return new Response(null, { status: 303, headers: { Location: '/login' } });
   }
   const user = auth.getUser()${ts ? '!' : ''};
   const userId = Number(user.id);
@@ -3775,7 +3775,7 @@ export async function action({ request, params, context }${ts ? ': { request: Re
   if (intent === 'delete') {
     deleteTask(taskId, userId);
     return new Response(null, {
-      status: 302,
+      status: 303,
       headers: { Location: '/tasks' },
     });
   }
@@ -3793,7 +3793,7 @@ export async function action({ request, params, context }${ts ? ': { request: Re
 
     updateTask(taskId, userId, task.title, task.description, nextStatus[task.status] || 'todo', task.priority);
     return new Response(null, {
-      status: 302,
+      status: 303,
       headers: { Location: \`/tasks/\${taskId}\` },
     });
   }
@@ -3821,7 +3821,7 @@ export async function action({ request, params, context }${ts ? ': { request: Re
   }
 
   return new Response(null, {
-    status: 302,
+    status: 303,
     headers: { Location: '/tasks' },
   });
 }

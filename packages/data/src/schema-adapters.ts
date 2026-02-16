@@ -156,6 +156,7 @@ export function ereoSchema<TOutput>(
           errors: result.error.errors.map((err) => ({
             path: err.path,
             message: err.message,
+            ...(err.code !== undefined && { code: err.code }),
           })),
         },
       };

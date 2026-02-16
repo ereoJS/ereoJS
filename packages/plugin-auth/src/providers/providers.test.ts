@@ -426,10 +426,11 @@ describe('google provider', () => {
     mockFetch.mockRestore();
   });
 
-  it('should use access token in userinfo URL', async () => {
+  it('should use access token in Authorization header (not URL)', async () => {
     let capturedUserInfoUrl: string = '';
+    let capturedAuthHeader: string | null = null;
 
-    const mockFetch = spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+    const mockFetch = spyOn(globalThis, 'fetch').mockImplementation(async (url: any, init?: any) => {
       const urlString = url.toString();
       if (urlString.includes('oauth2.googleapis.com/token')) {
         return new Response(JSON.stringify({ access_token: 'special-access-token-xyz' }), {
@@ -438,6 +439,7 @@ describe('google provider', () => {
       }
       if (urlString.includes('googleapis.com/oauth2/v2/userinfo')) {
         capturedUserInfoUrl = urlString;
+        capturedAuthHeader = init?.headers?.['Authorization'] ?? null;
         return new Response(
           JSON.stringify({ id: '123', email: 'test@example.com', name: 'Test' }),
           { headers: { 'Content-Type': 'application/json' } }
@@ -453,7 +455,10 @@ describe('google provider', () => {
 
     await provider.authorize({ code: 'test-code' });
 
-    expect(capturedUserInfoUrl).toContain('access_token=special-access-token-xyz');
+    // Token should NOT be in URL
+    expect(capturedUserInfoUrl).not.toContain('access_token=');
+    // Token should be in Authorization header
+    expect(capturedAuthHeader).toBe('Bearer special-access-token-xyz');
 
     mockFetch.mockRestore();
   });

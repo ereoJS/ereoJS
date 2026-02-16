@@ -4,5 +4,7 @@ exact = true
 
 [test]
 # Test configuration
-preload = ["./test-setup.ts"]
+# Note: forms DOM preload must be listed first so happy-dom registers
+# before @testing-library/dom evaluates its module-level `screen` export.
+preload = ["./packages/forms/src/test-setup-dom.ts", "./test-setup.ts"]
 coverage = true

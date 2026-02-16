@@ -338,12 +338,8 @@ export type {
  * Call this in your entry point.
  */
 export function initClient(): void {
-  // Initialize islands
-  _initializeIslands();
-
-  // Setup scroll restoration
-  _setupScrollRestoration();
-
-  // Setup auto prefetch
-  _setupAutoPrefetch({ strategy: 'hover' });
+  // Each subsystem is isolated so one failure doesn't prevent the others from running
+  try { _initializeIslands(); } catch (err) { console.error('[ereo] Island initialization failed:', err); }
+  try { _setupScrollRestoration(); } catch (err) { console.error('[ereo] Scroll restoration setup failed:', err); }
+  try { _setupAutoPrefetch({ strategy: 'hover' }); } catch (err) { console.error('[ereo] Auto prefetch setup failed:', err); }
 }

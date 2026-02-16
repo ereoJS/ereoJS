@@ -472,8 +472,8 @@ export function path(
             const prefix = pattern.slice(0, -1); // Remove the *
             return url.pathname.startsWith(prefix);
           }
-          // Simple prefix match
-          return url.pathname.startsWith(pattern);
+          // Prefix match with path boundary check
+          return url.pathname.startsWith(pattern + '/') || url.pathname === pattern;
         }
         return pattern.test(url.pathname);
       });
@@ -544,53 +544,58 @@ export function createCorsMiddleware(options: {
   const {
     origin = '*',
     methods = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-    headers = [],
+    headers = ['Content-Type', 'Authorization'],
     credentials = false,
     maxAge = 86400,
   } = options;
 
   return async (request, context, next) => {
+    // Resolve the allowed origin for this request
+    const resolveOrigin = (): string | null => {
+      if (typeof origin === 'string') return origin;
+      const requestOrigin = request.headers.get('Origin');
+      if (Array.isArray(origin)) {
+        return requestOrigin && origin.includes(requestOrigin) ? requestOrigin : null;
+      }
+      if (typeof origin === 'function') {
+        return requestOrigin && origin(requestOrigin) ? requestOrigin : null;
+      }
+      return null;
+    };
+
+    const allowedOrigin = resolveOrigin();
+
+    // Handle preflight — short-circuit before running downstream handlers
+    if (request.method === 'OPTIONS') {
+      const preflightHeaders = new Headers();
+      if (allowedOrigin) preflightHeaders.set('Access-Control-Allow-Origin', allowedOrigin);
+      preflightHeaders.set('Access-Control-Allow-Methods', methods.join(', '));
+      if (headers.length > 0) preflightHeaders.set('Access-Control-Allow-Headers', headers.join(', '));
+      if (credentials) preflightHeaders.set('Access-Control-Allow-Credentials', 'true');
+      preflightHeaders.set('Access-Control-Max-Age', String(maxAge));
+
+      return new Response(null, {
+        status: 204,
+        headers: preflightHeaders,
+      });
+    }
+
     const response = await next();
 
     const corsHeaders = new Headers(response.headers);
 
-    // Handle origin
-    if (typeof origin === 'string') {
-      corsHeaders.set('Access-Control-Allow-Origin', origin);
-    } else if (Array.isArray(origin)) {
-      const requestOrigin = request.headers.get('Origin');
-      if (requestOrigin && origin.includes(requestOrigin)) {
-        corsHeaders.set('Access-Control-Allow-Origin', requestOrigin);
-      }
-    } else if (typeof origin === 'function') {
-      const requestOrigin = request.headers.get('Origin') || '';
-      if (origin(requestOrigin)) {
-        corsHeaders.set('Access-Control-Allow-Origin', requestOrigin);
-      }
+    if (allowedOrigin) {
+      corsHeaders.set('Access-Control-Allow-Origin', allowedOrigin);
     }
 
-    // Handle methods
     corsHeaders.set('Access-Control-Allow-Methods', methods.join(', '));
 
-    // Handle headers
     if (headers.length > 0) {
       corsHeaders.set('Access-Control-Allow-Headers', headers.join(', '));
     }
 
-    // Handle credentials
     if (credentials) {
       corsHeaders.set('Access-Control-Allow-Credentials', 'true');
-    }
-
-    // Handle max age
-    corsHeaders.set('Access-Control-Max-Age', String(maxAge));
-
-    // Handle preflight
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders,
-      });
     }
 
     return new Response(response.body, {
@@ -626,11 +631,13 @@ export function createRateLimitMiddleware(options: {
     const now = Date.now();
 
     // Periodically clean up expired entries to prevent memory leaks
-    if (now - lastCleanup > windowMs) {
+    if (now - lastCleanup > windowMs || store.size > 10_000) {
       lastCleanup = now;
+      const expired: string[] = [];
       for (const [k, v] of store) {
-        if (now > v.resetTime) store.delete(k);
+        if (now > v.resetTime) expired.push(k);
       }
+      for (const k of expired) store.delete(k);
     }
 
     let record = store.get(key);
@@ -664,9 +671,9 @@ export function createRateLimitMiddleware(options: {
     newResponse.headers.set('X-RateLimit-Remaining', String(Math.max(0, maxRequests - record.count)));
     newResponse.headers.set('X-RateLimit-Reset', String(Math.ceil(record.resetTime / 1000)));
 
-    // Reset on successful request if configured
+    // Don't count successful requests against the rate limit
     if (skipSuccessfulRequests && response.status < 400) {
-      store.delete(key);
+      record.count = Math.max(0, record.count - 1);
     }
 
     return newResponse;

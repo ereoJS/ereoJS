@@ -144,6 +144,11 @@ export async function hydrateIslands(): Promise<void> {
   const reactDomClient = await import('react-dom/client');
   const hydrateRoot = reactDomClient.hydrateRoot ?? (reactDomClient as any).default?.hydrateRoot;
 
+  if (!hydrateRoot) {
+    console.error('[ereo] react-dom/client.hydrateRoot not found. Ensure react-dom >= 18 is installed.');
+    return;
+  }
+
   // Find all island markers in the DOM
   const islandElements = document.querySelectorAll('[data-island]');
 
@@ -184,15 +189,19 @@ export async function hydrateIslands(): Promise<void> {
       () => {
         if (islandRegistry.isHydrated(islandId)) return;
 
-        // Hydrate the island
-        const root = hydrateRoot(element, createElement(component, props));
-        islandRegistry.markHydrated(islandId);
+        try {
+          // Hydrate the island
+          const root = hydrateRoot(element, createElement(component, props));
+          islandRegistry.markHydrated(islandId);
 
-        // Update cleanup to also unmount the React root
-        islandRegistry.setCleanup(islandId, () => {
-          triggerCleanup();
-          root.unmount();
-        });
+          // Update cleanup to also unmount the React root
+          islandRegistry.setCleanup(islandId, () => {
+            triggerCleanup();
+            root.unmount();
+          });
+        } catch (err) {
+          console.error(`[ereo] Failed to hydrate island "${islandId}" (${componentName}):`, err);
+        }
       },
       media
     );

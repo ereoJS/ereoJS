@@ -165,7 +165,7 @@ describe('@ereo/data - Action', () => {
     test('creates redirect response', () => {
       const response = redirect('/dashboard');
 
-      expect(response.status).toBe(302);
+      expect(response.status).toBe(303);
       expect(response.headers.get('Location')).toBe('/dashboard');
     });
 

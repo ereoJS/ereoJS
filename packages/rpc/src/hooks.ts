@@ -46,6 +46,10 @@ export function useQuery<TInput, TOutput>(
   const inputRef = useRef(input);
   inputRef.current = input;
 
+  // Serialize input for structural equality comparison in dependency arrays.
+  // This ensures re-fetch when input changes structurally, not on every render.
+  const inputKey = JSON.stringify(input);
+
   // Use ref for procedure to avoid infinite re-fetching.
   // The RPC client uses Proxy objects that create new references on each property access.
   const procedureRef = useRef(procedure);
@@ -65,7 +69,7 @@ export function useQuery<TInput, TOutput>(
     } finally {
       setIsLoading(false);
     }
-  }, [enabled]);
+  }, [enabled, inputKey]);
 
   useEffect(() => {
     fetchData();
@@ -234,6 +238,9 @@ export function useSubscription<TInput, TOutput>(
   const inputRef = useRef(input);
   inputRef.current = input;
 
+  // Serialize input for structural equality comparison in dependency arrays.
+  const inputKey = JSON.stringify(input);
+
   // Use refs for procedure and callbacks to avoid re-subscribing on every render.
   // The RPC client uses Proxy objects that create new references on each property access,
   // so we must not include procedure in useCallback/useEffect dependency arrays.
@@ -277,7 +284,7 @@ export function useSubscription<TInput, TOutput>(
     } else {
       unsubscribeRef.current = (procedureRef.current as any).subscribe(callbacks);
     }
-  }, [enabled]);
+  }, [enabled, inputKey]);
 
   const unsubscribe = useCallback(() => {
     unsubscribeRef.current?.();

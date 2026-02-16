@@ -241,7 +241,7 @@ async function verifyJWT(token: string, secret: string): Promise<JWTPayload | nu
     const isValid = await crypto.subtle.verify(
       'HMAC',
       key,
-      signature.buffer as ArrayBuffer,
+      signature,
       encoder.encode(signingInput)
     );
 
@@ -369,7 +369,11 @@ class SessionStore {
 function parseCookie(cookieString: string, name: string): string | null {
   const cookies = cookieString.split(';');
   for (const cookie of cookies) {
-    const [key, value] = cookie.trim().split('=');
+    const trimmed = cookie.trim();
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = trimmed.substring(0, eqIndex);
+    const value = trimmed.substring(eqIndex + 1);
     if (key === name && value) {
       return decodeURIComponent(value);
     }
@@ -513,8 +517,6 @@ export function createAuthPlugin(config: AuthConfig): Plugin {
    * Create a JWT token from a session
    */
   async function createToken(session: Session): Promise<string> {
-    const now = Math.floor(Date.now() / 1000);
-
     let payload: JWTPayload = {
       sub: session.userId,
       iat: Math.floor((session.issuedAt?.getTime() ?? Date.now()) / 1000),
@@ -786,6 +788,8 @@ export function createAuthPlugin(config: AuthConfig): Plugin {
 
         // Add auth to context
         ctx.set('auth', authContext);
+        // Store config so OAuth helpers (getOAuthUrl, handleOAuthCallback) can access providers
+        ctx.set('authConfig', config);
 
         // Call next middleware
         const response = await next();
@@ -805,6 +809,11 @@ export function createAuthPlugin(config: AuthConfig): Plugin {
       };
 
       server.middlewares.push(authMiddleware);
+    },
+
+    destroy() {
+      // Clean up the session store's cleanup interval to allow clean process shutdown
+      sessionStore.destroy();
     },
   };
 }
@@ -953,13 +962,20 @@ export function withAuth<T>(
 // ============================================================================
 
 /**
- * Get OAuth authorization URL for a provider.
+ * Result of getOAuthUrl — includes the URL and a Set-Cookie header for the state token.
+ * The caller MUST include the cookie header in their redirect response.
  */
+export interface OAuthRedirectResult {
+  url: string;
+  /** Set-Cookie header value — must be included in the redirect response */
+  stateCookie: string;
+}
+
 export function getOAuthUrl(
   context: AppContext,
   providerId: string,
   redirectUri: string
-): string {
+): OAuthRedirectResult {
   const config = context.get('authConfig') as AuthConfig | undefined;
   const provider = config?.providers?.find(p => p.id === providerId);
 
@@ -970,20 +986,36 @@ export function getOAuthUrl(
   // Generate state for CSRF protection
   const state = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
 
-  // Store state for validation in callback
-  context.set('__oauth_state', state);
+  // Store state in a short-lived cookie so it survives the OAuth redirect round-trip
+  const stateCookie = buildCookieHeader('__oauth_state', state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 600, // 10 minutes
+  });
 
-  return provider.getAuthorizationUrl(state, redirectUri);
+  return {
+    url: provider.getAuthorizationUrl(state, redirectUri),
+    stateCookie,
+  };
 }
 
 /**
- * Handle OAuth callback.
+ * Result of handleOAuthCallback — includes the session and a Set-Cookie header to clear the state cookie.
  */
+export interface OAuthCallbackResult {
+  session: Session;
+  /** Set-Cookie header value to clear the state cookie — include in the response */
+  clearStateCookie: string;
+}
+
 export async function handleOAuthCallback(
   context: AppContext,
+  request: Request,
   providerId: string,
   params: { code: string; state: string; redirectUri: string }
-): Promise<Session> {
+): Promise<OAuthCallbackResult> {
   const auth = getAuth(context);
   const config = context.get('authConfig') as AuthConfig | undefined;
   const provider = config?.providers?.find(p => p.id === providerId);
@@ -992,13 +1024,15 @@ export async function handleOAuthCallback(
     throw new Error(`OAuth provider not found or not configured: ${providerId}`);
   }
 
-  // Validate CSRF state token
-  const storedState = context.get('__oauth_state') as string | undefined;
+  // Validate CSRF state token from cookie (survives the redirect round-trip)
+  const cookie = request.headers.get('cookie');
+  const storedState = cookie ? parseCookie(cookie, '__oauth_state') : undefined;
   if (!storedState || storedState !== params.state) {
     throw new Error('OAuth state mismatch: possible CSRF attack');
   }
-  // Clear state after validation
-  context.set('__oauth_state', undefined);
+
+  // Clear the state cookie
+  const clearStateCookie = buildClearCookieHeader('__oauth_state', { path: '/' });
 
   const user = await provider.handleCallback(params);
   if (!user) {
@@ -1006,5 +1040,6 @@ export async function handleOAuthCallback(
   }
 
   // Create session through auth context
-  return auth.signIn(providerId, { user });
+  const session = await auth.signIn(providerId, { user });
+  return { session, clearStateCookie };
 }

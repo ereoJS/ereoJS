@@ -53,7 +53,7 @@ describe('resolveAuthDenial', () => {
     const auth: AuthConfig = { redirect: '/login?from={pathname}' };
     const res = resolveAuthDenial(auth, GET('/dashboard'));
 
-    expect(res.status).toBe(302);
+    expect(res.status).toBe(303);
     expect(res.headers.get('Location')).toBe('/login?from=%2Fdashboard');
   });
 
@@ -78,7 +78,7 @@ describe('resolveAuthDenial', () => {
     };
     const res = resolveAuthDenial(auth, GET());
 
-    expect(res.status).toBe(302);
+    expect(res.status).toBe(303);
     expect(res.headers.get('Location')).toBe('/login');
   });
 });
@@ -99,7 +99,7 @@ describe('resolveCheckResult', () => {
   test('redirects when result has redirect', () => {
     const res = resolveCheckResult({ allowed: false, redirect: '/upgrade' });
 
-    expect(res.status).toBe(302);
+    expect(res.status).toBe(303);
     expect(res.headers.get('Location')).toBe('/upgrade');
   });
 
@@ -208,7 +208,7 @@ describe('enforceAuthConfig — static checks', () => {
       {},
     );
     expect(result).not.toBeNull();
-    expect(result!.status).toBe(302);
+    expect(result!.status).toBe(303);
     expect(result!.headers.get('Location')).toBe('/login');
   });
 
@@ -258,7 +258,7 @@ describe('enforceAuthConfig — boolean check', () => {
       {},
     );
     expect(result).not.toBeNull();
-    expect(result!.status).toBe(302);
+    expect(result!.status).toBe(303);
     expect(result!.headers.get('Location')).toBe('/login');
   });
 
@@ -306,7 +306,7 @@ describe('enforceAuthConfig — AuthCheckResult', () => {
       {},
     );
     expect(result).not.toBeNull();
-    expect(result!.status).toBe(302);
+    expect(result!.status).toBe(303);
     expect(result!.headers.get('Location')).toBe('/upgrade');
   });
 
@@ -495,7 +495,7 @@ describe('enforceAuthConfig — ownership pattern', () => {
     );
 
     expect(result).not.toBeNull();
-    expect(result!.status).toBe(302);
+    expect(result!.status).toBe(303);
     expect(result!.headers.get('Location')).toBe('/login?from=%2Fposts%2F42');
     expect(checkCalled).toBe(false);
   });
@@ -719,7 +719,7 @@ describe('requireAuth helper', () => {
       {},
     );
     expect(result).not.toBeNull();
-    expect(result!.status).toBe(302);
+    expect(result!.status).toBe(303);
     expect(result!.headers.get('Location')).toBe('/login');
   });
 });

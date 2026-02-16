@@ -109,8 +109,8 @@ class ClientRouter {
     this.blockers.clear();
     this.notifyBlockers();
     if (pending) {
-      this.navigate(pending.to, pending.options).then(() => {
-        // Restore blockers after navigation completes
+      this.navigate(pending.to, pending.options).finally(() => {
+        // Restore blockers after navigation completes (even on failure)
         for (const fn of savedBlockers) {
           this.blockers.add(fn);
         }
@@ -151,11 +151,13 @@ class ClientRouter {
     window.addEventListener('popstate', (event) => {
       // Check blockers for back/forward navigation
       if (this.isBlocked()) {
+        // Capture destination BEFORE restoring old state (pushState changes window.location)
+        const destination = window.location.pathname + window.location.search + window.location.hash;
         // Undo the browser navigation
         const current = this.currentState;
         window.history.pushState(current.state, '', current.pathname + current.search + current.hash);
         this.pendingNavigation = {
-          to: window.location.pathname + window.location.search + window.location.hash,
+          to: destination,
           options: {},
         };
         this.notifyBlockers();
@@ -346,6 +348,9 @@ export async function fetchLoaderData<T = unknown>(
   pathname: string,
   params?: RouteParams
 ): Promise<T> {
+  if (typeof window === 'undefined') {
+    throw new Error('fetchLoaderData is only available in the browser');
+  }
   const url = new URL(pathname, window.location.origin);
 
   // Add params as query string if provided
@@ -397,20 +402,32 @@ export async function submitAction<T = unknown>(
 /**
  * Scroll restoration helper.
  */
+let scrollRestorationInitialized = false;
+
 export function setupScrollRestoration(): void {
   if (typeof window === 'undefined') return;
+  // Prevent duplicate setup (e.g., double initClient calls)
+  if (scrollRestorationInitialized) return;
+  scrollRestorationInitialized = true;
 
   // Disable browser's default scroll restoration
   if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
   }
 
-  // Store scroll positions
+  // Store scroll positions (capped to prevent memory leaks)
+  const MAX_SCROLL_ENTRIES = 200;
   const scrollPositions = new Map<string, number>();
 
   // Save scroll position before navigation
   router.subscribe((event) => {
     scrollPositions.set(event.from.pathname, window.scrollY);
+
+    // Evict oldest entries if over capacity
+    if (scrollPositions.size > MAX_SCROLL_ENTRIES) {
+      const firstKey = scrollPositions.keys().next().value;
+      if (firstKey !== undefined) scrollPositions.delete(firstKey);
+    }
 
     // Restore scroll position on back/forward
     if (event.type === 'pop') {
