@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --cwd ../cli dev",
-    "build": "bun run --cwd ../cli build",
-    "start": "bun run --cwd ../cli start",
+    "dev": "bun run ../cli/src/index.ts dev",
+    "build": "bun run ../cli/src/index.ts build",
+    "start": "bun run ../cli/src/index.ts start",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
