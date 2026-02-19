@@ -23,7 +23,8 @@ export interface StartOptions {
  */
 export async function start(options: StartOptions = {}): Promise<void> {
   const root = process.cwd();
-  const buildDir = join(root, '.ereo');
+  const loadedConfig = await loadConfig(root);
+  const buildDir = join(root, loadedConfig.config.build?.outDir || '.ereo');
 
   console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Production Server\n');
 
@@ -36,9 +37,7 @@ export async function start(options: StartOptions = {}): Promise<void> {
 
   // Load manifest
   const manifest = await Bun.file(manifestPath).json();
-
-  // Load config if exists
-  const { config } = await loadConfig(root);
+  const config = loadedConfig.config;
 
   const port = options.port || config.server?.port || 3000;
   const hostname = options.host || config.server?.hostname || '0.0.0.0';
@@ -57,7 +56,7 @@ export async function start(options: StartOptions = {}): Promise<void> {
 
   // Initialize router from built routes
   const router = await initFileRouter({
-    routesDir: config.routesDir || 'app/routes',
+    routesDir: join(buildDir, 'routes'),
     watch: false,
   });
 
@@ -76,6 +75,7 @@ export async function start(options: StartOptions = {}): Promise<void> {
       maxAge: 31536000,
       immutable: true,
     },
+    clientEntry: manifest.clientEntry ? `/_ereo/${manifest.clientEntry}` : undefined,
   });
 
   server.setApp(app);

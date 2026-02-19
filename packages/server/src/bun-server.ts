@@ -152,6 +152,10 @@ export interface ServerOptions {
  * Bun server instance.
  */
 export class BunServer {
+  private static readonly HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'] as const;
+  private static readonly METHOD_OVERRIDE_HEADER = '_method';
+  private static readonly METHOD_OVERRIDE_ALLOWED = new Set(['PUT', 'PATCH', 'DELETE']);
+
   private server: Server<unknown> | null = null;
   private app: EreoApp | null = null;
   private router: FileRouter | null = null;
@@ -481,6 +485,7 @@ export class BunServer {
     context: RequestContext
   ): Promise<Response> {
     const module = match.route.module!;
+    const httpMethod = await this.getEffectiveMethod(request);
 
     // --- Auth Config Enforcement ---
     const routeAuthConfig = match.route.config?.auth || module.config?.auth;
@@ -490,9 +495,7 @@ export class BunServer {
     }
 
     // --- Method Handler Dispatch (API Routes) ---
-    const httpMethod = request.method.toUpperCase();
-    const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'] as const;
-    if (HTTP_METHODS.includes(httpMethod as any)) {
+    if (BunServer.HTTP_METHODS.includes(httpMethod as any)) {
       const methodHandler = (module as Record<string, unknown>)[httpMethod] as MethodHandlerFunction | undefined;
       if (typeof methodHandler === 'function') {
         const result = await methodHandler({ request, params: match.params, context });
@@ -525,7 +528,7 @@ export class BunServer {
     }
 
     // Handle actions (POST, PUT, DELETE, PATCH)
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (httpMethod !== 'GET' && httpMethod !== 'HEAD') {
       if (module.action) {
         const result = await module.action({
           request,
@@ -553,21 +556,26 @@ export class BunServer {
         const loaderArgs = { request, params: match.params, context };
         const loaderPromises: Promise<unknown>[] = [];
         loaderPromises.push(
-          module.loader ? Promise.resolve(module.loader(loaderArgs)) : Promise.resolve(null)
+          module.loader ? Promise.resolve(module.loader(loaderArgs)) : Promise.resolve(undefined)
         );
         for (const layout of layouts) {
           loaderPromises.push(
-            layout.module?.loader ? Promise.resolve(layout.module.loader(loaderArgs)) : Promise.resolve(null)
+            layout.module?.loader ? Promise.resolve(layout.module.loader(loaderArgs)) : Promise.resolve(undefined)
           );
         }
         const loaderResults = await Promise.all(loaderPromises);
-        const loaderData = loaderResults[0];
+        const loaderData = module.loader && loaderResults[0] === undefined
+          ? null
+          : loaderResults[0];
         if (loaderData instanceof Response) return loaderData;
         const layoutLoaderData = new Map<string, unknown>();
         for (let i = 0; i < layouts.length; i++) {
-          const layoutData = loaderResults[i + 1];
+          let layoutData = loaderResults[i + 1];
+          if (layouts[i].module?.loader && layoutData === undefined) {
+            layoutData = null;
+          }
           if (layoutData instanceof Response) return layoutData;
-          if (layoutData !== null) layoutLoaderData.set(layouts[i].id, layoutData);
+          if (layoutData !== undefined) layoutLoaderData.set(layouts[i].id, layoutData);
         }
         const routeHeaders = this.buildRouteHeaders(match);
         const htmlResponse = await this.renderPage(request, match, context, loaderData, layoutLoaderData, result);
@@ -594,7 +602,7 @@ export class BunServer {
           : Promise.resolve(loaderFn())
       );
     } else {
-      loaderPromises.push(Promise.resolve(null));
+      loaderPromises.push(Promise.resolve(undefined));
     }
 
     // Layout loaders (run in parallel with route loader)
@@ -607,7 +615,7 @@ export class BunServer {
             : Promise.resolve(layoutLoaderFn())
         );
       } else {
-        loaderPromises.push(Promise.resolve(null));
+        loaderPromises.push(Promise.resolve(undefined));
       }
     }
 
@@ -632,7 +640,9 @@ export class BunServer {
     }
 
     // First result is the route loader data
-    const loaderData = loaderResults[0];
+    const loaderData = module.loader && loaderResults[0] === undefined
+      ? null
+      : loaderResults[0];
     if (loaderData instanceof Response) {
       return loaderData;
     }
@@ -640,11 +650,14 @@ export class BunServer {
     // Build layout data map (keyed by layout route ID)
     const layoutLoaderData = new Map<string, unknown>();
     for (let i = 0; i < layouts.length; i++) {
-      const layoutData = loaderResults[i + 1];
+      let layoutData = loaderResults[i + 1];
+      if (layouts[i].module?.loader && layoutData === undefined) {
+        layoutData = null;
+      }
       if (layoutData instanceof Response) {
         return layoutData; // Layout loader returned a Response (e.g., redirect)
       }
-      if (layoutData !== null) {
+      if (layoutData !== undefined) {
         layoutLoaderData.set(layouts[i].id, layoutData);
       }
     }
@@ -655,9 +668,11 @@ export class BunServer {
     // JSON request (client-side navigation)
     if (request.headers.get('Accept')?.includes('application/json')) {
       // Resolve any deferred data before JSON serialization
-      const resolvedLoaderData = hasDeferredData(loaderData)
-        ? await resolveAllDeferred(loaderData)
-        : loaderData;
+      const resolvedLoaderData = loaderData === undefined
+        ? null
+        : (hasDeferredData(loaderData)
+          ? await resolveAllDeferred(loaderData)
+          : loaderData);
 
       const jsonPayload: Record<string, unknown> = {
         data: resolvedLoaderData,
@@ -1019,7 +1034,7 @@ export class BunServer {
 
       // Pre-build loader script if no deferred data (fast path).
       // Client entry is NOT included here — React handles it via bootstrapModules.
-      const loaderScript = (!hasDeferred && loaderData)
+      const loaderScript = (!hasDeferred && loaderData !== undefined)
         ? encoder.encode(`${traceScript}<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`)
         : (traceScript ? encoder.encode(traceScript) : null);
 
@@ -1128,7 +1143,7 @@ export class BunServer {
       }
 
       // Inject loader data and client script before closing body tag
-      const loaderScript = resolvedData
+      const loaderScript = resolvedData !== undefined
         ? `${traceScript}<script>window.__EREO_DATA__=${serializeLoaderData(resolvedData)}</script>`
         : traceScript;
       const clientScript = `<script type="module" src="${this.options.clientEntry}"></script>`;
@@ -1226,6 +1241,36 @@ export class BunServer {
         'Content-Type': 'text/html; charset=utf-8',
       },
     });
+  }
+
+  private async getEffectiveMethod(request: Request): Promise<string> {
+    const method = request.method.toUpperCase();
+
+    if (method !== 'POST') {
+      return method;
+    }
+
+    const contentType = request.headers.get('Content-Type') || '';
+    const isFormSubmission =
+      contentType.includes('application/x-www-form-urlencoded') ||
+      contentType.includes('multipart/form-data');
+
+    if (!isFormSubmission) {
+      return method;
+    }
+
+    try {
+      const formData = await request.clone().formData();
+      const override = formData.get(BunServer.METHOD_OVERRIDE_HEADER);
+      if (typeof override !== 'string') {
+        return method;
+      }
+
+      const normalized = override.toUpperCase();
+      return BunServer.METHOD_OVERRIDE_ALLOWED.has(normalized) ? normalized : method;
+    } catch {
+      return method;
+    }
   }
 
   /**

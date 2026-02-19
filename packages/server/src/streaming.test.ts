@@ -167,6 +167,16 @@ describe('@ereo/server - Streaming', () => {
       expect(tail).toContain('user');
     });
 
+    test('includes loader data script for falsy values', () => {
+      const falseTail = createShell({ loaderData: false }).tail;
+      const zeroTail = createShell({ loaderData: 0 }).tail;
+      const emptyTail = createShell({ loaderData: '' }).tail;
+
+      expect(falseTail).toContain('window.__EREO_DATA__=false');
+      expect(zeroTail).toContain('window.__EREO_DATA__=0');
+      expect(emptyTail).toContain('window.__EREO_DATA__=""');
+    });
+
     test('includes custom head content', () => {
       const { head } = createShell({
         shell: {

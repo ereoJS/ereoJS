@@ -136,6 +136,12 @@ function parseArgs(args: string[]): {
   return { command, options, positional };
 }
 
+function parseOptionalBoolean(value: string | boolean | undefined): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  return value !== 'false';
+}
+
 /**
  * Main CLI entry point.
  */
@@ -170,8 +176,8 @@ async function main(): Promise<void> {
       case 'build': {
         const buildOptions: BuildCommandOptions = {
           outDir: options.outDir as string | undefined,
-          minify: options.minify === 'false' ? false : true,
-          sourcemap: options.sourcemap === 'false' ? false : true,
+          minify: parseOptionalBoolean(options.minify),
+          sourcemap: parseOptionalBoolean(options.sourcemap),
         };
         await build(buildOptions);
         break;

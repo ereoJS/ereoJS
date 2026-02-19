@@ -104,9 +104,9 @@ export function createShell(options: {
     .map((src) => `<script type="module" src="${escapeAttr(src)}"></script>`)
     .join('\n    ');
 
-  const loaderScript = loaderData
-    ? `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`
-    : '';
+  const loaderScript = loaderData === undefined
+    ? ''
+    : `<script>window.__EREO_DATA__=${serializeLoaderData(loaderData)}</script>`;
 
   const head = `<!DOCTYPE html>
 <html ${htmlAttrs}>
@@ -152,16 +152,19 @@ export async function renderToStream(
   const { shell, scripts = [], styles = [] } = options;
 
   // Execute loader if available
-  let loaderData: unknown = null;
+  let loaderData: unknown = undefined;
   if (options.match.route.module?.loader) {
     loaderData = await options.match.route.module.loader({
       request: options.request ?? new Request('http://localhost'),
       params: options.match.params,
       context: options.context,
     });
+    if (loaderData === undefined) {
+      loaderData = null;
+    }
   }
 
-  const hasDeferred = hasDeferredData(loaderData);
+  const hasDeferred = loaderData !== undefined && hasDeferredData(loaderData);
 
   // Don't pass scripts to createShell — React's bootstrapModules handles
   // the client entry injection, avoiding double <script> tags.
@@ -169,7 +172,7 @@ export async function renderToStream(
     shell,
     scripts: [],
     styles,
-    loaderData: hasDeferred ? null : loaderData,
+    loaderData: hasDeferred ? undefined : loaderData,
   });
 
   return new Promise((resolve, reject) => {
@@ -278,17 +281,20 @@ export async function renderToString(
   const { shell, scripts = [], styles = [] } = options;
 
   // Execute loader if available
-  let loaderData: unknown = null;
+  let loaderData: unknown = undefined;
   if (options.match.route.module?.loader) {
     loaderData = await options.match.route.module.loader({
       request: options.request ?? new Request('http://localhost'),
       params: options.match.params,
       context: options.context,
     });
+    if (loaderData === undefined) {
+      loaderData = null;
+    }
   }
 
   // Resolve any deferred data before serialization
-  if (hasDeferredData(loaderData)) {
+  if (loaderData !== undefined && hasDeferredData(loaderData)) {
     loaderData = await resolveAllDeferred(loaderData);
   }
 

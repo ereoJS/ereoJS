@@ -64,6 +64,9 @@ export class EreoApp implements Application {
   private middlewares: MiddlewareHandler[] = [];
   private routeMatcher: ((pathname: string) => RouteMatch | null) | null = null;
 
+  private static readonly METHOD_OVERRIDE_HEADER = '_method';
+  private static readonly METHOD_OVERRIDE_ALLOWED = new Set(['PUT', 'PATCH', 'DELETE']);
+
   constructor(options: ApplicationOptions = {}) {
     // Merge config with defaults
     this.config = this.mergeConfig(defaultConfig, options.config || {});
@@ -188,9 +191,18 @@ export class EreoApp implements Application {
     const url = new URL(request.url);
     let pathname = url.pathname;
 
+    const effectiveMethod = await this.getEffectiveMethod(request);
+
     // Remove base path if configured
-    if (this.config.basePath && pathname.startsWith(this.config.basePath)) {
-      pathname = pathname.slice(this.config.basePath.length) || '/';
+    const normalizedBasePath = this.normalizeBasePath(this.config.basePath);
+    if (
+      normalizedBasePath &&
+      (pathname === normalizedBasePath || pathname.startsWith(normalizedBasePath + '/'))
+    ) {
+      pathname = pathname.slice(normalizedBasePath.length) || '/';
+      if (!pathname.startsWith('/')) {
+        pathname = '/' + pathname;
+      }
     }
 
     // Match route
@@ -211,7 +223,7 @@ export class EreoApp implements Application {
     const module = match.route.module;
 
     // Handle actions (POST, PUT, DELETE, PATCH)
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (effectiveMethod !== 'GET' && effectiveMethod !== 'HEAD') {
       if (module.action) {
         const actionData = await module.action({
           request,
@@ -256,6 +268,43 @@ export class EreoApp implements Application {
     // For full page requests, we need the renderer
     // This will be handled by @ereo/server with React rendering
     return this.jsonResponse({ loaderData, params: match.params });
+  }
+
+  private normalizeBasePath(basePath: string | undefined): string {
+    if (!basePath || basePath === '/') {
+      return '';
+    }
+    return basePath.replace(/\/+$/, '');
+  }
+
+  private async getEffectiveMethod(request: Request): Promise<string> {
+    const method = request.method.toUpperCase();
+
+    if (method !== 'POST') {
+      return method;
+    }
+
+    const contentType = request.headers.get('Content-Type') || '';
+    const isFormSubmission =
+      contentType.includes('application/x-www-form-urlencoded') ||
+      contentType.includes('multipart/form-data');
+
+    if (!isFormSubmission) {
+      return method;
+    }
+
+    try {
+      const formData = await request.clone().formData();
+      const override = formData.get(EreoApp.METHOD_OVERRIDE_HEADER);
+      if (typeof override !== 'string') {
+        return method;
+      }
+
+      const normalized = override.toUpperCase();
+      return EreoApp.METHOD_OVERRIDE_ALLOWED.has(normalized) ? normalized : method;
+    } catch {
+      return method;
+    }
   }
 
   /**

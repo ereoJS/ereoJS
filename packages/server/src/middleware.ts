@@ -154,6 +154,7 @@ export function cors(options: CorsOptions = {}): MiddlewareHandler {
 
   return async (request, context, next) => {
     const requestOrigin = request.headers.get('Origin');
+    const isWildcardOrigin = typeof origin === 'string' && origin === '*';
 
     // Determine allowed origin
     let allowedOrigin: string | null = null;
@@ -165,16 +166,35 @@ export function cors(options: CorsOptions = {}): MiddlewareHandler {
       allowedOrigin = requestOrigin && origin(requestOrigin) ? requestOrigin : null;
     }
 
+    const responseOrigin = (() => {
+      if (allowedOrigin === '*') {
+        // Wildcard cannot be used with credentials; echo the request origin instead.
+        if (credentials && requestOrigin) {
+          return requestOrigin;
+        }
+        return '*';
+      }
+      return allowedOrigin;
+    })();
+
+    const shouldVaryOrigin = !isWildcardOrigin || (credentials && !!requestOrigin);
+
     // Handle preflight
     if (request.method === 'OPTIONS') {
+      // Explicitly reject preflight from disallowed origins instead of falling back to '*'.
+      if (requestOrigin && !responseOrigin) {
+        return new Response(null, { status: 403 });
+      }
+
       return new Response(null, {
         status: 204,
         headers: {
-          'Access-Control-Allow-Origin': allowedOrigin || '*',
+          ...(responseOrigin ? { 'Access-Control-Allow-Origin': responseOrigin } : {}),
           'Access-Control-Allow-Methods': methods.join(', '),
           'Access-Control-Allow-Headers': allowedHeaders.join(', '),
           'Access-Control-Max-Age': maxAge.toString(),
           ...(credentials && { 'Access-Control-Allow-Credentials': 'true' }),
+          ...(shouldVaryOrigin ? { Vary: 'Origin' } : {}),
         },
       });
     }
@@ -183,8 +203,11 @@ export function cors(options: CorsOptions = {}): MiddlewareHandler {
     const response = await next();
     const headers = new Headers(response.headers);
 
-    if (allowedOrigin) {
-      headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    if (responseOrigin) {
+      headers.set('Access-Control-Allow-Origin', responseOrigin);
+      if (shouldVaryOrigin) {
+        headers.set('Vary', 'Origin');
+      }
     }
     if (exposedHeaders.length > 0) {
       headers.set('Access-Control-Expose-Headers', exposedHeaders.join(', '));

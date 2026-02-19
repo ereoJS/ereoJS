@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { createApp, defineConfig, EreoApp, isEreoApp } from './app';
-import type { FrameworkConfig, Plugin, RouteMatch, RequestContext, RouteErrorComponentProps, ErrorBoundaryProps } from './types';
+import type { FrameworkConfig, Plugin, RouteMatch, RouteErrorComponentProps, ErrorBoundaryProps } from './types';
 
 describe('@ereo/core - App', () => {
   describe('createApp', () => {
@@ -775,6 +775,35 @@ describe('@ereo/core - App HTTP methods', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ patched: true });
   });
+
+  test('POST form method override dispatches as DELETE', async () => {
+    const app = createApp();
+    let actionCalled = false;
+
+    const mockModule = {
+      action: async () => {
+        actionCalled = true;
+        return { deleted: true };
+      },
+    };
+
+    app.setRouteMatcher((pathname): RouteMatch | null => ({
+      route: { id: 'item', path: '/item', file: '/item.tsx', module: mockModule },
+      params: {},
+      pathname,
+    }));
+
+    const body = new URLSearchParams({ _method: 'DELETE' });
+    const response = await app.handle(new Request('http://localhost:3000/item', {
+      method: 'POST',
+      body,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }));
+
+    expect(actionCalled).toBe(true);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ deleted: true });
+  });
 });
 
 // ============================================================================
@@ -1305,10 +1334,7 @@ describe('@ereo/core - App basePath additional cases', () => {
     });
 
     await app.handle(new Request('http://localhost:3000/app/dashboard'));
-    // '/app/' does not match '/app/dashboard' because startsWith('/app/') fails
-    // (pathname is '/app/dashboard' which starts with '/app/')
-    // Actually '/app/dashboard'.startsWith('/app/') is true!
-    expect(matchedPath).toBe('dashboard');
+    expect(matchedPath).toBe('/dashboard');
   });
 
   test('empty basePath does not modify pathname', async () => {

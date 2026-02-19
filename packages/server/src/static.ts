@@ -167,6 +167,7 @@ export function serveStatic(options: StaticOptions): (request: Request) => Promi
     // Build file path with additional traversal protection
     const resolvedRoot = resolve(root);
     let filepath = resolve(root, normalize(pathname.replace(/^\//, '')));
+    const requestedExt = extname(filepath).toLowerCase();
 
     if (!filepath.startsWith(resolvedRoot)) {
       return new Response('Forbidden', { status: 403 });
@@ -225,9 +226,9 @@ export function serveStatic(options: StaticOptions): (request: Request) => Promi
         headers.set('Cache-Control', `public, max-age=${maxAge}`);
       }
 
-      // Add Vary header for images when format negotiation is enabled
-      const ext = extname(filepath).toLowerCase();
-      if (negotiateImageFormat && NEGOTIABLE_IMAGE_EXTENSIONS.includes(ext)) {
+      // Add Vary header for negotiable image requests so caches key by Accept.
+      // Use the original requested extension (before variant replacement).
+      if (negotiateImageFormat && NEGOTIABLE_IMAGE_EXTENSIONS.includes(requestedExt)) {
         headers.set('Vary', 'Accept');
       }
 

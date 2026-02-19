@@ -342,7 +342,21 @@ export function matchWithLayouts(
   // Layouts apply if the matched route's path starts with the layout's path
   const layouts: Route[] = [];
 
-  const collectLayouts = (routeList: Route[], currentPath: string): void => {
+  const isLayoutInMatchedScope = (layoutId: string, matchedRouteId: string): boolean => {
+    // Root layout applies globally.
+    if (layoutId === '/_layout') {
+      return true;
+    }
+
+    const layoutScope = layoutId.replace(/\/_layout$/, '');
+    if (!layoutScope || layoutScope === '/') {
+      return true;
+    }
+
+    return matchedRouteId === layoutScope || matchedRouteId.startsWith(layoutScope + '/');
+  };
+
+  const collectLayouts = (routeList: Route[]): void => {
     for (const route of routeList) {
       if (route.layout) {
         // A layout at path "/" applies to all routes
@@ -350,19 +364,23 @@ export function matchWithLayouts(
         const layoutPath = route.path === '/' ? '' : route.path;
         const matchPath = match.pathname === '/' ? '' : match.pathname;
 
-        if (matchPath === layoutPath || matchPath.startsWith(layoutPath + '/') || layoutPath === '') {
+        const pathMatches =
+          matchPath === layoutPath || matchPath.startsWith(layoutPath + '/') || layoutPath === '';
+        const scopeMatches = isLayoutInMatchedScope(route.id, match.route.id);
+
+        if (pathMatches && scopeMatches) {
           layouts.push(route);
         }
       }
 
       // Recurse into children
       if (route.children) {
-        collectLayouts(route.children, currentPath + route.path);
+        collectLayouts(route.children);
       }
     }
   };
 
-  collectLayouts(routes, '');
+  collectLayouts(routes);
 
   // Sort layouts by path length (shortest first = outermost)
   layouts.sort((a, b) => a.path.length - b.path.length);

@@ -213,6 +213,8 @@ describe('@ereo/server - Middleware', () => {
       });
 
       expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://example.com');
+      expect(response.headers.get('Vary')).toBe('Origin');
     });
 
     test('adds exposed headers', async () => {
@@ -702,7 +704,7 @@ describe('@ereo/server - Middleware', () => {
       expect(response.headers.get('Access-Control-Allow-Credentials')).toBe('true');
     });
 
-    test('function origin with preflight for non-matching origin falls back to *', async () => {
+    test('function origin with preflight for non-matching origin is rejected', async () => {
       const middleware = cors({
         origin: (origin) => origin === 'http://only-this.com',
       });
@@ -715,9 +717,8 @@ describe('@ereo/server - Middleware', () => {
 
       const response = await middleware(request, context, async () => new Response('Should not reach'));
 
-      expect(response.status).toBe(204);
-      // Fallback to * when allowedOrigin is null
-      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response.status).toBe(403);
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
     });
 
     test('cors without Origin header returns no CORS headers on regular request', async () => {

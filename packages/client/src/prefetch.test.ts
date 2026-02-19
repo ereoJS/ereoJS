@@ -275,7 +275,7 @@ describe('@ereo/client - Prefetch', () => {
       await prefetch('/test-url');
 
       expect(isPrefetched('/test-url')).toBe(true);
-      expect(getPrefetchedData('/test-url')).toEqual({ data: 'test' });
+      expect(getPrefetchedData<{ data: string }>('/test-url')).toEqual({ data: 'test' });
     });
 
     test('stores error on fetch failure', async () => {
@@ -321,6 +321,21 @@ describe('@ereo/client - Prefetch', () => {
       await prefetch('/cached');
 
       expect(fetchCount).toBe(1);
+    });
+
+    test('treats query variants as distinct cache keys', async () => {
+      let fetchCount = 0;
+      globalThis.fetch = async (url: any) => {
+        fetchCount++;
+        return new Response(JSON.stringify({ url: String(url) }), { status: 200 });
+      };
+
+      await prefetch('/products?page=1');
+      await prefetch('/products?page=2');
+
+      expect(fetchCount).toBe(2);
+      expect(getPrefetchedData<{ url: string }>('/products?page=1')).toEqual({ url: '/products?page=1' });
+      expect(getPrefetchedData<{ url: string }>('/products?page=2')).toEqual({ url: '/products?page=2' });
     });
   });
 

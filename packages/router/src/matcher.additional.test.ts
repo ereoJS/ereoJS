@@ -404,5 +404,38 @@ describe('@ereo/router - Matcher (Additional Coverage)', () => {
       expect(result).not.toBeNull();
       expect(result?.params.id).toBe('456');
     });
+
+    test('does not leak layouts across route groups with same URL path', () => {
+      const routes: Route[] = [
+        {
+          id: '/(marketing)/_layout',
+          path: '/',
+          file: '/(marketing)/_layout.tsx',
+          layout: true,
+        },
+        {
+          id: '/(marketing)/pricing',
+          path: '/pricing',
+          file: '/(marketing)/pricing.tsx',
+        },
+        {
+          id: '/(app)/_layout',
+          path: '/',
+          file: '/(app)/_layout.tsx',
+          layout: true,
+        },
+        {
+          id: '/(app)/pricing',
+          path: '/pricing',
+          file: '/(app)/pricing.tsx',
+        },
+      ];
+
+      const result = matchWithLayouts('/pricing', routes);
+
+      expect(result).not.toBeNull();
+      expect(result?.route.id).toBe('/(marketing)/pricing');
+      expect(result?.layouts.map((layout) => layout.id)).toEqual(['/(marketing)/_layout']);
+    });
   });
 });

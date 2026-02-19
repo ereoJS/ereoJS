@@ -14,6 +14,8 @@ describe('@ereo/server - Static', () => {
     await writeFile(join(TEST_DIR, 'index.html'), '<html><body>Index</body></html>');
     await writeFile(join(TEST_DIR, 'subdir', 'nested.txt'), 'Nested content');
     await writeFile(join(TEST_DIR, 'script.abc12345.js'), 'console.log("fingerprinted")');
+    await writeFile(join(TEST_DIR, 'photo.jpg'), 'jpg-bytes');
+    await writeFile(join(TEST_DIR, 'photo.webp'), 'webp-bytes');
   });
 
   afterEach(async () => {
@@ -344,6 +346,20 @@ describe('@ereo/server - Static', () => {
 
       expect(response).not.toBeNull();
       expect(response!.status).toBe(200);
+    });
+
+    test('sets Vary: Accept when serving optimized image variant', async () => {
+      const handler = serveStatic({ root: TEST_DIR, negotiateImageFormat: true });
+      const request = new Request('http://localhost:3000/photo.jpg', {
+        headers: { Accept: 'image/webp' },
+      });
+
+      const response = await handler(request);
+
+      expect(response).not.toBeNull();
+      expect(response!.status).toBe(200);
+      expect(response!.headers.get('Content-Type')).toBe('image/webp');
+      expect(response!.headers.get('Vary')).toBe('Accept');
     });
   });
 

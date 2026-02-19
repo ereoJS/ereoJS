@@ -184,15 +184,30 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   // Handle route changes
   router.on('reload', () => {
     console.log('\x1b[33m⟳\x1b[0m Routes reloaded');
-    // Don't eagerly loadAllModules — modules will be loaded on-demand
-    // per request with mtime-based freshness checks. This avoids serving
-    // stale content from Bun's import cache.
+    // Clear island module cache to prevent stale middleware/components
+    islandModuleCache.clear();
+    // Clear Bun's module cache for app directory to ensure fresh loads
+    for (const key of Object.keys((globalThis as any).__BUN_MODULE_CACHE__ || {})) {
+      if (key.includes('/app/')) {
+        delete (globalThis as any).__BUN_MODULE_CACHE__?.[key];
+      }
+    }
     hmr.reload();
   });
 
   router.on('change', (route) => {
     console.log(`\x1b[33m⟳\x1b[0m ${route.path} changed`);
-    hmr.jsUpdate(route.file);
+    // Invalidate specific module from cache
+    const absolutePath = join(root, route.file);
+    islandModuleCache.delete(absolutePath);
+    // Clear from Bun's module cache
+    for (const key of Object.keys((globalThis as any).__BUN_MODULE_CACHE__ || {})) {
+      if (key === absolutePath || key.endsWith(route.file)) {
+        delete (globalThis as any).__BUN_MODULE_CACHE__?.[key];
+      }
+    }
+    // Pass absolute path so ModuleAnalyzer can read the file
+    hmr.jsUpdate(absolutePath);
   });
 
   // Setup tracing if enabled

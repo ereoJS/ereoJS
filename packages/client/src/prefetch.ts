@@ -48,23 +48,58 @@ function isCacheValid(entry: PrefetchEntry, cacheDuration: number): boolean {
   return Date.now() - entry.timestamp < cacheDuration;
 }
 
+function normalizePrefetchUrl(url: string): string {
+  if (typeof window !== 'undefined') {
+    try {
+      const parsed = new URL(url, window.location.origin);
+      if (parsed.origin !== window.location.origin) {
+        return url;
+      }
+      return parsed.pathname + parsed.search;
+    } catch {
+      return url;
+    }
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname + parsed.search;
+  } catch {
+    return url;
+  }
+}
+
+function isSameOriginHref(href: string): boolean {
+  if (typeof window === 'undefined' || !href) {
+    return false;
+  }
+
+  try {
+    return new URL(href, window.location.origin).origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Prefetch a URL.
  */
 export async function prefetch(url: string): Promise<void> {
+  const cacheKey = normalizePrefetchUrl(url);
+
   // Check cache — skip if already loaded or currently loading
-  const cached = prefetchCache.get(url);
+  const cached = prefetchCache.get(cacheKey);
   if (cached && (cached.loading || isCacheValid(cached, defaultOptions.cacheDuration))) {
     return;
   }
 
   // Create entry
   const entry: PrefetchEntry = {
-    url,
+    url: cacheKey,
     timestamp: Date.now(),
     loading: true,
   };
-  prefetchCache.set(url, entry);
+  prefetchCache.set(cacheKey, entry);
 
   try {
     // Prefetch using fetch with low priority
@@ -93,7 +128,7 @@ export async function prefetch(url: string): Promise<void> {
  * Get prefetched data.
  */
 export function getPrefetchedData<T>(url: string): T | undefined {
-  const entry = prefetchCache.get(url);
+  const entry = prefetchCache.get(normalizePrefetchUrl(url));
   if (entry && isCacheValid(entry, defaultOptions.cacheDuration) && entry.data) {
     return entry.data as T;
   }
@@ -117,11 +152,11 @@ export function setupLinkPrefetch(
   const { strategy, threshold } = { ...defaultOptions, ...options };
   const href = element.href;
 
-  if (!href || !href.startsWith(window.location.origin)) {
+  if (!isSameOriginHref(href)) {
     return () => {};
   }
 
-  const url = new URL(href).pathname;
+  const url = normalizePrefetchUrl(href);
   let cleanup: (() => void) | null = null;
 
   switch (strategy) {
@@ -175,7 +210,7 @@ export function setupAutoPrefetch(options: PrefetchOptions = {}): () => void {
   const cleanups: Array<() => void> = [];
 
   // Setup existing links
-  const links = document.querySelectorAll('a[href^="/"]');
+  const links = document.querySelectorAll('a[href]');
   links.forEach((link) => {
     cleanups.push(setupLinkPrefetch(link as HTMLAnchorElement, options));
   });
@@ -184,11 +219,11 @@ export function setupAutoPrefetch(options: PrefetchOptions = {}): () => void {
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
-        if (node instanceof HTMLAnchorElement && node.href.startsWith('/')) {
+        if (node instanceof HTMLAnchorElement && isSameOriginHref(node.href)) {
           cleanups.push(setupLinkPrefetch(node, options));
         }
         if (node instanceof Element) {
-          const newLinks = node.querySelectorAll('a[href^="/"]');
+          const newLinks = node.querySelectorAll('a[href]');
           newLinks.forEach((link) => {
             cleanups.push(setupLinkPrefetch(link as HTMLAnchorElement, options));
           });
@@ -225,7 +260,7 @@ export interface LinkPrefetchProps {
  * Check if a URL is being prefetched.
  */
 export function isPrefetching(url: string): boolean {
-  const entry = prefetchCache.get(url);
+  const entry = prefetchCache.get(normalizePrefetchUrl(url));
   return entry?.loading ?? false;
 }
 
@@ -233,6 +268,6 @@ export function isPrefetching(url: string): boolean {
  * Check if a URL has been prefetched.
  */
 export function isPrefetched(url: string): boolean {
-  const entry = prefetchCache.get(url);
+  const entry = prefetchCache.get(normalizePrefetchUrl(url));
   return entry?.data !== undefined;
 }
