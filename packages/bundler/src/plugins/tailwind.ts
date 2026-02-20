@@ -558,7 +558,7 @@ export function generateTailwindConfig(options: TailwindPluginOptions = {}): str
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ${JSON.stringify(content, null, 4)},
-  darkMode: '${darkMode}',
+  darkMode: ${darkMode === false ? 'false' : `'${darkMode}'`},
   theme: {
     extend: {
       // Add your custom theme extensions here

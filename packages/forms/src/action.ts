@@ -272,6 +272,11 @@ export function useFormAction<T, TResult = unknown>(
     setIsSubmitting(false);
   }, []);
 
+  // Abort in-flight request on unmount to prevent state updates on unmounted component
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
   const submit = useCallback(
     async (values: T): Promise<ActionResult<TResult>> => {
       cancel();

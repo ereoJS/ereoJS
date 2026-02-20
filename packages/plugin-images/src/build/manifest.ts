@@ -73,12 +73,16 @@ export class ImageManifestManager {
 
   /**
    * Add or update an image entry.
+   * @param fileHash - Optional content hash of the source file. When provided,
+   *   `needsReprocessing()` can detect file changes accurately. Falls back to
+   *   metadata-based hash when omitted.
    */
   addImage(
     sourcePath: string,
-    data: Omit<ImageManifestEntry, 'hash'>
+    data: Omit<ImageManifestEntry, 'hash'>,
+    fileHash?: string
   ): void {
-    const hash = this.generateHash(sourcePath, data);
+    const hash = fileHash ?? this.generateHash(sourcePath, data);
 
     this.manifest.images[sourcePath] = {
       ...data,

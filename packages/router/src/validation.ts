@@ -57,6 +57,9 @@ export const validators = {
         throw new ParamValidationError('Value is required', 'value', value);
       }
       const str = Array.isArray(value) ? value[0] : value;
+      if (str === '' || (typeof str === 'string' && str.trim() === '')) {
+        throw new ParamValidationError('Value must be a number', 'value', value);
+      }
       const num = Number(str);
       if (isNaN(num)) {
         throw new ParamValidationError('Value must be a number', 'value', value);
@@ -205,6 +208,22 @@ export function safeValidateParams<T extends ParamValidationSchema>(
   }
 }
 
+/** Convert URLSearchParams to Record, preserving multi-value params */
+function searchParamsToRecord(sp: URLSearchParams): Record<string, string | string[]> {
+  const params: Record<string, string | string[]> = {};
+  for (const [key, value] of sp) {
+    const existing = params[key];
+    if (existing === undefined) {
+      params[key] = value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      params[key] = [existing, value];
+    }
+  }
+  return params;
+}
+
 /**
  * Validate search parameters against a schema.
  */
@@ -212,13 +231,13 @@ export function validateSearchParams<T extends SearchParamValidationSchema>(
   searchParams: URLSearchParams | string | Record<string, string | string[]>,
   schema: T
 ): Record<string, unknown> {
-  // Convert input to Record
+  // Convert input to Record, preserving multi-value params
   let params: Record<string, string | string[]>;
   if (typeof searchParams === 'string') {
     const url = new URL(`http://localhost:3000?${searchParams}`);
-    params = Object.fromEntries(url.searchParams.entries());
+    params = searchParamsToRecord(url.searchParams);
   } else if (searchParams instanceof URLSearchParams) {
-    params = Object.fromEntries(searchParams.entries());
+    params = searchParamsToRecord(searchParams);
   } else {
     params = searchParams;
   }
@@ -326,9 +345,6 @@ export function extractParamNames(path: string): string[] {
     if (segment.startsWith('[...') && segment.endsWith(']')) {
       // Catch-all
       names.push(segment.slice(4, -1));
-    } else if (segment.startsWith('[[[') && segment.endsWith(']]]')) {
-      // Optional catch-all
-      names.push(segment.slice(3, -3));
     } else if (segment.startsWith('[[') && segment.endsWith(']]')) {
       // Optional param
       names.push(segment.slice(2, -2));

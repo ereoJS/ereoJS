@@ -176,7 +176,11 @@ export class Store<T extends Record<string, unknown>> {
   /** Notify all store-level listeners */
   private _notifyListeners(): void {
     for (const listener of this._listeners) {
-      listener();
+      try {
+        listener();
+      } catch (e) {
+        console.error('Store listener error:', e);
+      }
     }
   }
 
@@ -202,6 +206,15 @@ export class Store<T extends Record<string, unknown>> {
   subscribe(listener: () => void): () => void {
     this._listeners.add(listener);
     return () => this._listeners.delete(listener);
+  }
+
+  /** Dispose the store: unsubscribe all internal signal subscriptions and clear listeners */
+  dispose(): void {
+    for (const unsub of this._internalUnsubs) {
+      unsub();
+    }
+    this._internalUnsubs = [];
+    this._listeners.clear();
   }
 
   /** Iterate over all signal entries */

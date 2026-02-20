@@ -97,6 +97,8 @@ export abstract class ConnectionPool<T> {
     totalCreated: 0,
     totalClosed: 0,
   };
+  /** Track idle timeout timers so they can be cleaned up */
+  private idleTimers = new Map<T, ReturnType<typeof setTimeout>>();
 
   constructor(config?: PoolConfig) {
     this.config = {
@@ -134,6 +136,12 @@ export abstract class ConnectionPool<T> {
     // Try to get an idle connection
     const idle = this.connections.pop();
     if (idle) {
+      // Cancel idle timeout for this connection
+      const timer = this.idleTimers.get(idle);
+      if (timer) {
+        clearTimeout(timer);
+        this.idleTimers.delete(idle);
+      }
       // Validate the connection before returning
       try {
         const isValid = await this.validateConnection(idle);
@@ -193,6 +201,12 @@ export abstract class ConnectionPool<T> {
   async close(): Promise<void> {
     this.closed = true;
 
+    // Clear all idle timeout timers
+    for (const timer of this.idleTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.idleTimers.clear();
+
     // Reject all waiters
     for (const waiter of this.waitQueue) {
       clearTimeout(waiter.timeout);
@@ -211,7 +225,18 @@ export abstract class ConnectionPool<T> {
     });
     this.connections = [];
 
-    await Promise.all(closePromises);
+    // Also close active connections (best-effort)
+    const activeClosePromises = Array.from(this.activeConnections).map(async (conn) => {
+      try {
+        await this.closeConnection(conn);
+        this.stats.totalClosed++;
+      } catch {
+        // Ignore close errors
+      }
+    });
+    this.activeConnections.clear();
+
+    await Promise.all([...closePromises, ...activeClosePromises]);
   }
 
   /**
@@ -309,7 +334,12 @@ export abstract class ConnectionPool<T> {
   private scheduleIdleTimeout(connection: T): void {
     if (this.config.idleTimeoutMs <= 0) return;
 
-    setTimeout(async () => {
+    // Clear any existing timer for this connection
+    const existing = this.idleTimers.get(connection);
+    if (existing) clearTimeout(existing);
+
+    const timer = setTimeout(async () => {
+      this.idleTimers.delete(connection);
       const index = this.connections.indexOf(connection);
       if (index !== -1) {
         this.connections.splice(index, 1);
@@ -321,6 +351,8 @@ export abstract class ConnectionPool<T> {
         }
       }
     }, this.config.idleTimeoutMs);
+
+    this.idleTimers.set(connection, timer);
   }
 
   /**

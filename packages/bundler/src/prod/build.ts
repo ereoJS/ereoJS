@@ -671,8 +671,8 @@ function generateServerEntry(routes: Route[], root: string, routeOutputMap: Map<
     imports.push(`import * as ${varName} from '${importPath.replace(/'/g, "\\'")}';`);
 
     routeRegistrations.push(`  {
-    id: '${route.id.replace(/'/g, "\\'")}',
-    path: '${route.path}',
+    id: ${JSON.stringify(route.id)},
+    path: ${JSON.stringify(route.path)},
     module: ${varName},
     index: ${route.index || false},
     layout: ${route.layout || false},
@@ -933,10 +933,11 @@ async function buildIslands(options: {
         isEntry: output.kind === 'entry-point',
       });
 
-      // Map islands to output files
+      // Map islands to output files (exact basename match to prevent Button/SubmitButton cross-match)
       if (output.kind === 'entry-point') {
+        const outputBaseName = basename(output.path, extname(output.path)).replace(/-[a-f0-9]+$/, '');
         const sourceIsland = islands.find(i =>
-          output.path.includes(basename(i.file, extname(i.file)))
+          basename(i.file, extname(i.file)) === outputBaseName
         );
         if (sourceIsland) {
           islandMap[sourceIsland.id] = relativePath;

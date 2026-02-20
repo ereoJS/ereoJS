@@ -33,6 +33,14 @@ async function fetchWithTimeout(
   }
 }
 
+/** Validate OAuth HTTP response, throwing a descriptive error on failure */
+async function assertOAuthResponse(response: Response, context: string): Promise<void> {
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => 'unknown error');
+    throw new Error(`${context} failed (${response.status}): ${errorBody}`);
+  }
+}
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -193,6 +201,7 @@ export function github(config: GitHubConfig): AuthProvider {
           redirect_uri: config.redirectUri,
         }),
       });
+      await assertOAuthResponse(tokenResponse, 'GitHub token exchange');
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
@@ -258,6 +267,7 @@ export function github(config: GitHubConfig): AuthProvider {
           redirect_uri: redirectUri,
         }),
       });
+      await assertOAuthResponse(tokenResponse, 'GitHub token exchange');
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
@@ -350,6 +360,7 @@ export function google(config: GoogleConfig): AuthProvider {
           grant_type: 'authorization_code',
         }),
       });
+      await assertOAuthResponse(tokenResponse, 'Google token exchange');
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
@@ -411,6 +422,7 @@ export function google(config: GoogleConfig): AuthProvider {
           grant_type: 'authorization_code',
         }),
       });
+      await assertOAuthResponse(tokenResponse, 'Google token exchange');
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
@@ -490,6 +502,7 @@ export function discord(config: DiscordConfig): AuthProvider {
           redirect_uri: config.redirectUri || '',
         }),
       });
+      await assertOAuthResponse(tokenResponse, 'Discord token exchange');
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
@@ -555,6 +568,7 @@ export function discord(config: DiscordConfig): AuthProvider {
           redirect_uri: redirectUri,
         }),
       });
+      await assertOAuthResponse(tokenResponse, 'Discord token exchange');
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
@@ -652,6 +666,7 @@ export function oauth(config: GenericOAuthConfig): AuthProvider {
           redirect_uri: config.redirectUri || '',
         }),
       });
+      await assertOAuthResponse(tokenResponse, `${config.name} token exchange`);
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;
@@ -722,6 +737,7 @@ export function oauth(config: GenericOAuthConfig): AuthProvider {
           redirect_uri: redirectUri,
         }),
       });
+      await assertOAuthResponse(tokenResponse, `${config.name} token exchange`);
 
       const tokenData = await tokenResponse.json() as OAuthTokens;
       if (!tokenData.access_token) return null;

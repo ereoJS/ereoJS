@@ -327,8 +327,21 @@ export const TypedLink = React.forwardRef(function TypedLink<
   };
 
   const internalRef = React.useRef<HTMLAnchorElement>(null);
-  const resolvedRef = (ref || internalRef) as React.RefObject<HTMLAnchorElement>;
   const hasPrefetched = React.useRef(false);
+  const prevHrefRef = React.useRef<string | null>(null);
+
+  // Merge forwarded ref with internal ref (supports callback, object, and null refs)
+  const mergedRef = React.useCallback(
+    (node: HTMLAnchorElement | null) => {
+      (internalRef as React.MutableRefObject<HTMLAnchorElement | null>).current = node;
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        (ref as React.MutableRefObject<HTMLAnchorElement | null>).current = node;
+      }
+    },
+    [ref]
+  );
 
   // Build the full URL
   const href = React.useMemo(() => {
@@ -338,6 +351,12 @@ export const TypedLink = React.forwardRef(function TypedLink<
       hash: hash as Partial<HashParamsFor<Path>>,
     });
   }, [to, params, search, hash]);
+
+  // Reset hasPrefetched when href changes
+  if (prevHrefRef.current !== href) {
+    prevHrefRef.current = href;
+    hasPrefetched.current = false;
+  }
 
   const isExternal = isExternalUrl(href);
 
@@ -413,7 +432,7 @@ export const TypedLink = React.forwardRef(function TypedLink<
       return;
     }
 
-    const element = resolvedRef.current;
+    const element = internalRef.current;
     if (!element) return;
 
     const observer = new IntersectionObserver(
@@ -434,12 +453,12 @@ export const TypedLink = React.forwardRef(function TypedLink<
     return () => {
       observer.disconnect();
     };
-  }, [prefetchStrategy, triggerPrefetch, resolvedRef]);
+  }, [prefetchStrategy, triggerPrefetch]);
 
   return (
     <a
       {...rest}
-      ref={resolvedRef}
+      ref={mergedRef}
       href={href}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}

@@ -46,7 +46,9 @@ describe('generateWranglerToml', () => {
     const toml = generateWranglerToml({
       routes: ['/api/*', '/static/*'],
     });
-    expect(toml).toContain('routes = ["/api/*","/static/*"]');
+    expect(toml).toContain('[[routes]]');
+    expect(toml).toContain('pattern = "/api/*"');
+    expect(toml).toContain('pattern = "/static/*"');
   });
 
   test('includes KV namespace bindings', () => {
@@ -73,7 +75,7 @@ describe('generateWranglerToml', () => {
       routes: ['/api/*'],
       kvNamespaces: ['DATA'],
     });
-    expect(toml).toContain('routes = ["/api/*"]');
+    expect(toml).toContain('pattern = "/api/*"');
     expect(toml).toContain('binding = "DATA"');
     expect(toml).toContain('name = "ereo-app"');
   });

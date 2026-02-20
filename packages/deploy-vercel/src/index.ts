@@ -32,7 +32,7 @@ export function vercel(config: VercelConfig = {}): Partial<FrameworkConfig> {
 
 /** Generate vercel.json configuration file */
 export function generateVercelJson(config: VercelConfig): string {
-  const vercelJson = {
+  const vercelJson: Record<string, unknown> = {
     version: 2,
     builds: [
       {
@@ -49,16 +49,18 @@ export function generateVercelJson(config: VercelConfig): string {
         dest: 'dist/server.js',
       },
     ],
-    regions: config.regions,
-    ...(config.edge && {
-      functions: {
-        'dist/server.js': {
-          runtime: 'edge',
-          regions: config.regions,
-        },
-      },
-    }),
   };
+
+  // Function-level config (regions, runtime, memory, timeout)
+  const fnConfig: Record<string, unknown> = {};
+  if (config.edge) fnConfig.runtime = 'edge';
+  if (config.regions) fnConfig.regions = config.regions;
+  if (config.memory) fnConfig.memory = config.memory;
+  if (config.timeout) fnConfig.maxDuration = config.timeout;
+
+  if (Object.keys(fnConfig).length > 0) {
+    vercelJson.functions = { 'dist/server.js': fnConfig };
+  }
 
   return JSON.stringify(vercelJson, null, 2);
 }

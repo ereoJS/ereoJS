@@ -253,6 +253,13 @@ export function validateConfig(config: ImagePluginConfig = {}): Required<ImagePl
 }
 
 /**
+ * Escape all regex special characters except `*` (handled separately as wildcard).
+ */
+function escapeRegexChars(str: string): string {
+  return str.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Check if a URL matches the allowed remote patterns.
  */
 export function matchesRemotePattern(
@@ -275,8 +282,8 @@ export function matchesRemotePattern(
       }
     }
 
-    // Check hostname (supports wildcards)
-    const hostnamePattern = pattern.hostname.replace(/\./g, '\\.').replace(/\*/g, '.*');
+    // Check hostname (supports wildcards — escape regex chars, then convert * to .*)
+    const hostnamePattern = escapeRegexChars(pattern.hostname).replace(/\*/g, '.*');
     const hostnameRegex = new RegExp(`^${hostnamePattern}$`, 'i');
     if (!hostnameRegex.test(url.hostname)) {
       continue;
@@ -289,7 +296,7 @@ export function matchesRemotePattern(
 
     // Check pathname
     if (pattern.pathname) {
-      const pathnamePattern = pattern.pathname.replace(/\./g, '\\.').replace(/\*/g, '.*');
+      const pathnamePattern = escapeRegexChars(pattern.pathname).replace(/\*/g, '.*');
       const pathnameRegex = new RegExp(`^${pathnamePattern}`, 'i');
       if (!pathnameRegex.test(url.pathname)) {
         continue;

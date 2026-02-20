@@ -129,13 +129,14 @@ export function defineBunSQLiteConfig(
   return {
     driver: 'bun-sqlite',
     edgeCompatible: false,
+    ...config,
     pragma: {
       journal_mode: 'WAL',
       synchronous: 'NORMAL',
       foreign_keys: true,
       cache_size: 10000,
+      ...config.pragma,
     },
-    ...config,
   };
 }
 

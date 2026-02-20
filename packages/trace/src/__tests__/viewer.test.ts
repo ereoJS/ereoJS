@@ -58,14 +58,15 @@ describe('generateViewerHTML', () => {
     root.end();
 
     const html = generateViewerHTML(tracer.getTraces());
-    // The JSON.stringify + replace(</, <\/) should prevent embedded </script> in data
     // Extract just the TRACES JSON assignment to check the data portion
     const tracesMatch = html.match(/const TRACES = (.+?);/s);
     expect(tracesMatch).toBeTruthy();
-    // The embedded JSON data should not contain raw </script>
+    // The embedded JSON data should not contain raw < or > (escaped via \u003c/\u003e)
     expect(tracesMatch![1]).not.toContain('</script>');
-    // It should contain the escaped version
-    expect(tracesMatch![1]).toContain('<\\/script>');
+    expect(tracesMatch![1]).not.toContain('<script>');
+    // It should contain the Unicode-escaped version
+    expect(tracesMatch![1]).toContain('\\u003c');
+    expect(tracesMatch![1]).toContain('\\u003e');
     // The esc() function is present for runtime XSS protection
     expect(html).toContain('esc(');
   });

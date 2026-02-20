@@ -214,7 +214,15 @@ export function cors(options: CorsOptions = {}): MiddlewareHandler {
     if (responseOrigin) {
       headers.set('Access-Control-Allow-Origin', responseOrigin);
       if (shouldVaryOrigin) {
-        headers.set('Vary', 'Origin');
+        const existingVary = headers.get('Vary');
+        if (existingVary) {
+          const parts = existingVary.split(',').map(s => s.trim().toLowerCase());
+          if (!parts.includes('origin')) {
+            headers.set('Vary', `${existingVary}, Origin`);
+          }
+        } else {
+          headers.set('Vary', 'Origin');
+        }
       }
     }
     if (exposedHeaders.length > 0) {

@@ -69,7 +69,9 @@ describe('generateVercelJson', () => {
       regions: ['us-east-1', 'eu-west-1'],
     });
     const parsed = JSON.parse(json);
-    expect(parsed.regions).toEqual(['us-east-1', 'eu-west-1']);
+    // Regions belong in functions config, not top-level
+    expect(parsed.regions).toBeUndefined();
+    expect(parsed.functions['dist/server.js'].regions).toEqual(['us-east-1', 'eu-west-1']);
   });
 
   test('edge runtime includes regions', () => {
@@ -78,8 +80,9 @@ describe('generateVercelJson', () => {
       regions: ['sfo1', 'iad1'],
     });
     const parsed = JSON.parse(json);
-    expect(parsed.regions).toEqual(['sfo1', 'iad1']);
+    expect(parsed.regions).toBeUndefined();
     expect(parsed.functions['dist/server.js'].regions).toEqual(['sfo1', 'iad1']);
+    expect(parsed.functions['dist/server.js'].runtime).toBe('edge');
   });
 
   test('routes catch-all path', () => {

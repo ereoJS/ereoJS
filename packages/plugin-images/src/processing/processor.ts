@@ -6,6 +6,7 @@
 
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { createHash } from 'node:crypto';
 import type {
   ImagePluginConfig,
   ProcessedImage,
@@ -54,6 +55,7 @@ export interface FullImageData {
  * Image processor orchestrator.
  */
 export class ImageProcessor {
+  private static readonly MAX_CACHE_ENTRIES = 500;
   private readonly config: Required<ImagePluginConfig>;
   private readonly sharp: SharpProcessor;
   private readonly cache = new Map<string, ProcessedImage>();
@@ -85,7 +87,12 @@ export class ImageProcessor {
     // Process image
     const result = await this.sharp.process(input, params);
 
-    // Cache result
+    // Cache result (evict oldest if at capacity)
+    if (this.cache.size >= ImageProcessor.MAX_CACHE_ENTRIES) {
+      // Delete the first (oldest) entry
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) this.cache.delete(firstKey);
+    }
     this.cache.set(cacheKey, result);
 
     return result;
@@ -331,14 +338,10 @@ export class ImageProcessor {
   }
 
   /**
-   * Simple hash for buffer content.
+   * Hash buffer content using MD5 for cache key generation.
    */
   private hashBuffer(buffer: Buffer): string {
-    let hash = 0;
-    for (let i = 0; i < Math.min(buffer.length, 1000); i++) {
-      hash = ((hash << 5) - hash + buffer[i]) | 0;
-    }
-    return hash.toString(36);
+    return createHash('md5').update(buffer).digest('hex');
   }
 }
 

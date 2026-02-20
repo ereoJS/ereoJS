@@ -270,6 +270,7 @@ export function hasMiddleware(name: string): boolean {
  * Remove a named middleware from the registry.
  */
 export function unregisterMiddleware(name: string): boolean {
+  typedMiddlewareRegistry.delete(name);
   return namedMiddlewareRegistry.delete(name);
 }
 
@@ -410,7 +411,7 @@ export function composeMiddleware(...handlers: MiddlewareHandler[]): MiddlewareH
       const handler = handlers[currentIndex];
       let called = false;
 
-      return handler(request, context, async () => {
+      return await handler(request, context, async () => {
         if (called) {
           throw new Error('next() called multiple times in middleware');
         }
@@ -477,20 +478,21 @@ export function path(
 ): MiddlewareHandler {
   const patternList = Array.isArray(patterns) ? patterns : [patterns];
 
+  // Pre-compile string patterns containing glob wildcards into RegExp
+  const compiledPatterns = patternList.map((pattern) => {
+    if (typeof pattern === 'string' && (pattern.includes('*') || pattern.includes('?'))) {
+      return globToRegex(pattern);
+    }
+    return pattern;
+  });
+
   return when(
     (request) => {
       const url = new URL(request.url);
-      return patternList.some((pattern) => {
+      return compiledPatterns.some((pattern) => {
         if (typeof pattern === 'string') {
-          // Exact match
-          if (url.pathname === pattern) return true;
-          // Glob pattern: /api/* matches /api/anything
-          if (pattern.endsWith('/*')) {
-            const prefix = pattern.slice(0, -1); // Remove the *
-            return url.pathname.startsWith(prefix);
-          }
-          // Prefix match with path boundary check
-          return url.pathname.startsWith(pattern + '/') || url.pathname === pattern;
+          // Exact match or prefix match with path boundary check
+          return url.pathname === pattern || url.pathname.startsWith(pattern + '/');
         }
         return pattern.test(url.pathname);
       });
@@ -689,7 +691,12 @@ export function createRateLimitMiddleware(options: {
 
     const response = await next();
 
-    // Add rate limit headers
+    // Don't count successful requests against the rate limit (before setting headers)
+    if (skipSuccessfulRequests && response.status < 400) {
+      record.count = Math.max(0, record.count - 1);
+    }
+
+    // Add rate limit headers (after adjusting count)
     const newResponse = new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -699,11 +706,6 @@ export function createRateLimitMiddleware(options: {
     newResponse.headers.set('X-RateLimit-Limit', String(maxRequests));
     newResponse.headers.set('X-RateLimit-Remaining', String(Math.max(0, maxRequests - record.count)));
     newResponse.headers.set('X-RateLimit-Reset', String(Math.ceil(record.resetTime / 1000)));
-
-    // Don't count successful requests against the rate limit
-    if (skipSuccessfulRequests && response.status < 400) {
-      record.count = Math.max(0, record.count - 1);
-    }
 
     return newResponse;
   };

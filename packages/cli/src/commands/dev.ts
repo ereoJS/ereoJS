@@ -116,7 +116,15 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         const cleanCode = text.replace(/^['"]use client['"];?\s*\r?\n?/m, '');
         const tmpPath = args.path + '.ereo-raw';
         await Bun.write(tmpPath, cleanCode);
-        const rawModule = await import(tmpPath);
+        let rawModule: any;
+        try {
+          rawModule = await import(tmpPath);
+        } catch (importError) {
+          // Clean up temp file and remove bad cache entry so retry is possible
+          try { (await import('node:fs')).unlinkSync(tmpPath); } catch {}
+          islandModuleCache.delete(args.path);
+          return { contents: text, loader: ext };
+        }
         try { (await import('node:fs')).unlinkSync(tmpPath); } catch {}
 
         // Wrap each exported function component with createIsland()
@@ -170,10 +178,11 @@ export async function dev(options: DevOptions = {}): Promise<void> {
   hmrWatcher.watch(join(root, 'app'));
 
   // Watch config file for changes and restart
+  let configWatcher: import('node:fs').FSWatcher | null = null;
   if (configPath) {
     const { watch } = await import('node:fs');
     let configDebounce: ReturnType<typeof setTimeout> | null = null;
-    watch(configPath, () => {
+    configWatcher = watch(configPath, () => {
       if (configDebounce) clearTimeout(configDebounce);
       configDebounce = setTimeout(() => {
         console.log('\x1b[33m⟳\x1b[0m Config changed — restart the dev server to apply changes.');
@@ -465,9 +474,32 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
   await buildDevClient();
 
+  // Serialize client rebuilds to prevent race conditions on clientBundleCache
+  let buildInProgress: Promise<void> | null = null;
+  let buildQueued = false;
+
+  async function serializedBuildDevClient(): Promise<void> {
+    if (buildInProgress) {
+      buildQueued = true;
+      return;
+    }
+    buildInProgress = buildDevClient();
+    try {
+      await buildInProgress;
+    } finally {
+      buildInProgress = null;
+      if (buildQueued) {
+        buildQueued = false;
+        serializedBuildDevClient().catch((err) => {
+          console.error('  \x1b[31m✖\x1b[0m Failed to rebuild client:', err);
+        });
+      }
+    }
+  }
+
   // Rebuild client on route changes
   router.on('reload', () => {
-    buildDevClient().catch((err) => {
+    serializedBuildDevClient().catch((err) => {
       console.error('  \x1b[31m✖\x1b[0m Failed to rebuild client:', err);
     });
   });
@@ -548,10 +580,31 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         ? 'start'
         : 'xdg-open';
 
-    Bun.spawn([opener, `http://${hostname}:${port}`]);
+    try {
+      const proc = Bun.spawn([opener, `http://${hostname}:${port}`], {
+        stdout: 'ignore',
+        stderr: 'ignore',
+      });
+      proc.exited.catch(() => {});
+    } catch {
+      // Browser opener not available, ignore
+    }
   }
 
   console.log('\n  \x1b[2mpress h to show help\x1b[0m\n');
+
+  // Unified shutdown to prevent double cleanup from both stdin and SIGINT
+  let shuttingDown = false;
+  function shutdown(): void {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log('\n  Shutting down...\n');
+    server.stop();
+    hmrWatcher.stop();
+    configWatcher?.close();
+    rm(clientBuildDir, { recursive: true, force: true }).catch(() => {});
+    process.exit(0);
+  }
 
   // Handle keyboard input
   if (process.stdin.isTTY) {
@@ -560,48 +613,42 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     process.stdin.on('data', async (data) => {
       const key = data.toString();
 
-      switch (key) {
-        case 'h':
-          console.log('\n  Shortcuts:');
-          console.log('    r - Reload routes');
-          console.log('    c - Clear console');
-          console.log('    q - Quit');
-          console.log('');
-          break;
+      try {
+        switch (key) {
+          case 'h':
+            console.log('\n  Shortcuts:');
+            console.log('    r - Reload routes');
+            console.log('    c - Clear console');
+            console.log('    q - Quit');
+            console.log('');
+            break;
 
-        case 'r':
-          console.log('\x1b[33m⟳\x1b[0m Reloading routes...');
-          await router.discoverRoutes();
-          await router.loadAllModules();
-          hmr.reload();
-          break;
+          case 'r':
+            console.log('\x1b[33m⟳\x1b[0m Reloading routes...');
+            await router.discoverRoutes();
+            await router.loadAllModules();
+            hmr.reload();
+            break;
 
-        case 'c':
-          console.clear();
-          console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Dev Server\n');
-          console.log(`  \x1b[32m➜\x1b[0m  Local:   \x1b[36mhttp://${hostname}:${port}/\x1b[0m\n`);
-          break;
+          case 'c':
+            console.clear();
+            console.log('\n  \x1b[36m⬡\x1b[0m \x1b[1mEreo\x1b[0m Dev Server\n');
+            console.log(`  \x1b[32m➜\x1b[0m  Local:   \x1b[36mhttp://${hostname}:${port}/\x1b[0m\n`);
+            break;
 
-        case 'q':
-        case '\x03': // Ctrl+C
-          console.log('\n  Shutting down...\n');
-          server.stop();
-          hmrWatcher.stop();
-          rm(clientBuildDir, { recursive: true, force: true }).catch(() => {});
-          process.exit(0);
-          break;
+          case 'q':
+          case '\x03': // Ctrl+C
+            shutdown();
+            break;
+        }
+      } catch (error) {
+        console.error('  \x1b[31m✖\x1b[0m Error handling keyboard input:', error);
       }
     });
   }
 
   // Handle process signals
-  process.on('SIGINT', () => {
-    console.log('\n  Shutting down...\n');
-    server.stop();
-    hmrWatcher.stop();
-    rm(clientBuildDir, { recursive: true, force: true }).catch(() => {});
-    process.exit(0);
-  });
+  process.on('SIGINT', shutdown);
 
   // Clean up temp directory on unexpected crashes to prevent /tmp accumulation
   process.on('uncaughtException', (error) => {

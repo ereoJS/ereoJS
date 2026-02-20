@@ -29,24 +29,30 @@ export function cloudflare(config: CloudflareConfig = {}): Partial<FrameworkConf
 
 /** Generate wrangler.toml configuration */
 export function generateWranglerToml(config: CloudflareConfig): string {
-  const bindings = [];
+  const lines = [
+    'name = "ereo-app"',
+    'compatibility_date = "2024-01-01"',
+    'main = "dist/server.js"',
+  ];
 
-  if (config.kvNamespaces) {
-    for (const ns of config.kvNamespaces) {
-      bindings.push(`[[kv_namespaces]]
-binding = "${ns}"
-id = "your-namespace-id"`);
+  if (config.routes) {
+    for (const route of config.routes) {
+      lines.push('');
+      lines.push('[[routes]]');
+      lines.push(`pattern = "${route}"`);
     }
   }
 
-  return `name = "ereo-app"
-compatibility_date = "2024-01-01"
-main = "dist/server.js"
+  if (config.kvNamespaces) {
+    for (const ns of config.kvNamespaces) {
+      lines.push('');
+      lines.push('[[kv_namespaces]]');
+      lines.push(`binding = "${ns}"`);
+      lines.push('id = "your-namespace-id"');
+    }
+  }
 
-${config.routes ? `routes = ${JSON.stringify(config.routes)}` : ''}
-
-${bindings.join('\n\n')}
-`;
+  return lines.join('\n') + '\n';
 }
 
 export default cloudflare;

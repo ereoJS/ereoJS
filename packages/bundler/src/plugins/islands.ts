@@ -91,12 +91,12 @@ export function transformIslandJSX(code: string): string {
 
   // Simple regex-based transform (a proper implementation would use an AST)
   transformed = transformed.replace(
-    /<(\w+)\s+([^>]*client:(load|idle|visible|media)[^>]*)>/g,
-    (match, tag, props, strategy) => {
+    /<(\w+)\s+([^>]*?client:(load|idle|visible|media)[^>]*?)\s*(\/?)>/g,
+    (match, tag, props, strategy, selfClose) => {
       // Use a deterministic ID based on the component tag and its position in the file.
       // This ensures server and client builds produce identical IDs.
       const id = `island-${tag}-${counter++}`;
-      return `<${tag} data-island="${id}" data-strategy="${strategy}" ${props}>`;
+      return `<${tag} data-island="${id}" data-strategy="${strategy}" ${props}${selfClose ? ' /' : ''}>`;
     }
   );
 
@@ -131,8 +131,9 @@ export function generateIslandEntry(islands: IslandMeta[]): string {
 
   for (const island of islands) {
     const importName = `Island_${island.id}`;
-    imports.push(`import ${importName} from '${island.file}';`);
-    registrations.push(`  registerIslandComponent('${island.name}', ${importName});`);
+    // Use namespace import to handle both default and named exports
+    imports.push(`import * as ${importName}_ns from '${island.file}';`);
+    registrations.push(`  registerIslandComponent('${island.name}', ${importName}_ns.default || ${importName}_ns.${island.name});`);
   }
 
   return `

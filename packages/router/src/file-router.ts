@@ -194,6 +194,8 @@ export class FileRouter {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           // File deleted
           const routeId = '/' + toUrlPath(filename).replace(/\.(tsx?|jsx?)$/, '');
+          const fullPath = join(this.routesDir, filename);
+          this.mtimeCache.delete(fullPath);
           this.tree?.removeById(routeId);
           this.routes = this.tree?.toRoutes() || [];
           this.matcher = createMatcher(this.routes);

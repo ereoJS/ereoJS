@@ -192,7 +192,8 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
     batch(() => {
       const paths = flattenToPaths(partial);
       for (const [path, value] of paths) {
-        if (typeof value !== 'object' || value === null) {
+        // Set leaf values AND arrays (arrays must be set whole to handle length changes)
+        if (typeof value !== 'object' || value === null || Array.isArray(value)) {
           this.setValue(path, value);
         }
       }
@@ -216,7 +217,7 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
           this._syncChildSignals(childPath, value[i]);
         }
       }
-      // Clean up signals for indices beyond the new array length
+      // Clean up signals, errors, touched, and dirty for indices beyond the new array length
       const prefix = path + '.';
       for (const key of [...this._signals.keys()]) {
         if (key.startsWith(prefix)) {
@@ -226,6 +227,10 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
           const idx = parseInt(segment, 10);
           if (!isNaN(idx) && idx >= value.length) {
             this._signals.delete(key);
+            this._errorSignals.delete(key);
+            this._errorMapSignals.delete(key);
+            this._touchedSet.delete(key);
+            this._dirtySet.delete(key);
           }
         }
       }
@@ -299,7 +304,7 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
         } else {
           // Try current signal value first, then baseline
           const fromCurrent = Array.isArray(currentSigVal) ? currentSigVal[i] : undefined;
-          result[i] = fromCurrent ?? (baselineVal as any[])?.[i] ?? undefined;
+          result[i] = fromCurrent !== undefined ? fromCurrent : ((baselineVal as any[])?.[i] ?? undefined);
         }
       }
       return result;
@@ -867,10 +872,10 @@ export class FormStore<T extends Record<string, any> = Record<string, any>>
           const part = parts[i];
           const idx = parseInt(part, 10);
           if (!isNaN(idx)) {
-            if (!current[idx]) current[idx] = {};
+            if (current[idx] == null || typeof current[idx] !== 'object') current[idx] = {};
             current = current[idx];
           } else {
-            if (!current[part]) current[part] = {};
+            if (current[part] == null || typeof current[part] !== 'object') current[part] = {};
             current = current[part];
           }
         }

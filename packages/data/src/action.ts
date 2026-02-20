@@ -285,11 +285,15 @@ export async function parseRequestBody(
     return { body, contentType: 'text' };
   }
 
-  // Try to parse as JSON, fallback to text
+  // Try to parse as JSON, fallback to raw text (not null)
   try {
     const text = await request.text();
-    const body = JSON.parse(text);
-    return { body, contentType: 'json' };
+    try {
+      const body = JSON.parse(text);
+      return { body, contentType: 'json' };
+    } catch {
+      return { body: text, contentType: 'text' };
+    }
   } catch {
     return { body: null, contentType: 'unknown' };
   }
@@ -489,24 +493,38 @@ export function coerceValue(value: string): unknown {
     return Number(value);
   }
 
-  // ISO Date (basic check)
-  if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/.test(value)) {
+  // ISO Date (strict check — full date or datetime only, not partial prefixes)
+  if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/.test(value)) {
     const date = new Date(value);
     if (!isNaN(date.getTime())) {
       return date;
     }
   }
 
-  // JSON objects/arrays
+  // JSON objects/arrays — sanitize to prevent prototype pollution
   if ((value.startsWith('{') && value.endsWith('}')) || (value.startsWith('[') && value.endsWith(']'))) {
     try {
-      return JSON.parse(value);
+      const parsed = JSON.parse(value);
+      return sanitizeParsedValue(parsed);
     } catch {
       // Not valid JSON, return as string
     }
   }
 
   return value;
+}
+
+/** Recursively remove __proto__, constructor, and prototype keys from parsed JSON values. */
+function sanitizeParsedValue(value: unknown): unknown {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(sanitizeParsedValue);
+  const obj = value as Record<string, unknown>;
+  const clean: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    clean[key] = sanitizeParsedValue(obj[key]);
+  }
+  return clean;
 }
 
 /**

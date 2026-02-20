@@ -177,6 +177,11 @@ class ClientTracer {
     const data = span.toData();
     this.pendingSpans.push(data);
 
+    // Cap pending spans to prevent memory leaks when disconnected
+    if (this.pendingSpans.length > 1000) {
+      this.pendingSpans = this.pendingSpans.slice(-500);
+    }
+
     if (this.connected) {
       this.flushPending();
     }
@@ -202,20 +207,21 @@ class ClientTracer {
       traceGroups.set(span.traceId, group);
     }
 
+    const failedSpans: SpanData[] = [];
     for (const [traceId, spans] of traceGroups) {
       try {
-        this.ws.send(JSON.stringify({
+        this.ws!.send(JSON.stringify({
           type: 'client:spans',
           traceId,
           spans,
         }));
       } catch {
-        // Send failed, keep pending
-        return;
+        // Keep failed spans for retry, don't re-send successful ones
+        failedSpans.push(...spans);
       }
     }
 
-    this.pendingSpans = [];
+    this.pendingSpans = failedSpans;
   }
 
   /** Disconnect and clean up */

@@ -152,10 +152,8 @@ export class TracerImpl implements Tracer {
     for (const span of spans) {
       if (trace.spans.size >= this.config.maxSpansPerTrace) break;
       trace.spans.set(span.id, span);
-    }
 
-    // Update trace end time if needed
-    for (const span of spans) {
+      // Only update endTime for spans that were actually added
       if (span.endTime > trace.endTime) {
         trace.endTime = span.endTime;
         trace.duration = trace.endTime - trace.startTime;
@@ -166,9 +164,16 @@ export class TracerImpl implements Tracer {
   /** Find the active span from the most recently started trace's stack */
   private findActiveSpan(): SpanImpl | null {
     let latest: SpanImpl | null = null;
-    for (const stack of this.spanStacks.values()) {
+    let latestStartTime = -1;
+    for (const [traceId, stack] of this.spanStacks) {
       const top = stack[stack.length - 1];
-      if (top) latest = top;
+      if (top) {
+        const activeTrace = this.activeTraces.get(traceId);
+        if (activeTrace && activeTrace.startTime > latestStartTime) {
+          latestStartTime = activeTrace.startTime;
+          latest = top;
+        }
+      }
     }
     return latest;
   }

@@ -160,18 +160,27 @@ export interface AuthContext {
 // JWT Utilities using Web Crypto API
 // ============================================================================
 
-/** Generate a cryptographic key from secret */
+/** Cache for imported CryptoKeys, keyed by secret string */
+const _signingKeyCache = new Map<string, CryptoKey>();
+
+/** Generate a cryptographic key from secret (cached) */
 async function getSigningKey(secret: string): Promise<CryptoKey> {
+  const cached = _signingKeyCache.get(secret);
+  if (cached) return cached;
+
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
 
-  return crypto.subtle.importKey(
+  const key = await crypto.subtle.importKey(
     'raw',
     keyData,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign', 'verify']
   );
+
+  _signingKeyCache.set(secret, key);
+  return key;
 }
 
 /** Base64url encode */
@@ -275,6 +284,7 @@ interface StoredSession {
 }
 
 class SessionStore {
+  private static readonly MAX_SESSIONS = 10_000;
   private sessions: Map<string, StoredSession> = new Map();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -292,6 +302,20 @@ class SessionStore {
 
   /** Store a session */
   set(sessionId: string, session: Session): void {
+    // Prevent unbounded growth (DoS protection)
+    if (this.sessions.size >= SessionStore.MAX_SESSIONS && !this.sessions.has(sessionId)) {
+      this.cleanup();
+      // If still at capacity after cleanup, evict oldest sessions
+      if (this.sessions.size >= SessionStore.MAX_SESSIONS) {
+        const entries = Array.from(this.sessions.entries());
+        entries.sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
+        const toEvict = Math.max(1, Math.floor(entries.length * 0.1));
+        for (let i = 0; i < toEvict; i++) {
+          this.sessions.delete(entries[i][0]);
+        }
+      }
+    }
+
     this.sessions.set(sessionId, {
       session,
       createdAt: Date.now(),
@@ -589,6 +613,21 @@ export function createAuthPlugin(config: AuthConfig): Plugin {
       const token = authHeader.slice(7);
       const session = await sessionFromToken(token);
       if (session) {
+        // Validate session (same checks as cookie path)
+        if (config.callbacks?.onSessionValidate) {
+          const isValid = await config.callbacks.onSessionValidate(session);
+          if (!isValid) {
+            log('Bearer session validation failed');
+            return null;
+          }
+        }
+
+        // Check expiration
+        if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
+          log('Bearer session expired');
+          return null;
+        }
+
         log('Session extracted from Authorization header');
         return session;
       }
@@ -726,7 +765,9 @@ export function createAuthPlugin(config: AuthConfig): Plugin {
             roles.some((role) => authContext.session?.roles?.includes(role)),
 
           hasAllRoles: (roles) =>
-            roles.every((role) => authContext.session?.roles?.includes(role)),
+            authContext.session?.roles
+              ? roles.every((role) => authContext.session!.roles!.includes(role))
+              : false,
 
           getUser: () => {
             if (!authContext.session) return null;
@@ -958,6 +999,23 @@ export function withAuth<T>(
 }
 
 // ============================================================================
+// Crypto Utilities
+// ============================================================================
+
+/** Constant-time string comparison to prevent timing side-channel attacks */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  let result = 0;
+  for (let i = 0; i < bufA.length; i++) {
+    result |= bufA[i] ^ bufB[i];
+  }
+  return result === 0;
+}
+
+// ============================================================================
 // OAuth Helper Functions
 // ============================================================================
 
@@ -1027,7 +1085,7 @@ export async function handleOAuthCallback(
   // Validate CSRF state token from cookie (survives the redirect round-trip)
   const cookie = request.headers.get('cookie');
   const storedState = cookie ? parseCookie(cookie, '__oauth_state') : undefined;
-  if (!storedState || storedState !== params.state) {
+  if (!storedState || !timingSafeEqual(storedState, params.state)) {
     throw new Error('OAuth state mismatch: possible CSRF attack');
   }
 

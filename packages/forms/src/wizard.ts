@@ -181,19 +181,20 @@ export function createWizard<T extends Record<string, any>>(
     const valid = await validateCurrentStep();
     if (!valid) return;
 
-    // Mark last step as completed
+    // Submit first — only mark step complete after success
+    if (config.onComplete) {
+      await form.submitWith(config.onComplete);
+    } else {
+      await form.handleSubmit();
+    }
+
+    // Mark last step as completed (only reached if submit didn't throw)
     const step = currentStep.get();
     const stepConfig = steps[step];
     if (stepConfig) {
       const completed = new Set(completedSteps.get());
       completed.add(stepConfig.id);
       completedSteps.set(completed);
-    }
-
-    if (config.onComplete) {
-      await form.submitWith(config.onComplete);
-    } else {
-      await form.handleSubmit();
     }
 
     // Clear persisted state on successful submit

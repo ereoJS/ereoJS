@@ -95,6 +95,11 @@ function printHelp(): void {
 /**
  * Parse command line arguments.
  */
+/** Check if an argument is a flag (--long or -x) vs a value (negative numbers, dash-prefixed strings) */
+function isFlag(arg: string): boolean {
+  return arg.startsWith('--') || (arg.startsWith('-') && arg.length === 2 && /[a-zA-Z]/.test(arg[1]));
+}
+
 function parseArgs(args: string[]): {
   command: string;
   options: Record<string, string | boolean>;
@@ -116,18 +121,20 @@ function parseArgs(args: string[]): {
       const [key, value] = arg.slice(2).split('=');
       if (value !== undefined) {
         options[key] = value;
-      } else if (args[i + 1] && !args[i + 1].startsWith('-')) {
+      } else if (args[i + 1] && !isFlag(args[i + 1])) {
         options[key] = args[++i];
       } else {
         options[key] = true;
       }
-    } else if (arg.startsWith('-')) {
+    } else if (arg.startsWith('-') && arg.length === 2 && /[a-zA-Z]/.test(arg[1])) {
       const key = arg.slice(1);
-      if (args[i + 1] && !args[i + 1].startsWith('-')) {
+      if (args[i + 1] && !isFlag(args[i + 1])) {
         options[key] = args[++i];
       } else {
         options[key] = true;
       }
+    } else if (!command) {
+      command = arg;
     } else {
       positional.push(arg);
     }
@@ -171,8 +178,9 @@ async function main(): Promise<void> {
   try {
     switch (command) {
       case 'dev': {
+        const rawPort = options.port || options.p;
         const devOptions: DevOptions = {
-          port: options.port ? parsePort(options.port as string) : undefined,
+          port: rawPort ? parsePort(rawPort as string) : undefined,
           host: (options.host || options.h) as string | undefined,
           open: !!(options.open || options.o),
           trace: !!(options.trace),
@@ -192,8 +200,9 @@ async function main(): Promise<void> {
       }
 
       case 'start': {
+        const rawStartPort = options.port || options.p;
         const startOptions: StartOptions = {
-          port: options.port ? parsePort(options.port as string) : undefined,
+          port: rawStartPort ? parsePort(rawStartPort as string) : undefined,
           host: (options.host || options.h) as string | undefined,
         };
         await start(startOptions);
@@ -262,7 +271,7 @@ async function main(): Promise<void> {
 
       case 'db:studio': {
         const studioOptions: DbStudioOptions = {
-          port: options.port ? parseInt(options.port as string, 10) : undefined,
+          port: options.port ? parsePort(options.port as string) : undefined,
           config: options.config as string | undefined,
           open: options.open !== false,
         };

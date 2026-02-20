@@ -157,7 +157,7 @@ export const ROUTE_GROUP_PATTERN = /^\((.+)\)$/;
 /**
  * Dynamic segment pattern (brackets).
  */
-export const DYNAMIC_SEGMENT_PATTERN = /^\[([^\]]+)\]$/;
+export const DYNAMIC_SEGMENT_PATTERN = /^\[(?!\.\.\.|\[)([^\]]+)\]$/;
 
 /**
  * Catch-all segment pattern (spread).

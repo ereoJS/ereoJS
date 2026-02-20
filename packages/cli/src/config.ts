@@ -28,7 +28,7 @@ export async function loadConfig(root: string): Promise<{
     try {
       if (await Bun.file(configPath).exists()) {
         const configModule = await import(configPath);
-        const config = configModule.default || configModule;
+        const config = 'default' in configModule ? configModule.default : configModule;
         return { config, configPath };
       }
     } catch (error: any) {

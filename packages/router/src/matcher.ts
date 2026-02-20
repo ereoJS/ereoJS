@@ -325,6 +325,13 @@ export function createMatcher(routes: Route[]): RouteMatcher {
 }
 
 /**
+ * Cached RouteMatcher for matchWithLayouts.
+ * Avoids re-compiling routes on every request when the routes array hasn't changed.
+ */
+let _cachedMatcherRoutes: Route[] | null = null;
+let _cachedMatcher: RouteMatcher | null = null;
+
+/**
  * Match with layout resolution.
  * Returns all matching layouts from root to the matched route.
  */
@@ -332,8 +339,12 @@ export function matchWithLayouts(
   pathname: string,
   routes: Route[]
 ): MatchResult | null {
-  const matcher = new RouteMatcher(routes);
-  const match = matcher.match(pathname);
+  // Reuse cached matcher if routes reference hasn't changed
+  if (_cachedMatcherRoutes !== routes) {
+    _cachedMatcher = new RouteMatcher(routes);
+    _cachedMatcherRoutes = routes;
+  }
+  const match = _cachedMatcher!.match(pathname);
 
   if (!match) {
     return null;

@@ -77,11 +77,23 @@ export function useServerFn<TInput, TOutput>(
   fn: ServerFn<TInput, TOutput>,
   options: UseServerFnOptions<TOutput> = {}
 ): UseServerFnReturn<TInput, TOutput> {
-  const { onSuccess, onError, onSettled } = options;
-
   const [data, setData] = useState<TOutput | undefined>(undefined);
   const [error, setError] = useState<ServerFnErrorShape | undefined>(undefined);
   const [isPending, setIsPending] = useState(false);
+
+  // Use refs for fn and callbacks to keep execute stable across re-renders.
+  // This prevents infinite re-render loops when fn is a Proxy (RPC client)
+  // that creates new references each render.
+  const fnRef = useRef(fn);
+  const onSuccessRef = useRef(options.onSuccess);
+  const onErrorRef = useRef(options.onError);
+  const onSettledRef = useRef(options.onSettled);
+
+  // Update refs on every render
+  fnRef.current = fn;
+  onSuccessRef.current = options.onSuccess;
+  onErrorRef.current = options.onError;
+  onSettledRef.current = options.onSettled;
 
   // Track the latest request to implement last-write-wins
   const requestIdRef = useRef(0);
@@ -105,13 +117,13 @@ export function useServerFn<TInput, TOutput>(
       }
 
       try {
-        const result = await fn(input);
+        const result = await fnRef.current(input);
 
         // Only update state if this is still the latest request
         if (currentId === requestIdRef.current && mountedRef.current) {
           setData(result);
           setIsPending(false);
-          onSuccess?.(result);
+          onSuccessRef.current?.(result);
         }
 
         return result;
@@ -122,17 +134,17 @@ export function useServerFn<TInput, TOutput>(
           setError(errorShape);
           setData(undefined);
           setIsPending(false);
-          onError?.(errorShape);
+          onErrorRef.current?.(errorShape);
         }
 
         throw err;
       } finally {
         if (currentId === requestIdRef.current && mountedRef.current) {
-          onSettled?.();
+          onSettledRef.current?.();
         }
       }
     },
-    [fn, onSuccess, onError, onSettled]
+    [] // Stable: no deps since we read from refs
   );
 
   const reset = useCallback(() => {

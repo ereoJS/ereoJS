@@ -166,6 +166,15 @@ export function createRevalidationHandler(secret?: string) {
 
     try {
       const body = await request.json() as RevalidateOptions;
+
+      // Prevent full cache clear without authentication
+      if (body.all && !secret) {
+        return new Response(
+          JSON.stringify({ error: 'Full cache clear requires a revalidation secret' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       const result = await revalidate(body);
 
       return new Response(JSON.stringify(result), {

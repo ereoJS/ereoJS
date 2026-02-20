@@ -49,36 +49,50 @@ type StreamingRenderer = {
  *
  * Bun supports Web Streams natively, so we prefer renderToReadableStream.
  */
-async function getStreamingRenderer(): Promise<StreamingRenderer> {
-  try {
-    // Try to import from react-dom/server.browser first (Web Streams API)
-    // This is the correct path for renderToReadableStream in React 18+
-    // @ts-expect-error - react-dom/server.browser may not have types
-    const browserServer = await import('react-dom/server.browser');
-    if (typeof browserServer.renderToReadableStream === 'function') {
-      return {
-        renderToReadableStream: browserServer.renderToReadableStream,
-        renderToString: browserServer.renderToString,
-      };
-    }
-  } catch {
-    // Browser build not available, try the main export
-  }
+/** Cached renderer to avoid repeated dynamic imports on every request */
+let _cachedRenderer: StreamingRenderer | null = null;
+let _rendererPromise: Promise<StreamingRenderer> | null = null;
 
-  try {
-    // Fallback to react-dom/server
-    const server = await import('react-dom/server');
-    return {
-      renderToReadableStream: (server as any).renderToReadableStream,
-      renderToString: server.renderToString,
-    };
-  } catch {
-    // Last resort - return undefined for streaming, will fallback to string
-    return {
-      renderToReadableStream: undefined,
-      renderToString: (await import('react-dom/server')).renderToString,
-    };
-  }
+async function getStreamingRenderer(): Promise<StreamingRenderer> {
+  if (_cachedRenderer) return _cachedRenderer;
+  if (_rendererPromise) return _rendererPromise;
+
+  _rendererPromise = (async (): Promise<StreamingRenderer> => {
+    try {
+      // Try to import from react-dom/server.browser first (Web Streams API)
+      // This is the correct path for renderToReadableStream in React 18+
+      // @ts-expect-error - react-dom/server.browser may not have types
+      const browserServer = await import('react-dom/server.browser');
+      if (typeof browserServer.renderToReadableStream === 'function') {
+        _cachedRenderer = {
+          renderToReadableStream: browserServer.renderToReadableStream,
+          renderToString: browserServer.renderToString,
+        };
+        return _cachedRenderer;
+      }
+    } catch {
+      // Browser build not available, try the main export
+    }
+
+    try {
+      // Fallback to react-dom/server
+      const server = await import('react-dom/server');
+      _cachedRenderer = {
+        renderToReadableStream: (server as any).renderToReadableStream,
+        renderToString: server.renderToString,
+      };
+      return _cachedRenderer;
+    } catch {
+      // Last resort - return undefined for streaming, will fallback to string
+      _cachedRenderer = {
+        renderToReadableStream: undefined,
+        renderToString: (await import('react-dom/server')).renderToString,
+      };
+      return _cachedRenderer;
+    }
+  })();
+
+  return _rendererPromise;
 }
 
 /**
@@ -167,6 +181,7 @@ export class BunServer {
     upgrader: (server: any, request: Request) => boolean;
     wsConfig: any;
   }> = [];
+  private fetchHandler: ((request: Request, server: Server<unknown>) => Promise<Response | undefined>) | null = null;
 
   constructor(options: ServerOptions = {}) {
     this.options = {
@@ -922,15 +937,18 @@ export class BunServer {
                   // The deferred resolution gets its own independent timeout below.
                   clearTimeout(timeoutId);
                   let resolvedData: unknown;
+                  let deferredTimeoutId: ReturnType<typeof setTimeout> | undefined;
                   try {
                     // Race against a timeout so a hanging deferred can't stall the stream forever.
                     resolvedData = await Promise.race([
                       resolveAllDeferred(loaderData),
-                      new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Deferred data resolution timed out')), STREAM_TIMEOUT)
-                      ),
+                      new Promise((_, reject) => {
+                        deferredTimeoutId = setTimeout(() => reject(new Error('Deferred data resolution timed out')), STREAM_TIMEOUT);
+                      }),
                     ]);
+                    clearTimeout(deferredTimeoutId);
                   } catch (error) {
+                    clearTimeout(deferredTimeoutId);
                     console.error('Deferred data resolution failed:', error);
                     resolvedData = null;
                   }
@@ -1092,15 +1110,18 @@ export class BunServer {
               // The deferred resolution gets its own independent timeout below.
               clearTimeout(timeoutId);
               let resolvedData: unknown;
+              let deferredTimeoutId: ReturnType<typeof setTimeout> | undefined;
               try {
                 // Race against a timeout so a hanging deferred can't stall the stream forever.
                 resolvedData = await Promise.race([
                   resolveAllDeferred(loaderData),
-                  new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Deferred data resolution timed out')), STREAM_TIMEOUT)
-                  ),
+                  new Promise((_, reject) => {
+                    deferredTimeoutId = setTimeout(() => reject(new Error('Deferred data resolution timed out')), STREAM_TIMEOUT);
+                  }),
                 ]);
+                clearTimeout(deferredTimeoutId);
               } catch (error) {
+                clearTimeout(deferredTimeoutId);
                 console.error('Deferred data resolution failed:', error);
                 resolvedData = null;
               }
@@ -1302,12 +1323,19 @@ export class BunServer {
       return method;
     }
 
-    const contentType = request.headers.get('Content-Type') || '';
-    const isFormSubmission =
-      contentType.includes('application/x-www-form-urlencoded') ||
-      contentType.includes('multipart/form-data');
+    // Check header-based override first (zero-cost, no body parsing)
+    const headerOverride = request.headers.get('X-HTTP-Method-Override');
+    if (headerOverride) {
+      const normalized = headerOverride.toUpperCase();
+      if (BunServer.METHOD_OVERRIDE_ALLOWED.has(normalized)) return normalized;
+    }
 
-    if (!isFormSubmission) {
+    const contentType = request.headers.get('Content-Type') || '';
+
+    // Only parse URL-encoded forms for method override.
+    // Avoid parsing multipart/form-data — it would load entire file uploads into memory
+    // just to check a single _method field.
+    if (!contentType.includes('application/x-www-form-urlencoded')) {
       return method;
     }
 
@@ -1386,16 +1414,30 @@ export class BunServer {
   /**
    * Build HTML string for meta tags from descriptors.
    */
+  private static readonly ALLOWED_LINK_ATTRS = new Set([
+    'rel', 'href', 'type', 'media', 'sizes', 'crossorigin',
+    'as', 'hreflang', 'title', 'integrity', 'referrerpolicy',
+    'fetchpriority', 'imagesizes', 'imagesrcset', 'disabled',
+  ]);
+
+  private static escapeAttr(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   private buildMetaHtml(meta: MetaDescriptor[]): string {
     let html = '';
     for (const descriptor of meta) {
       if (descriptor.name && descriptor.content) {
-        const name = descriptor.name.replace(/"/g, '&quot;');
-        const content = descriptor.content.replace(/"/g, '&quot;');
+        const name = BunServer.escapeAttr(descriptor.name);
+        const content = BunServer.escapeAttr(descriptor.content);
         html += `<meta name="${name}" content="${content}"/>`;
       } else if (descriptor.property && descriptor.content) {
-        const property = descriptor.property.replace(/"/g, '&quot;');
-        const content = descriptor.content.replace(/"/g, '&quot;');
+        const property = BunServer.escapeAttr(descriptor.property);
+        const content = BunServer.escapeAttr(descriptor.content);
         html += `<meta property="${property}" content="${content}"/>`;
       } else if (descriptor['script:ld+json']) {
         // Escape closing script tags to prevent XSS breakout
@@ -1403,8 +1445,8 @@ export class BunServer {
         html += `<script type="application/ld+json">${safeJsonLd}</script>`;
       } else if (descriptor.tagName === 'link') {
         const attrs = Object.entries(descriptor)
-          .filter(([k]) => k !== 'tagName')
-          .map(([k, v]) => `${k}="${String(v).replace(/"/g, '&quot;')}"`)
+          .filter(([k]) => k !== 'tagName' && BunServer.ALLOWED_LINK_ATTRS.has(k))
+          .map(([k, v]) => `${k}="${BunServer.escapeAttr(String(v))}"`)
           .join(' ');
         html += `<link ${attrs}/>`;
       }
@@ -1767,10 +1809,7 @@ export class BunServer {
       drain(ws: any) { resolveHandler(ws)?.drain?.(ws); },
     };
 
-    const serverOptions: Parameters<typeof Bun.serve>[0] = {
-      port,
-      hostname,
-      fetch: async (request: Request, server: Server<unknown>) => {
+    this.fetchHandler = async (request: Request, server: Server<unknown>) => {
         const url = new URL(request.url);
 
         // Handle WebSocket upgrade for HMR
@@ -1833,8 +1872,13 @@ export class BunServer {
         }
 
         return this.handleRequest(request);
-      },
-      error: (error) => this.handleError(error, {} as RequestContext),
+    };
+
+    const serverOptions: Parameters<typeof Bun.serve>[0] = {
+      port,
+      hostname,
+      fetch: this.fetchHandler,
+      error: (error) => this.handleError(error, createContext(new Request('http://localhost/'))),
     };
 
     if (tls) {
@@ -1864,11 +1908,12 @@ export class BunServer {
 
   /**
    * Reload the server (for HMR).
+   * Reuses the full fetch handler to preserve WebSocket upgrade logic.
    */
   async reload(): Promise<void> {
-    if (this.server) {
+    if (this.server && this.fetchHandler) {
       this.server.reload({
-        fetch: (request: Request) => this.handleRequest(request),
+        fetch: this.fetchHandler,
       });
     }
   }

@@ -454,7 +454,7 @@ describe('@ereo/data - Action', () => {
       expect(body).toEqual({ data: 'test' });
     });
 
-    test('returns unknown content type for non-JSON text without content-type', async () => {
+    test('returns raw text for non-JSON body without content-type', async () => {
       const request = new Request('http://localhost/api', {
         method: 'POST',
         body: 'not valid json at all {{{',
@@ -462,8 +462,8 @@ describe('@ereo/data - Action', () => {
 
       const { body, contentType } = await parseRequestBody(request);
 
-      expect(contentType).toBe('unknown');
-      expect(body).toBeNull();
+      expect(contentType).toBe('text');
+      expect(body).toBe('not valid json at all {{{');
     });
   });
 

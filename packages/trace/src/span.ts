@@ -19,9 +19,9 @@ function randomHex(len: number): string {
 
 /** Generate an 8-byte hex span ID (16 chars) */
 export function generateSpanId(): SpanId {
-  idCounter++;
-  const time = Date.now().toString(16).slice(-8);
-  const counter = (idCounter & 0xffff).toString(16).padStart(4, '0');
+  idCounter = (idCounter + 1) & 0xffffffff; // 32-bit wrap (~4 billion before collision)
+  const time = Date.now().toString(16).slice(-6);
+  const counter = idCounter.toString(16).padStart(6, '0').slice(-6);
   const random = randomHex(4);
   return `${time}${counter}${random}`;
 }

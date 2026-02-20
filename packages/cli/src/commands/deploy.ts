@@ -13,6 +13,11 @@ import { loadConfig } from '../config';
  */
 export type DeployTarget = 'vercel' | 'cloudflare' | 'fly' | 'netlify' | 'docker';
 
+/** Sanitize project name for use in config files (TOML, Dockerfile tags). */
+function sanitizeProjectName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
+}
+
 /**
  * Deploy command options.
  */
@@ -231,7 +236,7 @@ async function deployToCloudflare(root: string, options: DeployOptions, config: 
   // Generate wrangler.toml if needed
   const wranglerConfigPath = join(root, 'wrangler.toml');
   if (!(await Bun.file(wranglerConfigPath).exists())) {
-    const projectName = options.name || 'ereo-app';
+    const projectName = sanitizeProjectName(options.name || 'ereo-app');
     const wranglerConfig = `name = "${projectName}"
 main = "${outDir}/server/index.js"
 compatibility_date = "2024-01-01"
@@ -292,7 +297,7 @@ async function deployToFly(root: string, options: DeployOptions): Promise<Deploy
   // Generate fly.toml if needed
   const flyConfigPath = join(root, 'fly.toml');
   if (!(await Bun.file(flyConfigPath).exists())) {
-    const projectName = options.name || 'ereo-app';
+    const projectName = sanitizeProjectName(options.name || 'ereo-app');
     const flyConfig = `app = "${projectName}"
 primary_region = "iad"
 
@@ -446,7 +451,7 @@ CMD ["bun", "run", "start"]
   }
 
   // Build image
-  const imageName = options.name || 'ereo-app';
+  const imageName = sanitizeProjectName(options.name || 'ereo-app');
   const tag = options.production ? 'latest' : 'dev';
 
   const result = await runCommandWithOutput(
@@ -520,8 +525,10 @@ async function runCommandWithOutput(
       stderr: 'pipe',
     });
 
-    const stdout = await new Response(proc.stdout).text();
-    const stderr = await new Response(proc.stderr).text();
+    const [stdout, stderr] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
     await proc.exited;
 
     return {

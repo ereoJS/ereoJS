@@ -269,7 +269,7 @@ export class ValidationEngine<T extends Record<string, any>> {
     const schema = this._store.config.schema;
     if (schema) {
       schemaResult = await this._validateSchema(schema as ValidationSchema);
-      if (controller.signal.aborted) return { success: true };
+      if (controller.signal.aborted) return { success: false, errors: { '': ['Validation cancelled'] } };
       if (!schemaResult.success && schemaResult.errors) {
         for (const [path, errors] of Object.entries(schemaResult.errors)) {
           allErrors[path] = errors;

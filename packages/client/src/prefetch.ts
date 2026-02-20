@@ -230,25 +230,46 @@ export function setupAutoPrefetch(options: PrefetchOptions = {}): () => void {
     activeAutoPrefetchCleanup = null;
   }
 
-  const cleanups: Array<() => void> = [];
+  // Track which elements have been set up to avoid duplicates
+  const setupElements = new WeakSet<Element>();
+  // Map element → cleanup to support removal tracking
+  const elementCleanups = new Map<Element, () => void>();
+
+  function setupElement(link: HTMLAnchorElement): void {
+    if (setupElements.has(link)) return;
+    setupElements.add(link);
+    const cleanupFn = setupLinkPrefetch(link, options);
+    elementCleanups.set(link, cleanupFn);
+  }
 
   // Setup existing links
   const links = document.querySelectorAll('a[href]');
-  links.forEach((link) => {
-    cleanups.push(setupLinkPrefetch(link as HTMLAnchorElement, options));
-  });
+  links.forEach((link) => setupElement(link as HTMLAnchorElement));
 
-  // Watch for new links
+  // Watch for new and removed links
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
+      // Handle added nodes
       for (const node of mutation.addedNodes) {
         if (node instanceof HTMLAnchorElement && isSameOriginHref(node.href)) {
-          cleanups.push(setupLinkPrefetch(node, options));
+          setupElement(node);
         }
         if (node instanceof Element) {
           const newLinks = node.querySelectorAll('a[href]');
-          newLinks.forEach((link) => {
-            cleanups.push(setupLinkPrefetch(link as HTMLAnchorElement, options));
+          newLinks.forEach((link) => setupElement(link as HTMLAnchorElement));
+        }
+      }
+      // Handle removed nodes — clean up their listeners
+      for (const node of mutation.removedNodes) {
+        if (node instanceof HTMLAnchorElement) {
+          const fn = elementCleanups.get(node);
+          if (fn) { fn(); elementCleanups.delete(node); }
+        }
+        if (node instanceof Element) {
+          const removedLinks = node.querySelectorAll('a[href]');
+          removedLinks.forEach((link) => {
+            const fn = elementCleanups.get(link);
+            if (fn) { fn(); elementCleanups.delete(link); }
           });
         }
       }
@@ -259,7 +280,10 @@ export function setupAutoPrefetch(options: PrefetchOptions = {}): () => void {
 
   const cleanup = () => {
     observer.disconnect();
-    cleanups.forEach((c) => c());
+    for (const fn of elementCleanups.values()) {
+      fn();
+    }
+    elementCleanups.clear();
     if (activeAutoPrefetchCleanup === cleanup) {
       activeAutoPrefetchCleanup = null;
     }

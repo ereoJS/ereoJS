@@ -98,7 +98,15 @@ export function createServerFnHandler(
     }
 
     // Extract function ID from the URL
-    const fnId = decodeURIComponent(url.pathname.slice(prefix.length));
+    let fnId: string;
+    try {
+      fnId = decodeURIComponent(url.pathname.slice(prefix.length));
+    } catch {
+      return jsonResponse(
+        { ok: false, error: { code: 'BAD_REQUEST', message: 'Invalid function ID encoding' } },
+        400
+      );
+    }
     if (!fnId || fnId.includes('..') || fnId.includes('\0')) {
       return jsonResponse(
         { ok: false, error: { code: 'BAD_REQUEST', message: 'Invalid function ID' } },
@@ -132,7 +140,17 @@ export function createServerFnHandler(
     }
 
     // Build server function context
-    const resolvedContext = createContext ? await createContext(request) : appContext ?? {};
+    let resolvedContext: unknown;
+    try {
+      resolvedContext = createContext ? await createContext(request) : appContext ?? {};
+    } catch (error) {
+      onError?.(error, fnId);
+      console.error(`Server function "${fnId}" context creation error:`, error instanceof Error ? error.message : error);
+      return jsonResponse(
+        { ok: false, error: { code: 'INTERNAL_ERROR', message: 'Context creation failed' } },
+        500
+      );
+    }
     const responseHeaders = new Headers();
 
     const ctx: ServerFnContext = {

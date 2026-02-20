@@ -310,6 +310,9 @@ export function filePathToUrlPath(
   // Replace route group segments like /(marketing)/ with /
   path = path.replace(/\/\([^)]+\)/g, '');
 
+  // Collapse consecutive slashes from nested route group removal
+  path = path.replace(/\/{2,}/g, '/');
+
   // Ensure path starts with /
   if (!path.startsWith('/')) {
     path = '/' + path;

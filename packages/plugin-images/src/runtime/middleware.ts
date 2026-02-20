@@ -214,12 +214,40 @@ export function createImageMiddleware(options: ImageMiddlewareOptions) {
       let sourceBuffer: Buffer;
 
       if (params.src.startsWith('http://') || params.src.startsWith('https://')) {
-        // Fetch remote image
-        const response = await fetch(params.src);
-        if (!response.ok) {
+        // Fetch remote image with timeout and size limit
+        const FETCH_TIMEOUT_MS = 10_000; // 10 seconds
+        const MAX_REMOTE_SIZE = 20 * 1024 * 1024; // 20MB
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+        try {
+          const response = await fetch(params.src, { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            return new Response('Failed to fetch source image', { status: 502 });
+          }
+
+          // Check Content-Length header before downloading body
+          const contentLength = response.headers.get('Content-Length');
+          if (contentLength && parseInt(contentLength, 10) > MAX_REMOTE_SIZE) {
+            return new Response('Source image too large', { status: 413 });
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          if (arrayBuffer.byteLength > MAX_REMOTE_SIZE) {
+            return new Response('Source image too large', { status: 413 });
+          }
+
+          sourceBuffer = Buffer.from(arrayBuffer);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+            return new Response('Remote image fetch timed out', { status: 504 });
+          }
           return new Response('Failed to fetch source image', { status: 502 });
         }
-        sourceBuffer = Buffer.from(await response.arrayBuffer());
       } else {
         // Load local file with path traversal protection
         const baseDir = resolve(options.root, 'public');

@@ -74,6 +74,10 @@ export function removeRouteLinks(): void {
     link.parentNode?.removeChild(link);
   }
   activeLinks = [];
+
+  // Also remove any SSR-rendered links with the marker attribute that aren't tracked
+  const ssrLinks = document.querySelectorAll(`link[${EREO_LINK_ATTR}]`);
+  ssrLinks.forEach((link) => link.parentNode?.removeChild(link));
 }
 
 /**

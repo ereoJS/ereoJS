@@ -85,7 +85,7 @@ export function generateViewerHTML(traces: TraceData[]): string {
     <div class="detail-panel" id="detail-panel"><div class="empty">Select a trace to view details</div></div>
   </div>
   <script>
-    const TRACES = ${JSON.stringify(serialized).replace(/<\//g, '<\\/')};
+    const TRACES = ${JSON.stringify(serialized).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/'/g, '\\u0027')};
     let selectedTraceId = null;
     let selectedSpanId = null;
 
