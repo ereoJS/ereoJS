@@ -31,9 +31,13 @@ export async function loadConfig(root: string): Promise<{
         const config = configModule.default || configModule;
         return { config, configPath };
       }
-    } catch (error) {
-      console.warn(`Could not load config (${configPath}):`, error);
-      return { config: {}, configPath: null };
+    } catch (error: any) {
+      // Only swallow file-not-found; re-throw syntax/import errors so devs
+      // see the real problem instead of silently running with empty config.
+      if (error?.code === 'ENOENT' || error?.code === 'MODULE_NOT_FOUND') {
+        continue;
+      }
+      throw new Error(`Failed to load config (${configPath}): ${error?.message || error}`);
     }
   }
 

@@ -179,9 +179,18 @@ export function createServerFnHandler(
 
       return response;
     } catch (error) {
+      // Helper to copy accumulated middleware headers (CORS, cache, etc.) onto error responses.
+      // Without this, browsers see "CORS error" when the real error was 401/429.
+      const withResponseHeaders = (response: Response): Response => {
+        responseHeaders.forEach((value, key) => {
+          response.headers.set(key, value);
+        });
+        return response;
+      };
+
       // ServerFnError — structured error
       if (error instanceof ServerFnError) {
-        return jsonResponse(
+        return withResponseHeaders(jsonResponse(
           {
             ok: false,
             error: {
@@ -191,16 +200,16 @@ export function createServerFnHandler(
             },
           },
           error.statusCode
-        );
+        ));
       }
 
       // Zod-style validation error thrown from handler
       if (isZodError(error)) {
         const details = extractValidationDetails(error);
-        return jsonResponse(
+        return withResponseHeaders(jsonResponse(
           { ok: false, error: { code: 'VALIDATION_ERROR', message: 'Validation failed', details } },
           400
-        );
+        ));
       }
 
       // Unhandled error
@@ -212,10 +221,10 @@ export function createServerFnHandler(
         console.error(`Server function "${fnId}" error:`, error.message);
       }
 
-      return jsonResponse(
+      return withResponseHeaders(jsonResponse(
         { ok: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
         500
-      );
+      ));
     }
   };
 }

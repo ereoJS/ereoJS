@@ -277,7 +277,7 @@ export function generateRouteTypes(
     const safeName = safeIdentifier(importPath);
     const wrapType = lazyEvaluation ? (t: string) => `LazyEval<${t}>` : (t: string) => t;
 
-    lines.push(`    '${info.path}': {`);
+    lines.push(`    '${info.path.replace(/'/g, "\\'")}': {`);
     lines.push(`      params: ${paramsType};`);
 
     // Search params type inference (Ereo feature)

@@ -16,9 +16,10 @@ interface PrefetchEntry {
 }
 
 /**
- * Prefetch cache.
+ * Prefetch cache with bounded size.
  */
 const prefetchCache = new Map<string, PrefetchEntry>();
+const MAX_PREFETCH_CACHE_SIZE = 100;
 
 /**
  * Prefetch options.
@@ -89,8 +90,21 @@ export async function prefetch(url: string): Promise<void> {
 
   // Check cache — skip if already loaded or currently loading
   const cached = prefetchCache.get(cacheKey);
-  if (cached && (cached.loading || isCacheValid(cached, defaultOptions.cacheDuration))) {
-    return;
+  if (cached) {
+    if (cached.loading || isCacheValid(cached, defaultOptions.cacheDuration)) {
+      return;
+    }
+    // Evict expired or failed entries so they don't accumulate indefinitely
+    prefetchCache.delete(cacheKey);
+  }
+
+  // Evict oldest entries if cache is full
+  if (prefetchCache.size >= MAX_PREFETCH_CACHE_SIZE) {
+    // Delete the oldest (first inserted) entry
+    const firstKey = prefetchCache.keys().next().value;
+    if (firstKey !== undefined) {
+      prefetchCache.delete(firstKey);
+    }
   }
 
   // Create entry
@@ -201,11 +215,20 @@ export function setupLinkPrefetch(
   };
 }
 
+/** Track active auto-prefetch cleanup to prevent duplicate observers on HMR */
+let activeAutoPrefetchCleanup: (() => void) | null = null;
+
 /**
  * Auto-setup prefetching for all links.
  */
 export function setupAutoPrefetch(options: PrefetchOptions = {}): () => void {
   if (typeof document === 'undefined') return () => {};
+
+  // Clean up previous observer if called again (e.g., during HMR)
+  if (activeAutoPrefetchCleanup) {
+    activeAutoPrefetchCleanup();
+    activeAutoPrefetchCleanup = null;
+  }
 
   const cleanups: Array<() => void> = [];
 
@@ -234,10 +257,16 @@ export function setupAutoPrefetch(options: PrefetchOptions = {}): () => void {
 
   observer.observe(document.body, { childList: true, subtree: true });
 
-  return () => {
+  const cleanup = () => {
     observer.disconnect();
-    cleanups.forEach((cleanup) => cleanup());
+    cleanups.forEach((c) => c());
+    if (activeAutoPrefetchCleanup === cleanup) {
+      activeAutoPrefetchCleanup = null;
+    }
   };
+
+  activeAutoPrefetchCleanup = cleanup;
+  return cleanup;
 }
 
 /**

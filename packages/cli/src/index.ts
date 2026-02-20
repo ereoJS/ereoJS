@@ -142,6 +142,14 @@ function parseOptionalBoolean(value: string | boolean | undefined): boolean | un
   return value !== 'false';
 }
 
+function parsePort(value: string): number {
+  const port = parseInt(value, 10);
+  if (Number.isNaN(port) || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid port number: "${value}". Must be an integer between 1 and 65535.`);
+  }
+  return port;
+}
+
 /**
  * Main CLI entry point.
  */
@@ -164,7 +172,7 @@ async function main(): Promise<void> {
     switch (command) {
       case 'dev': {
         const devOptions: DevOptions = {
-          port: options.port ? parseInt(options.port as string, 10) : undefined,
+          port: options.port ? parsePort(options.port as string) : undefined,
           host: (options.host || options.h) as string | undefined,
           open: !!(options.open || options.o),
           trace: !!(options.trace),
@@ -185,7 +193,7 @@ async function main(): Promise<void> {
 
       case 'start': {
         const startOptions: StartOptions = {
-          port: options.port ? parseInt(options.port as string, 10) : undefined,
+          port: options.port ? parsePort(options.port as string) : undefined,
           host: (options.host || options.h) as string | undefined,
         };
         await start(startOptions);

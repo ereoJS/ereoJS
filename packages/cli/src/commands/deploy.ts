@@ -73,9 +73,9 @@ export async function deploy(options: DeployOptions = {}): Promise<DeployResult>
   try {
     switch (target) {
       case 'vercel':
-        return await deployToVercel(root, options);
+        return await deployToVercel(root, options, config);
       case 'cloudflare':
-        return await deployToCloudflare(root, options);
+        return await deployToCloudflare(root, options, config);
       case 'fly':
         return await deployToFly(root, options);
       case 'netlify':
@@ -134,7 +134,7 @@ function generateDeployPreview(
   logs.push(`Would deploy to ${target}`);
   logs.push(`Project root: ${root}`);
   logs.push(`Build target: ${config.build?.target || 'bun'}`);
-  logs.push(`Output directory: ${config.build?.outDir || 'dist'}`);
+  logs.push(`Output directory: ${config.build?.outDir || '.ereo'}`);
 
   console.log('  Preview:');
   for (const log of logs) {
@@ -151,7 +151,7 @@ function generateDeployPreview(
 /**
  * Deploy to Vercel.
  */
-async function deployToVercel(root: string, options: DeployOptions): Promise<DeployResult> {
+async function deployToVercel(root: string, options: DeployOptions, config: FrameworkConfig): Promise<DeployResult> {
   console.log('  Deploying to Vercel...\n');
 
   // Check for Vercel CLI
@@ -166,7 +166,7 @@ async function deployToVercel(root: string, options: DeployOptions): Promise<Dep
   if (!(await Bun.file(vercelConfigPath).exists())) {
     const vercelConfig = {
       buildCommand: 'bun run build',
-      outputDirectory: 'dist',
+      outputDirectory: config.build?.outDir || '.ereo',
       framework: null,
       functions: {
         'api/**/*.ts': {
@@ -216,7 +216,7 @@ async function deployToVercel(root: string, options: DeployOptions): Promise<Dep
 /**
  * Deploy to Cloudflare Pages/Workers.
  */
-async function deployToCloudflare(root: string, options: DeployOptions): Promise<DeployResult> {
+async function deployToCloudflare(root: string, options: DeployOptions, config: FrameworkConfig): Promise<DeployResult> {
   console.log('  Deploying to Cloudflare...\n');
 
   // Check for Wrangler CLI
@@ -226,16 +226,18 @@ async function deployToCloudflare(root: string, options: DeployOptions): Promise
     await runCommand('bun', ['add', '-g', 'wrangler']);
   }
 
+  const outDir = config.build?.outDir || '.ereo';
+
   // Generate wrangler.toml if needed
   const wranglerConfigPath = join(root, 'wrangler.toml');
   if (!(await Bun.file(wranglerConfigPath).exists())) {
     const projectName = options.name || 'ereo-app';
     const wranglerConfig = `name = "${projectName}"
-main = "dist/server/index.js"
+main = "${outDir}/server/index.js"
 compatibility_date = "2024-01-01"
 
 [site]
-bucket = "./dist/client"
+bucket = "./${outDir}/client"
 
 [build]
 command = "bun run build"

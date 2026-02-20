@@ -234,16 +234,17 @@ export class RouteMatcher {
    * Match a URL pathname against compiled routes.
    */
   match(pathname: string): RouteMatch | null {
-    // Normalize pathname: collapse double slashes, handle empty
+    // Normalize pathname: decode first, then collapse slashes.
+    // Decode BEFORE normalization so that encoded double-slashes (%2F%2F)
+    // are properly collapsed after decoding.
     let normalizedPath = pathname === '' ? '/' : pathname;
-    // Collapse consecutive slashes (e.g., //admin///users → /admin/users)
-    normalizedPath = normalizedPath.replace(/\/{2,}/g, '/');
-    // Decode URI for matching, preserving path separators (%2F stays encoded)
     try {
       normalizedPath = decodeURI(normalizedPath);
     } catch {
       // Malformed URI, use as-is
     }
+    // Collapse consecutive slashes (e.g., //admin///users → /admin/users)
+    normalizedPath = normalizedPath.replace(/\/{2,}/g, '/');
 
     for (const { route, segments, regex } of this.routes) {
       const match = normalizedPath.match(regex);

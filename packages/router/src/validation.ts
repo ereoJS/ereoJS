@@ -326,9 +326,9 @@ export function extractParamNames(path: string): string[] {
     if (segment.startsWith('[...') && segment.endsWith(']')) {
       // Catch-all
       names.push(segment.slice(4, -1));
-    } else if (segment.startsWith('[[[') && segment.endsWith(']]')) {
+    } else if (segment.startsWith('[[[') && segment.endsWith(']]]')) {
       // Optional catch-all
-      names.push(segment.slice(3, -2));
+      names.push(segment.slice(3, -3));
     } else if (segment.startsWith('[[') && segment.endsWith(']]')) {
       // Optional param
       names.push(segment.slice(2, -2));

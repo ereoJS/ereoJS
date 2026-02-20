@@ -78,8 +78,16 @@ export class MiddlewareChain {
 
     const next: NextFunction = async () => {
       if (index < applicable.length) {
-        const middleware = applicable[index++];
-        return middleware.handler(request, context, next);
+        const currentIndex = index++;
+        const middleware = applicable[currentIndex];
+        let called = false;
+        return middleware.handler(request, context, async () => {
+          if (called) {
+            throw new Error('next() called multiple times in middleware');
+          }
+          called = true;
+          return next();
+        });
       }
       return final();
     };
@@ -343,7 +351,9 @@ export function rateLimit(options: RateLimitOptions = {}): MiddlewareHandler {
 
     record.count++;
 
-    // Clean up expired entries deterministically every window period or when map is too large
+    // Clean up expired entries deterministically every window period or when map is too large.
+    // When the store exceeds MAX_ENTRIES, also evict the soonest-to-expire entries
+    // to prevent unbounded growth from spoofed IPs.
     if (now - lastCleanup > windowMs || requests.size > MAX_ENTRIES) {
       lastCleanup = now;
       const expired: string[] = [];
@@ -354,6 +364,15 @@ export function rateLimit(options: RateLimitOptions = {}): MiddlewareHandler {
       }
       for (const k of expired) {
         requests.delete(k);
+      }
+      // Hard eviction: if still over limit after removing expired, drop oldest 20%
+      if (requests.size > MAX_ENTRIES) {
+        const entries = Array.from(requests.entries());
+        entries.sort((a, b) => a[1].resetTime - b[1].resetTime);
+        const toRemove = Math.max(1, Math.floor(entries.length * 0.2));
+        for (let i = 0; i < toRemove; i++) {
+          requests.delete(entries[i][0]);
+        }
       }
     }
 

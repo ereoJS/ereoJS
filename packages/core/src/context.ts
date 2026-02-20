@@ -33,7 +33,12 @@ export class RequestContext implements AppContext {
   private setCookieHeaders: string[] = [];
 
   constructor(request: Request) {
-    this.url = new URL(request.url);
+    try {
+      this.url = new URL(request.url);
+    } catch {
+      // Fallback for malformed URLs from misconfigured proxies
+      this.url = new URL('http://localhost/');
+    }
     this.env = typeof process !== 'undefined' ? process.env : {};
     this.responseHeaders = new Headers();
 
@@ -101,12 +106,13 @@ export class RequestContext implements AppContext {
       if (options.sameSite) parts.push(`SameSite=${options.sameSite}`);
       this.setCookieHeaders.push(parts.join('; '));
     },
-    delete: (name: string, options?: Pick<CookieSetOptions, 'path' | 'domain'>): void => {
+    delete: (name: string, options?: Pick<CookieSetOptions, 'path' | 'domain' | 'httpOnly'>): void => {
       this.cookieMap.delete(name);
       const parts = [`${encodeURIComponent(name)}=`, 'Max-Age=0'];
       parts.push(`Path=${options?.path ?? '/'}`);
       if (options?.domain) parts.push(`Domain=${options.domain}`);
-      parts.push('HttpOnly');
+      // Only add HttpOnly if not explicitly disabled — mirrors the set() behavior
+      if (options?.httpOnly !== false) parts.push('HttpOnly');
       this.setCookieHeaders.push(parts.join('; '));
     },
     has: (name: string): boolean => {

@@ -6,7 +6,7 @@
 
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import {
   createApp,
@@ -326,7 +326,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
           } else if (entry.isFile() && /\.(tsx?|jsx?)$/.test(entry.name)) {
             try {
               const content = await readFile(fullPath, 'utf-8');
-              if (/^['"]use client['"]/m.test(content)) {
+              if (/^\s*['"]use client['"]/m.test(content)) {
                 // Extract named exports
                 for (const match of content.matchAll(/export\s+(?:function|const|class)\s+(\w+)/g)) {
                   islands.push({ path: fullPath, name: match[1] });
@@ -429,6 +429,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
     // Write combined entry to cache directory (in project root so Bun resolves node_modules)
     const entryPath = join(root, 'node_modules', '.cache', 'ereo', '_entry.client.tsx');
+    await mkdir(join(root, 'node_modules', '.cache', 'ereo'), { recursive: true });
     await Bun.write(entryPath, entrySource);
 
     try {
@@ -466,7 +467,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
   // Rebuild client on route changes
   router.on('reload', () => {
-    buildDevClient();
+    buildDevClient().catch((err) => {
+      console.error('  \x1b[31m✖\x1b[0m Failed to rebuild client:', err);
+    });
   });
 
   // Add HMR middleware
@@ -598,5 +601,12 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     hmrWatcher.stop();
     rm(clientBuildDir, { recursive: true, force: true }).catch(() => {});
     process.exit(0);
+  });
+
+  // Clean up temp directory on unexpected crashes to prevent /tmp accumulation
+  process.on('uncaughtException', (error) => {
+    console.error('\n  Uncaught exception:', error);
+    rm(clientBuildDir, { recursive: true, force: true }).catch(() => {});
+    process.exit(1);
   });
 }

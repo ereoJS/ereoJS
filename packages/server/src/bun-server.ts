@@ -393,7 +393,9 @@ export class BunServer {
 
       return context.applyToResponse(response);
     } catch (error) {
-      return this.handleError(error, context);
+      // Apply context headers (e.g., CORS) to error responses too
+      const errorResponse = this.handleError(error, context);
+      return context.applyToResponse(errorResponse);
     }
   }
 
@@ -469,8 +471,17 @@ export class BunServer {
         return handler();
       }
 
-      const mw = middleware[index++];
-      return mw(request, context as any, next);
+      const currentIndex = index++;
+      const mw = middleware[currentIndex];
+      let called = false;
+
+      return mw(request, context as any, async () => {
+        if (called) {
+          throw new Error('next() called multiple times in middleware');
+        }
+        called = true;
+        return next();
+      });
     };
 
     return next();
@@ -871,8 +882,11 @@ export class BunServer {
       const tailBytes = hasDeferred ? null : encoder.encode(tail);
 
       // Abort streaming after 10s to prevent hanging on unresolved Suspense.
+      // This timeout is cleared when entering deferred data resolution to avoid
+      // a race between the streaming abort and the deferred resolution timeout.
       const abortController = new AbortController();
-      timeoutId = setTimeout(() => abortController.abort(), 10000);
+      const STREAM_TIMEOUT = 10000;
+      timeoutId = setTimeout(() => abortController.abort(), STREAM_TIMEOUT);
 
       // bootstrapModules tells React to:
       // 1. Emit $RC/$RX inline scripts for out-of-order Suspense boundary completion
@@ -904,13 +918,16 @@ export class BunServer {
                 // React finished rendering — all Suspense boundaries resolved.
                 // React's stream already included the client entry <script> via bootstrapModules.
                 if (hasDeferred) {
+                  // Clear the streaming abort timeout — React finished normally.
+                  // The deferred resolution gets its own independent timeout below.
+                  clearTimeout(timeoutId);
                   let resolvedData: unknown;
                   try {
                     // Race against a timeout so a hanging deferred can't stall the stream forever.
                     resolvedData = await Promise.race([
                       resolveAllDeferred(loaderData),
                       new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Deferred data resolution timed out')), 10000)
+                        setTimeout(() => reject(new Error('Deferred data resolution timed out')), STREAM_TIMEOUT)
                       ),
                     ]);
                   } catch (error) {
@@ -1019,8 +1036,11 @@ export class BunServer {
       const encoder = new TextEncoder();
 
       // Abort streaming after 10s to prevent hanging on unresolved Suspense.
+      // This timeout is cleared when entering deferred data resolution to avoid
+      // a race between the streaming abort and the deferred resolution timeout.
       const abortController = new AbortController();
-      timeoutId = setTimeout(() => abortController.abort(), 10000);
+      const STREAM_TIMEOUT = 10000;
+      timeoutId = setTimeout(() => abortController.abort(), STREAM_TIMEOUT);
 
       // Layout provides full HTML structure. bootstrapModules tells React to
       // emit $RC scripts for Suspense and inject client entry at stream end.
@@ -1044,6 +1064,8 @@ export class BunServer {
         : '';
       let metaInjected = metaHtml.length === 0;
       const decoder = new TextDecoder();
+      // Buffer for handling </head> split across chunks
+      let pendingChunk = '';
 
       // Pipe progressively: React content (with $RC scripts) → loader data
       // Do NOT await allReady — stream bytes to the client as React renders.
@@ -1057,16 +1079,25 @@ export class BunServer {
 
           const result = await reader.read();
           if (result.done) {
+            // Flush any buffered chunk that never contained </head>
+            if (pendingChunk) {
+              controller.enqueue(encoder.encode(pendingChunk));
+              pendingChunk = '';
+              metaInjected = true;
+            }
             // React finished — all Suspense boundaries resolved.
             // React's stream already included the client entry <script> via bootstrapModules.
             if (hasDeferred) {
+              // Clear the streaming abort timeout — React finished normally.
+              // The deferred resolution gets its own independent timeout below.
+              clearTimeout(timeoutId);
               let resolvedData: unknown;
               try {
                 // Race against a timeout so a hanging deferred can't stall the stream forever.
                 resolvedData = await Promise.race([
                   resolveAllDeferred(loaderData),
                   new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Deferred data resolution timed out')), 10000)
+                    setTimeout(() => reject(new Error('Deferred data resolution timed out')), STREAM_TIMEOUT)
                   ),
                 ]);
               } catch (error) {
@@ -1084,15 +1115,36 @@ export class BunServer {
             controller.close();
             done = true;
           } else {
-            // Inject route meta tags into the layout's <head> on first matching chunk
+            // Inject route meta tags into the layout's <head> on first matching chunk.
+            // Buffer chunks to handle </head> being split across chunk boundaries.
             if (!metaInjected) {
-              const chunk = decoder.decode(result.value, { stream: true });
+              const chunk = pendingChunk + decoder.decode(result.value, { stream: true });
+              pendingChunk = '';
               if (chunk.includes('</head>')) {
                 const injected = self.injectMetaIntoHtml(chunk, metaDescriptors);
                 controller.enqueue(encoder.encode(injected));
                 metaInjected = true;
                 return;
               }
+              // If chunk ends with a partial '</head' tag, buffer it
+              // Check if the chunk ends with any prefix of '</head>'
+              const tail = chunk.slice(-6); // '</head>' is 7 chars, check last 6
+              const headTag = '</head>';
+              let bufferFrom = -1;
+              for (let i = 1; i < headTag.length; i++) {
+                if (chunk.endsWith(headTag.slice(0, i))) {
+                  bufferFrom = chunk.length - i;
+                  break;
+                }
+              }
+              if (bufferFrom >= 0) {
+                // Send everything before the potential split and buffer the rest
+                controller.enqueue(encoder.encode(chunk.slice(0, bufferFrom)));
+                pendingChunk = chunk.slice(bufferFrom);
+              } else {
+                controller.enqueue(encoder.encode(chunk));
+              }
+              return;
             }
             controller.enqueue(result.value);
           }

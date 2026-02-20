@@ -353,10 +353,18 @@ export async function executeMiddlewareChain(
       return finalHandler();
     }
 
-    const handler = handlers[index++];
+    const currentIndex = index++;
+    const handler = handlers[currentIndex];
+    let called = false;
 
     try {
-      return await handler(request, context, next);
+      return await handler(request, context, async () => {
+        if (called) {
+          throw new Error('next() called multiple times in middleware');
+        }
+        called = true;
+        return next();
+      });
     } catch (error) {
       if (onError) {
         return onError(error instanceof Error ? error : new Error(String(error)));
@@ -398,8 +406,17 @@ export function composeMiddleware(...handlers: MiddlewareHandler[]): MiddlewareH
         return next();
       }
 
-      const handler = handlers[index++];
-      return handler(request, context, composedNext);
+      const currentIndex = index++;
+      const handler = handlers[currentIndex];
+      let called = false;
+
+      return handler(request, context, async () => {
+        if (called) {
+          throw new Error('next() called multiple times in middleware');
+        }
+        called = true;
+        return composedNext();
+      });
     };
 
     return composedNext();
@@ -630,14 +647,26 @@ export function createRateLimitMiddleware(options: {
     const key = keyGenerator(request);
     const now = Date.now();
 
-    // Periodically clean up expired entries to prevent memory leaks
-    if (now - lastCleanup > windowMs || store.size > 10_000) {
+    // Periodically clean up expired entries to prevent memory leaks.
+    // When the store exceeds the threshold, also evict the soonest-to-expire
+    // entries to prevent unbounded growth from spoofed IPs.
+    const MAX_ENTRIES = 10_000;
+    if (now - lastCleanup > windowMs || store.size > MAX_ENTRIES) {
       lastCleanup = now;
       const expired: string[] = [];
       for (const [k, v] of store) {
         if (now > v.resetTime) expired.push(k);
       }
       for (const k of expired) store.delete(k);
+      // Hard eviction: if still over limit after removing expired, drop oldest 20%
+      if (store.size > MAX_ENTRIES) {
+        const entries = Array.from(store.entries());
+        entries.sort((a, b) => a[1].resetTime - b[1].resetTime);
+        const toRemove = Math.max(1, Math.floor(entries.length * 0.2));
+        for (let i = 0; i < toRemove; i++) {
+          store.delete(entries[i][0]);
+        }
+      }
     }
 
     let record = store.get(key);

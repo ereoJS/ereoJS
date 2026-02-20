@@ -156,7 +156,9 @@ export class EreoApp implements Application {
       // Apply context headers and cache control
       return context.applyToResponse(response);
     } catch (error) {
-      return this.handleError(error, context);
+      // Apply context headers (e.g., CORS) to error responses too
+      const errorResponse = this.handleError(error, context);
+      return context.applyToResponse(errorResponse);
     }
   }
 
@@ -172,8 +174,16 @@ export class EreoApp implements Application {
 
     const next = async (): Promise<Response> => {
       if (index < this.middlewares.length) {
-        const middleware = this.middlewares[index++];
-        return middleware(request, context, next);
+        const currentIndex = index++;
+        const middleware = this.middlewares[currentIndex];
+        let called = false;
+        return middleware(request, context, async () => {
+          if (called) {
+            throw new Error('next() called multiple times in middleware');
+          }
+          called = true;
+          return next();
+        });
       }
       return final();
     };
@@ -274,7 +284,8 @@ export class EreoApp implements Application {
     if (!basePath || basePath === '/') {
       return '';
     }
-    return basePath.replace(/\/+$/, '');
+    // Collapse consecutive slashes and remove trailing slashes
+    return basePath.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
   }
 
   private async getEffectiveMethod(request: Request): Promise<string> {

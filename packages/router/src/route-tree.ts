@@ -88,7 +88,7 @@ export class RouteTree {
       currentPath += '/' + segment;
 
       const child = current.children.find(
-        (c) => c.path === currentPath || c.layout
+        (c) => c.path === currentPath || (c.layout && c.path === currentPath)
       );
 
       if (child) {
@@ -224,12 +224,13 @@ export class RouteTree {
 
     while (current) {
       if (current.layout) {
-        layouts.unshift(current);
+        layouts.push(current);
       }
       current = current.parent;
     }
 
-    return layouts;
+    // Reverse to get root-first order. O(n) vs O(n^2) with unshift.
+    return layouts.reverse();
   }
 
   /**

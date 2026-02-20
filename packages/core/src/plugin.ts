@@ -33,12 +33,13 @@ export class PluginRegistry {
       return;
     }
 
-    this.plugins.push(plugin);
-
-    // Call setup hook
+    // Call setup hook before adding to the array — if setup() throws,
+    // the plugin must not remain in the registry in a half-initialized state.
     if (plugin.setup) {
       await plugin.setup(this.context);
     }
+
+    this.plugins.push(plugin);
   }
 
   /**
@@ -148,13 +149,21 @@ export class PluginRegistry {
 
   /**
    * Run buildEnd hooks.
+   * Error-isolated: all plugins get their buildEnd called even if one throws.
    */
   async buildEnd(): Promise<void> {
+    let firstError: unknown = null;
     for (const plugin of this.plugins) {
       if (plugin.buildEnd) {
-        await plugin.buildEnd();
+        try {
+          await plugin.buildEnd();
+        } catch (error) {
+          console.error(`Plugin "${plugin.name}" buildEnd failed:`, error);
+          if (!firstError) firstError = error;
+        }
       }
     }
+    if (firstError) throw firstError;
   }
 }
 
@@ -227,11 +236,18 @@ export function composePlugins(name: string, plugins: Plugin[]): Plugin {
       }
     },
     async buildEnd() {
+      let firstError: unknown = null;
       for (const plugin of plugins) {
         if (plugin.buildEnd) {
-          await plugin.buildEnd();
+          try {
+            await plugin.buildEnd();
+          } catch (error) {
+            console.error(`Composed plugin "${plugin.name}" buildEnd failed:`, error);
+            if (!firstError) firstError = error;
+          }
         }
       }
+      if (firstError) throw firstError;
     },
   };
 }

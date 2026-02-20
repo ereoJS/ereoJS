@@ -668,10 +668,10 @@ function generateServerEntry(routes: Route[], root: string, routeOutputMap: Map<
     const importPath = outputPath
       ? `./routes/${outputPath}`
       : `./routes/${relative(join(root, 'app/routes'), route.file).replace(/\\/g, '/').replace(/\.[^.]+$/, '.js')}`;
-    imports.push(`import * as ${varName} from '${importPath}';`);
+    imports.push(`import * as ${varName} from '${importPath.replace(/'/g, "\\'")}';`);
 
     routeRegistrations.push(`  {
-    id: '${route.id}',
+    id: '${route.id.replace(/'/g, "\\'")}',
     path: '${route.path}',
     module: ${varName},
     index: ${route.index || false},

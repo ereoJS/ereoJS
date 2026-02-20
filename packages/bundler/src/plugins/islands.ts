@@ -20,9 +20,11 @@ export interface IslandMeta {
 
 /**
  * Regex patterns for island detection.
+ * Non-global versions for .test(), global versions for .exec() loops.
  */
-const ISLAND_DIRECTIVE_PATTERN = /client:(load|idle|visible|media)(?:="([^"]+)")?/g;
-const COMPONENT_EXPORT_PATTERN = /export\s+(?:default\s+)?(?:function|const|class)\s+(\w+)/g;
+const ISLAND_DIRECTIVE_TEST = /client:(load|idle|visible|media)(?:="([^"]+)")?/;
+const ISLAND_DIRECTIVE_EXEC = /client:(load|idle|visible|media)(?:="([^"]+)")?/g;
+const COMPONENT_EXPORT_EXEC = /export\s+(?:default\s+)?(?:function|const|class)\s+(\w+)/g;
 const USE_CLIENT_PATTERN = /^['"]use client['"]/m;
 
 /**
@@ -38,9 +40,8 @@ export function extractIslands(
   const isClientComponent = USE_CLIENT_PATTERN.test(content);
 
   if (!isClientComponent) {
-    // Also check for island directives
-    ISLAND_DIRECTIVE_PATTERN.lastIndex = 0;
-    const hasDirectives = ISLAND_DIRECTIVE_PATTERN.test(content);
+    // Also check for island directives (use non-global pattern for .test())
+    const hasDirectives = ISLAND_DIRECTIVE_TEST.test(content);
     if (!hasDirectives) {
       return islands;
     }
@@ -50,8 +51,8 @@ export function extractIslands(
   const componentNames: string[] = [];
   let match;
 
-  COMPONENT_EXPORT_PATTERN.lastIndex = 0;
-  while ((match = COMPONENT_EXPORT_PATTERN.exec(content)) !== null) {
+  COMPONENT_EXPORT_EXEC.lastIndex = 0;
+  while ((match = COMPONENT_EXPORT_EXEC.exec(content)) !== null) {
     componentNames.push(match[1]);
   }
 
@@ -73,10 +74,11 @@ export function extractIslands(
  * Generate unique island ID from file path.
  */
 function generateIslandId(filePath: string): string {
+  // Preserve hyphens to avoid collisions (foo-bar.tsx vs foo_bar.tsx)
   return filePath
     .replace(/[\/\\]/g, '_')
     .replace(/\.[^.]+$/, '')
-    .replace(/[^a-zA-Z0-9_]/g, '');
+    .replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
 /**
@@ -210,6 +212,5 @@ export function findIslandByName(
  * Check if a file contains islands.
  */
 export function hasIslands(content: string): boolean {
-  ISLAND_DIRECTIVE_PATTERN.lastIndex = 0;
-  return USE_CLIENT_PATTERN.test(content) || ISLAND_DIRECTIVE_PATTERN.test(content);
+  return USE_CLIENT_PATTERN.test(content) || ISLAND_DIRECTIVE_TEST.test(content);
 }

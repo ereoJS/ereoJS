@@ -15,6 +15,8 @@ export class Signal<T> {
   private readonly _boundFire: () => void;
   /** Cleanup functions for upstream subscriptions (from map/computed) */
   _disposers: (() => void)[] = [];
+  /** Whether this signal has been disposed */
+  private _disposed = false;
 
   constructor(initialValue: T) {
     this._value = initialValue;
@@ -55,6 +57,7 @@ export class Signal<T> {
 
   /** Dispose this signal: unsubscribe from upstream sources and clear subscribers */
   dispose(): void {
+    this._disposed = true;
     for (const disposer of this._disposers) {
       disposer();
     }
@@ -63,6 +66,7 @@ export class Signal<T> {
   }
 
   private _notify(): void {
+    if (this._disposed) return;
     const deferred = _scheduleBatchNotification(this._boundFire);
     if (!deferred) {
       this._fireSubscribers();

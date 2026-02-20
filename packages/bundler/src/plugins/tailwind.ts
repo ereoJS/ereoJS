@@ -305,6 +305,7 @@ export function createTailwindPlugin(options: TailwindPluginOptions = {}): Plugi
     ];
 
     for (const pattern of patterns) {
+      pattern.lastIndex = 0;
       let match;
       while ((match = pattern.exec(content)) !== null) {
         const classString = match[1];
@@ -757,6 +758,7 @@ export function extractTailwindClasses(content: string): string[] {
   ];
 
   for (const pattern of patterns) {
+    pattern.lastIndex = 0;
     let match;
     while ((match = pattern.exec(content)) !== null) {
       const classString = match[1];

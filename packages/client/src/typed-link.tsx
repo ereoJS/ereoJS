@@ -543,14 +543,17 @@ export const TypedNavLink = React.forwardRef(function TypedNavLink<
     ).split('?')[0].split('#')[0];
   }, [to, params]);
 
-  // Determine active state
+  // Determine active state — check segment boundaries to avoid /user matching /users
   const isActive = React.useMemo(() => {
     if (end) {
       return navigationState.pathname === targetPath;
     }
+    if (targetPath === '/') {
+      return navigationState.pathname === '/';
+    }
     return (
-      navigationState.pathname.startsWith(targetPath) &&
-      (targetPath === '/' ? navigationState.pathname === '/' : true)
+      navigationState.pathname === targetPath ||
+      navigationState.pathname.startsWith(targetPath + '/')
     );
   }, [targetPath, end, navigationState.pathname]);
 
@@ -564,21 +567,16 @@ export const TypedNavLink = React.forwardRef(function TypedNavLink<
   const resolvedStyle =
     typeof style === 'function' ? style(activeProps) : style;
 
-  // Build href for the underlying anchor
-  const href = React.useMemo(() => {
-    return buildUrl(to, {
-      params: params as RouteParamsFor<Path>,
-      search: search as Partial<SearchParamsFor<Path>>,
-      hash: hash as Partial<HashParamsFor<Path>>,
-    });
-  }, [to, params, search, hash]);
-
-  // Render the anchor directly to avoid complex type inference issues
+  // Delegate to TypedLink for proper client-side navigation (click interception,
+  // prefetch, scroll handling). Cast props to work around complex type inference.
   return (
-    <a
-      {...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
+    <TypedLink
+      {...(rest as any)}
       ref={ref}
-      href={href}
+      to={to}
+      params={params}
+      search={search}
+      hash={hash}
       className={resolvedClassName}
       style={resolvedStyle}
       aria-current={isActive ? 'page' : undefined}
@@ -632,8 +630,12 @@ export function useIsRouteActive<Path extends TypedRoutes>(
     return pathname === targetPath;
   }
 
+  if (targetPath === '/') {
+    return pathname === '/';
+  }
+
   return (
-    pathname.startsWith(targetPath) &&
-    (targetPath === '/' ? pathname === '/' : true)
+    pathname === targetPath ||
+    pathname.startsWith(targetPath + '/')
   );
 }
