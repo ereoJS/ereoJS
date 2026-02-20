@@ -1874,21 +1874,16 @@ export class BunServer {
         return this.handleRequest(request);
     };
 
-    const serverOptions: Parameters<typeof Bun.serve>[0] = {
+    const serverOptions = {
       port,
       hostname,
       fetch: this.fetchHandler,
-      error: (error) => this.handleError(error, createContext(new Request('http://localhost/'))),
+      error: (error: any) => this.handleError(error, createContext(new Request('http://localhost/'))),
+      websocket: mergedWebSocket,
+      tls: tls || undefined,
     };
 
-    if (tls) {
-      serverOptions.tls = tls;
-    }
-
-    // Always set WebSocket handler for multiplexing support
-    (serverOptions as any).websocket = mergedWebSocket;
-
-    this.server = Bun.serve(serverOptions);
+    this.server = Bun.serve(serverOptions as any);
 
     const protocol = tls ? 'https' : 'http';
     console.log(`Server running at ${protocol}://${hostname}:${port}`);
@@ -1914,7 +1909,7 @@ export class BunServer {
     if (this.server && this.fetchHandler) {
       this.server.reload({
         fetch: this.fetchHandler,
-      });
+      } as any);
     }
   }
 
