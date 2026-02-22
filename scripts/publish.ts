@@ -31,11 +31,14 @@ interface PackageJson {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+  [key: string]: unknown;
 }
 
 interface PackageInfo {
   path: string;
   packageJson: PackageJson;
+  /** Original file content before any version bumps */
+  originalContent: string;
   isExample: boolean;
 }
 
@@ -115,6 +118,7 @@ async function getPackages(): Promise<PackageInfo[]> {
       packages.push({
         path: pkgPath,
         packageJson,
+        originalContent: content,
         isExample: false,
       });
     } catch {
@@ -137,6 +141,7 @@ async function getPackages(): Promise<PackageInfo[]> {
         packages.push({
           path: pkgPath,
           packageJson,
+          originalContent: content,
           isExample: true,
         });
       } catch {
@@ -150,36 +155,47 @@ async function getPackages(): Promise<PackageInfo[]> {
   return packages;
 }
 
-// Update version in a package.json (keeps workspace: protocol intact)
-function updateVersionOnly(packageJson: PackageJson, newVersion: string): PackageJson {
-  return { ...packageJson, version: newVersion };
-}
-
 // Transform workspace dependencies to actual versions for npm publish
 function transformForPublish(
   packageJson: PackageJson,
   newVersion: string,
   allPackageNames: Set<string>
 ): PackageJson {
-  const transformed = { ...packageJson };
+  const transformed = JSON.parse(JSON.stringify(packageJson)) as PackageJson;
 
   const transformDeps = (deps: Record<string, string> | undefined) => {
     if (!deps) return deps;
-    const newDeps = { ...deps };
-    for (const [name, version] of Object.entries(newDeps)) {
+    for (const [name, version] of Object.entries(deps)) {
       if (allPackageNames.has(name) && version.startsWith("workspace:")) {
-        // Replace workspace:* with actual version for npm publish
-        newDeps[name] = `^${newVersion}`;
+        deps[name] = `^${newVersion}`;
       }
     }
-    return newDeps;
+    return deps;
   };
 
-  transformed.dependencies = transformDeps(transformed.dependencies);
-  transformed.devDependencies = transformDeps(transformed.devDependencies);
-  transformed.peerDependencies = transformDeps(transformed.peerDependencies);
+  transformDeps(transformed.dependencies);
+  transformDeps(transformed.devDependencies);
+  transformDeps(transformed.peerDependencies);
 
   return transformed;
+}
+
+// Verify that a package.json string has no workspace: protocol references in deps
+function verifyNoWorkspaceRefs(content: string, pkgName: string): void {
+  const parsed = JSON.parse(content);
+  const depTypes = ["dependencies", "devDependencies", "peerDependencies"] as const;
+
+  for (const depType of depTypes) {
+    const deps = parsed[depType];
+    if (!deps) continue;
+    for (const [name, version] of Object.entries(deps)) {
+      if (typeof version === "string" && version.startsWith("workspace:")) {
+        throw new Error(
+          `PUBLISH ABORT: ${pkgName} still has workspace protocol in ${depType}: ${name} = "${version}"`
+        );
+      }
+    }
+  }
 }
 
 // Sort packages by dependency order (packages with no internal deps first)
@@ -273,14 +289,15 @@ async function main() {
   // Update all package.json files with new version (keeping workspace: protocol)
   console.log("📝 Updating package.json versions...");
   for (const pkg of packages) {
-    const updated = updateVersionOnly(pkg.packageJson, newVersion);
-    const pkgJsonPath = join(pkg.path, "package.json");
+    const parsed = JSON.parse(pkg.originalContent);
+    parsed.version = newVersion;
+    const updatedContent = JSON.stringify(parsed, null, 2) + "\n";
 
     if (!options.dryRun) {
-      await writeFile(pkgJsonPath, JSON.stringify(updated, null, 2) + "\n");
+      await writeFile(join(pkg.path, "package.json"), updatedContent);
     }
-    // Update in-memory packageJson for later use
-    pkg.packageJson = updated;
+    // Update in-memory version for transforms
+    pkg.packageJson.version = newVersion;
 
     console.log(`   ✓ ${pkg.packageJson.name}`);
   }
@@ -306,39 +323,73 @@ async function main() {
     console.log("\n🚀 Publishing to npm...");
 
     const sortedPackages = sortByDependencyOrder(publishablePackages);
+    const failedPackages: string[] = [];
 
     for (const pkg of sortedPackages) {
       const pkgJsonPath = join(pkg.path, "package.json");
-
-      // Transform workspace:* to actual versions for publishing
-      const publishReady = transformForPublish(pkg.packageJson, newVersion, allPackageNames);
+      const pkgName = pkg.packageJson.name;
 
       if (!options.dryRun) {
-        // Write transformed package.json for publish
-        await writeFile(pkgJsonPath, JSON.stringify(publishReady, null, 2) + "\n");
-      }
+        // Transform workspace:* to actual versions for publishing
+        // Use deep clone via JSON round-trip to avoid shared references
+        const originalOnDisk = await readFile(pkgJsonPath, "utf-8");
+        const publishReady = transformForPublish(
+          JSON.parse(originalOnDisk),
+          newVersion,
+          allPackageNames
+        );
+        const publishContent = JSON.stringify(publishReady, null, 2) + "\n";
 
-      const publishCmd = ["npm", "publish", "--access", "public", "--tag", options.tag];
+        // Write transformed package.json
+        await writeFile(pkgJsonPath, publishContent);
 
-      if (options.otp) {
-        publishCmd.push("--otp", options.otp);
-      }
-
-      if (!options.dryRun) {
+        // Verify the transform worked by reading the file back
         try {
-          await $`${publishCmd}`.cwd(pkg.path);
-          console.log(`   ✓ ${pkg.packageJson.name}@${newVersion}`);
-        } catch (error) {
-          console.error(`   ✗ ${pkg.packageJson.name} - publish failed`);
-          // Continue with other packages
+          const written = await readFile(pkgJsonPath, "utf-8");
+          verifyNoWorkspaceRefs(written, pkgName);
+        } catch (verifyError) {
+          console.error(`   ✗ ${pkgName} - ${verifyError}`);
+          // Restore and skip this package
+          await writeFile(pkgJsonPath, originalOnDisk);
+          failedPackages.push(pkgName);
+          continue;
         }
 
-        // Restore original package.json with workspace: protocol
-        await writeFile(pkgJsonPath, JSON.stringify(pkg.packageJson, null, 2) + "\n");
+        // Publish using npm publish with explicit args
+        try {
+          const publishArgs = ["--access", "public", "--tag", options.tag];
+          if (options.otp) {
+            publishArgs.push("--otp", options.otp);
+          }
+          await $`npm publish ${publishArgs}`.cwd(pkg.path);
+          console.log(`   ✓ ${pkgName}@${newVersion}`);
+        } catch (error) {
+          console.error(`   ✗ ${pkgName} - publish failed`);
+          failedPackages.push(pkgName);
+        } finally {
+          // Always restore the original file (with version bump, workspace:* intact)
+          await writeFile(pkgJsonPath, originalOnDisk);
+        }
       } else {
-        console.log(`   (dry-run) ${pkg.packageJson.name}@${newVersion}`);
-        console.log(`      Would transform: workspace:* → ^${newVersion}`);
+        // Dry-run: show what would be transformed
+        const publishReady = transformForPublish(pkg.packageJson, newVersion, allPackageNames);
+        const deps = publishReady.dependencies ?? {};
+        const peerDeps = publishReady.peerDependencies ?? {};
+        const allDeps = { ...deps, ...peerDeps };
+        const internalDeps = Object.entries(allDeps)
+          .filter(([name]) => allPackageNames.has(name))
+          .map(([name, ver]) => `${name}: ${ver}`)
+          .join(", ");
+
+        console.log(`   (dry-run) ${pkgName}@${newVersion}`);
+        if (internalDeps) {
+          console.log(`      deps: ${internalDeps}`);
+        }
       }
+    }
+
+    if (failedPackages.length > 0) {
+      console.error(`\n⚠️  Failed to publish: ${failedPackages.join(", ")}`);
     }
   }
 
