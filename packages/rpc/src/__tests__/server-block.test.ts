@@ -385,11 +385,23 @@ describe('buildCorsMiddleware', () => {
   });
 
   test('sets credentials header', async () => {
-    const mw = buildCorsMiddleware({ origins: '*', credentials: true });
-    const ctx = makeCtx();
+    const mw = buildCorsMiddleware({ origins: ['https://example.com'], credentials: true });
+    const ctx = makeCtx({
+      request: new Request('http://localhost/test', {
+        method: 'POST',
+        headers: { Origin: 'https://example.com' },
+      }),
+    });
 
     await mw(ctx, async () => 'ok');
     expect(ctx.responseHeaders.get('Access-Control-Allow-Credentials')).toBe('true');
+    expect(ctx.responseHeaders.get('Access-Control-Allow-Origin')).toBe('https://example.com');
+  });
+
+  test('throws if origins is wildcard with credentials', () => {
+    expect(() => buildCorsMiddleware({ origins: '*', credentials: true })).toThrow(
+      'CORS config error'
+    );
   });
 
   test('does not set credentials header by default', async () => {
@@ -511,6 +523,36 @@ describe('buildAuthMiddleware', () => {
     } catch (err) {
       expect((err as ServerFnError).code).toBe('UNAUTHORIZED');
     }
+  });
+
+  test('sets ctx.user when getUser returns a user', async () => {
+    const user = { id: '42', name: 'Bob' };
+    const mw = buildAuthMiddleware({
+      getUser: () => user,
+    });
+    const ctx = makeCtx();
+
+    let capturedUser: unknown;
+    await mw(ctx, async () => {
+      capturedUser = ctx.user;
+      return 'ok';
+    });
+    expect(capturedUser).toEqual(user);
+    expect(ctx.user).toEqual(user);
+  });
+
+  test('does not set ctx.user when getUser returns null', async () => {
+    const mw = buildAuthMiddleware({
+      getUser: () => null,
+    });
+    const ctx = makeCtx();
+
+    try {
+      await mw(ctx, async () => 'fail');
+    } catch {
+      // Expected
+    }
+    expect(ctx.user).toBeUndefined();
   });
 });
 
@@ -942,15 +984,23 @@ describe('integration with HTTP handler', () => {
   test('CORS headers are set on HTTP response', async () => {
     server$(async () => 'data', {
       id: 'cors-fn',
-      cors: { origins: '*', credentials: true },
+      cors: { origins: ['https://example.com'] },
     });
 
     const handler = createServerFnHandler();
-    const response = await handler(makeRequest('cors-fn'));
+    const req = new Request('http://localhost/_server-fn/cors-fn', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Ereo-RPC': '1',
+        'Origin': 'https://example.com',
+      },
+      body: JSON.stringify({ input: undefined }),
+    });
+    const response = await handler(req);
 
     expect(response!.status).toBe(200);
-    expect(response!.headers.get('Access-Control-Allow-Origin')).toBe('*');
-    expect(response!.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+    expect(response!.headers.get('Access-Control-Allow-Origin')).toBe('https://example.com');
   });
 
   test('createServerBlock functions dispatch via HTTP handler', async () => {

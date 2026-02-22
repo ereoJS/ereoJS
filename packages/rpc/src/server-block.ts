@@ -159,9 +159,11 @@ const MAX_RATE_LIMIT_ENTRIES = 10_000;
 export function buildRateLimitMiddleware(config: ServerFnRateLimitConfig): ServerFnMiddleware {
   const windowMs = parseWindow(config.window);
   const { max } = config;
-  const keyFn = config.keyFn ?? ((ctx: ServerFnContext) =>
-    ctx.request.headers.get('x-forwarded-for') ?? 'unknown'
-  );
+  const keyFn = config.keyFn ?? ((ctx: ServerFnContext) => {
+    const xff = ctx.request.headers.get('x-forwarded-for');
+    if (xff) return xff.split(',')[0].trim();
+    return ctx.request.headers.get('x-real-ip') ?? 'unknown';
+  });
 
   // Per-instance store: each middleware gets its own Map
   const store = new Map<string, ServerFnRateLimitEntry>();
@@ -225,6 +227,16 @@ export function buildCacheMiddleware(config: ServerFnCacheConfig): ServerFnMiddl
  * Sets Access-Control-* headers on ctx.responseHeaders.
  */
 export function buildCorsMiddleware(config: ServerFnCorsConfig): ServerFnMiddleware {
+  // Validate: wildcard origin with credentials is forbidden by the CORS specification.
+  // Browsers silently reject responses with Access-Control-Allow-Origin: * when
+  // Access-Control-Allow-Credentials: true is also set.
+  if (config.origins === '*' && config.credentials) {
+    throw new Error(
+      'CORS config error: origins "*" cannot be used with credentials: true. ' +
+      'The CORS specification forbids this combination. Specify explicit origins instead.'
+    );
+  }
+
   const methods = config.methods ?? ['GET', 'POST'];
   const headers = config.headers ?? ['Content-Type', 'Authorization', 'X-Ereo-RPC'];
 
@@ -267,6 +279,8 @@ export function buildAuthMiddleware(config: ServerFnAuthConfig): ServerFnMiddlew
     if (user == null) {
       throw new ServerFnError('UNAUTHORIZED', message, { statusCode: 401 });
     }
+    // Make authenticated user available to downstream middleware and handlers
+    ctx.user = user;
     return next();
   };
 }

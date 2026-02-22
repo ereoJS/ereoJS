@@ -40,6 +40,16 @@ export interface ServerFnContext {
   responseHeaders: Headers;
   /** Application context (from @ereo/core or context provider) */
   appContext: unknown;
+  /** Authenticated user — set by auth middleware, available to handlers */
+  user?: unknown;
+}
+
+/** Options for server-side direct calls to opt into full middleware processing */
+export interface ServerFnCallOptions {
+  /** Real request for middleware context (enables auth, CORS, rate-limit) */
+  request?: Request;
+  /** Application context override */
+  appContext?: unknown;
 }
 
 /** Middleware that runs before a server function */
@@ -64,7 +74,7 @@ export interface ServerFnOptions<TInput, TOutput> {
 
 /** A callable server function with metadata */
 export interface ServerFn<TInput, TOutput> {
-  (input: TInput): Promise<TOutput>;
+  (input: TInput, options?: ServerFnCallOptions): Promise<TOutput>;
   /** Unique function ID */
   readonly _id: string;
   /** HTTP endpoint for this function */
@@ -156,6 +166,38 @@ export function clearServerFnRegistry(): void {
 }
 
 // =============================================================================
+// Global Middleware (shared between handler and direct calls)
+// =============================================================================
+
+let _serverFnGlobalMiddleware: ServerFnMiddleware[] = [];
+let _serverFnDefaultMiddleware: ServerFnMiddleware[] = [];
+let _serverFnCreateContext: ((request: Request) => unknown | Promise<unknown>) | undefined;
+
+/**
+ * Configure global and default middleware that runs on both HTTP requests
+ * and direct server-side calls (when called with ServerFnCallOptions).
+ *
+ * Called automatically by createServerFnHandler(). Can also be called manually
+ * to configure middleware for direct server-side calls.
+ */
+export function setServerFnMiddleware(
+  global: ServerFnMiddleware[],
+  defaults: ServerFnMiddleware[],
+  createContext?: (request: Request) => unknown | Promise<unknown>
+): void {
+  _serverFnGlobalMiddleware = global;
+  _serverFnDefaultMiddleware = defaults;
+  _serverFnCreateContext = createContext;
+}
+
+/** @internal Clear global middleware. For testing only. */
+export function _clearServerFnMiddleware(): void {
+  _serverFnGlobalMiddleware = [];
+  _serverFnDefaultMiddleware = [];
+  _serverFnCreateContext = undefined;
+}
+
+// =============================================================================
 // Environment Detection
 // =============================================================================
 
@@ -174,7 +216,7 @@ export const SERVER_FN_BASE = '/_server-fn';
 export function _createClientProxy<TInput, TOutput>(id: string): ServerFn<TInput, TOutput> {
   const url = `${SERVER_FN_BASE}/${encodeURIComponent(id)}`;
 
-  const fn = async (input: TInput): Promise<TOutput> => {
+  const fn = async (input: TInput, _options?: ServerFnCallOptions): Promise<TOutput> => {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Ereo-RPC': '1' },
@@ -280,12 +322,32 @@ export function createServerFn<TInput, TOutput>(
       allowPublic,
     });
 
-    const fn = async (input: TInput): Promise<TOutput> => {
-      // When called directly on the server, execute with a minimal context
+    // Cache the synthetic request so we don't allocate on every call
+    const syntheticUrl = `http://localhost${SERVER_FN_BASE}/${encodeURIComponent(id)}`;
+    let _syntheticRequest: Request | undefined;
+
+    const fn = async (input: TInput, options?: ServerFnCallOptions): Promise<TOutput> => {
+      const hasExplicitContext = options?.request != null;
+
+      // Build context: use real request if provided, synthetic otherwise
+      let request: Request;
+      let appCtx: unknown;
+
+      if (hasExplicitContext) {
+        request = options!.request!;
+        // Use provided appContext, or derive from createContext if configured
+        appCtx = options?.appContext ??
+          (_serverFnCreateContext ? await _serverFnCreateContext(request) : {});
+      } else {
+        // Reuse cached synthetic request to avoid per-call allocation
+        request = _syntheticRequest ??= new Request(syntheticUrl, { method: 'POST' });
+        appCtx = options?.appContext ?? {};
+      }
+
       const ctx: ServerFnContext = {
-        request: new Request('http://localhost/_server-fn/' + id, { method: 'POST' }),
+        request,
         responseHeaders: new Headers(),
-        appContext: {},
+        appContext: appCtx,
       };
 
       // Validate input
@@ -294,9 +356,13 @@ export function createServerFn<TInput, TOutput>(
         validatedInput = inputSchema.parse(input) as TInput;
       }
 
-      // Run middleware chain
-      let result: unknown;
-      const chain = [...middleware];
+      // Build middleware chain:
+      // - With explicit context: full chain (global + default + fn-level)
+      // - Without: fn-level middleware only (backwards compatible)
+      const fnDefaults = allowPublic ? [] : _serverFnDefaultMiddleware;
+      const chain = hasExplicitContext
+        ? [..._serverFnGlobalMiddleware, ...fnDefaults, ...middleware]
+        : [...middleware];
 
       const runChain = async (index: number): Promise<unknown> => {
         if (index < chain.length) {
@@ -305,7 +371,7 @@ export function createServerFn<TInput, TOutput>(
         return handler(validatedInput, ctx);
       };
 
-      result = await runChain(0);
+      const result = await runChain(0);
       return result as TOutput;
     };
 

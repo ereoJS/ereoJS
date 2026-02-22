@@ -21,6 +21,7 @@ import {
   getServerFn,
   SERVER_FN_BASE,
   ServerFnError,
+  setServerFnMiddleware,
   type ServerFnContext,
   type ServerFnMiddleware,
 } from './server-fn';
@@ -73,6 +74,13 @@ export function createServerFnHandler(
 
   const prefix = basePath.endsWith('/') ? basePath : basePath + '/';
 
+  // Share global/default middleware with direct server-side calls so that
+  // createServerFn(...)(input, { request }) can run the full middleware chain.
+  setServerFnMiddleware(globalMiddleware, defaultMiddleware, createContext);
+
+  // Cache compiled middleware arrays per function ID to avoid array spread on every request
+  const middlewareCache = new Map<string, ServerFnMiddleware[]>();
+
   return async (request: Request, appContext?: unknown): Promise<Response | null> => {
     const url = new URL(request.url);
 
@@ -81,19 +89,11 @@ export function createServerFnHandler(
       return null;
     }
 
-    // Only POST is allowed
-    if (request.method !== 'POST') {
+    // Only POST and OPTIONS are allowed
+    if (request.method !== 'POST' && request.method !== 'OPTIONS') {
       return jsonResponse(
         { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Server functions only accept POST requests' } },
         405
-      );
-    }
-
-    // CSRF protection: require X-Ereo-RPC header on all POST requests
-    if (!disableCsrfProtection && !request.headers.get('X-Ereo-RPC')) {
-      return jsonResponse(
-        { ok: false, error: { code: 'CSRF_ERROR', message: 'Missing X-Ereo-RPC header' } },
-        403
       );
     }
 
@@ -117,9 +117,51 @@ export function createServerFnHandler(
     // Look up the function
     const fn = getServerFn(fnId);
     if (!fn) {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { status: 204 });
+      }
       return jsonResponse(
         { ok: false, error: { code: 'NOT_FOUND', message: `Server function "${fnId}" not found` } },
         404
+      );
+    }
+
+    // Handle CORS preflight (OPTIONS)
+    // Run middleware to collect CORS headers (set before next() in CORS middleware),
+    // then return 204. If non-CORS middleware (auth, rate-limit) throws, we still
+    // have the CORS headers since they're set first in the middleware order.
+    if (request.method === 'OPTIONS') {
+      const responseHeaders = new Headers();
+      const ctx: ServerFnContext = { request, responseHeaders, appContext: appContext ?? {} };
+
+      const fnDefaultMiddleware = fn.allowPublic ? [] : defaultMiddleware;
+      const allMiddleware = [...globalMiddleware, ...fnDefaultMiddleware, ...fn.middleware];
+
+      try {
+        const runChain = async (index: number): Promise<unknown> => {
+          if (index < allMiddleware.length) {
+            return allMiddleware[index](ctx, () => runChain(index + 1));
+          }
+          return undefined; // No handler execution for preflight
+        };
+        await runChain(0);
+      } catch {
+        // Ignore middleware errors during preflight (e.g. auth throwing 401).
+        // CORS headers are already set since CORS middleware runs first.
+      }
+
+      const response = new Response(null, { status: 204 });
+      responseHeaders.forEach((value, key) => {
+        response.headers.set(key, value);
+      });
+      return response;
+    }
+
+    // CSRF protection: require X-Ereo-RPC header on POST requests
+    if (!disableCsrfProtection && !request.headers.get('X-Ereo-RPC')) {
+      return jsonResponse(
+        { ok: false, error: { code: 'CSRF_ERROR', message: 'Missing X-Ereo-RPC header' } },
+        403
       );
     }
 
@@ -174,9 +216,14 @@ export function createServerFnHandler(
         }
       }
 
-      // Build middleware chain: global middleware + default middleware (unless allowPublic) + function-specific middleware
-      const fnDefaultMiddleware = fn.allowPublic ? [] : defaultMiddleware;
-      const allMiddleware = [...globalMiddleware, ...fnDefaultMiddleware, ...fn.middleware];
+      // Build middleware chain: global + default (unless allowPublic) + function-specific.
+      // Cached per function ID to avoid array spread on every request.
+      let allMiddleware = middlewareCache.get(fnId);
+      if (!allMiddleware) {
+        const fnDefaultMiddleware = fn.allowPublic ? [] : defaultMiddleware;
+        allMiddleware = [...globalMiddleware, ...fnDefaultMiddleware, ...fn.middleware];
+        middlewareCache.set(fnId, allMiddleware);
+      }
 
       const runChain = async (index: number): Promise<unknown> => {
         if (index < allMiddleware.length) {

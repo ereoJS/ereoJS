@@ -11,6 +11,8 @@ import {
   getAllServerFns,
   unregisterServerFn,
   clearServerFnRegistry,
+  setServerFnMiddleware,
+  _clearServerFnMiddleware,
   SERVER_FN_BASE,
   _createClientProxy,
   type ServerFnContext,
@@ -20,6 +22,7 @@ import {
 // Clean registry between tests
 beforeEach(() => {
   clearServerFnRegistry();
+  _clearServerFnMiddleware();
 });
 
 // =============================================================================
@@ -492,5 +495,161 @@ describe('_createClientProxy', () => {
     const fn = _createClientProxy<void, number>('voidInput');
     await fn(undefined as void);
     expect(receivedBody.input).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// ServerFnCallOptions (direct calls with context)
+// =============================================================================
+
+describe('ServerFnCallOptions', () => {
+  test('direct call without options runs only fn-level middleware', async () => {
+    const calls: string[] = [];
+
+    const fnMiddleware: ServerFnMiddleware = async (ctx, next) => {
+      calls.push('fn-mw');
+      return next();
+    };
+
+    // Set global middleware
+    const globalMw: ServerFnMiddleware = async (ctx, next) => {
+      calls.push('global-mw');
+      return next();
+    };
+    setServerFnMiddleware([globalMw], []);
+
+    const fn = createServerFn({
+      id: 'ctx-test-1',
+      handler: async () => 'ok',
+      middleware: [fnMiddleware],
+    });
+
+    await fn('anything');
+
+    // Only fn middleware should run (backwards compatible)
+    expect(calls).toEqual(['fn-mw']);
+  });
+
+  test('direct call with { request } runs full middleware chain', async () => {
+    const calls: string[] = [];
+
+    const globalMw: ServerFnMiddleware = async (ctx, next) => {
+      calls.push('global');
+      return next();
+    };
+    const defaultMw: ServerFnMiddleware = async (ctx, next) => {
+      calls.push('default');
+      return next();
+    };
+    const fnMw: ServerFnMiddleware = async (ctx, next) => {
+      calls.push('fn');
+      return next();
+    };
+
+    setServerFnMiddleware([globalMw], [defaultMw]);
+
+    const fn = createServerFn({
+      id: 'ctx-test-2',
+      handler: async () => 'ok',
+      middleware: [fnMw],
+    });
+
+    const request = new Request('http://localhost/test', { method: 'POST' });
+    await fn('anything', { request });
+
+    // Full chain: global + default + fn
+    expect(calls).toEqual(['global', 'default', 'fn']);
+  });
+
+  test('allowPublic skips default middleware even with explicit context', async () => {
+    const calls: string[] = [];
+
+    const defaultMw: ServerFnMiddleware = async (ctx, next) => {
+      calls.push('default');
+      return next();
+    };
+    const globalMw: ServerFnMiddleware = async (ctx, next) => {
+      calls.push('global');
+      return next();
+    };
+
+    setServerFnMiddleware([globalMw], [defaultMw]);
+
+    const fn = createServerFn({
+      id: 'ctx-test-3',
+      handler: async () => 'public',
+      middleware: [],
+      allowPublic: true,
+    });
+
+    const request = new Request('http://localhost/test');
+    await fn('anything', { request });
+
+    // Global runs, default skipped for allowPublic
+    expect(calls).toEqual(['global']);
+  });
+
+  test('passes real request to middleware context', async () => {
+    let capturedAuth: string | null = null;
+
+    const authMw: ServerFnMiddleware = async (ctx, next) => {
+      capturedAuth = ctx.request.headers.get('Authorization');
+      return next();
+    };
+
+    setServerFnMiddleware([authMw], []);
+
+    const fn = createServerFn({
+      id: 'ctx-test-4',
+      handler: async () => 'ok',
+    });
+
+    const request = new Request('http://localhost/test', {
+      headers: { Authorization: 'Bearer token123' },
+    });
+    await fn('anything', { request });
+
+    expect(capturedAuth).toBe('Bearer token123');
+  });
+
+  test('uses createContext when request is provided', async () => {
+    setServerFnMiddleware([], [], async (request) => {
+      const token = request.headers.get('Authorization');
+      return { userId: token === 'Bearer valid' ? '42' : null };
+    });
+
+    let capturedAppCtx: unknown;
+    const fn = createServerFn({
+      id: 'ctx-test-5',
+      handler: async (input, ctx) => {
+        capturedAppCtx = ctx.appContext;
+        return 'ok';
+      },
+    });
+
+    const request = new Request('http://localhost/test', {
+      headers: { Authorization: 'Bearer valid' },
+    });
+    await fn('anything', { request });
+
+    expect(capturedAppCtx).toEqual({ userId: '42' });
+  });
+
+  test('appContext override takes precedence over createContext', async () => {
+    setServerFnMiddleware([], [], async () => ({ fromCreateContext: true }));
+
+    let capturedAppCtx: unknown;
+    const fn = createServerFn({
+      id: 'ctx-test-6',
+      handler: async (input, ctx) => {
+        capturedAppCtx = ctx.appContext;
+        return 'ok';
+      },
+    });
+
+    const request = new Request('http://localhost/test');
+    await fn('anything', { request, appContext: { manual: true } });
+
+    expect(capturedAppCtx).toEqual({ manual: true });
   });
 });

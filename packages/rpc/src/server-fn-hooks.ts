@@ -79,7 +79,7 @@ export function useServerFn<TInput, TOutput>(
 ): UseServerFnReturn<TInput, TOutput> {
   const [data, setData] = useState<TOutput | undefined>(undefined);
   const [error, setError] = useState<ServerFnErrorShape | undefined>(undefined);
-  const [isPending, setIsPending] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
 
   // Use refs for fn and callbacks to keep execute stable across re-renders.
   // This prevents infinite re-render loops when fn is a Proxy (RPC client)
@@ -112,7 +112,7 @@ export function useServerFn<TInput, TOutput>(
       const currentId = ++requestIdRef.current;
 
       if (mountedRef.current) {
-        setIsPending(true);
+        setStatus('pending');
         setError(undefined);
       }
 
@@ -122,7 +122,7 @@ export function useServerFn<TInput, TOutput>(
         // Only update state if this is still the latest request
         if (currentId === requestIdRef.current && mountedRef.current) {
           setData(result);
-          setIsPending(false);
+          setStatus('success');
           onSuccessRef.current?.(result);
         }
 
@@ -133,7 +133,7 @@ export function useServerFn<TInput, TOutput>(
         if (currentId === requestIdRef.current && mountedRef.current) {
           setError(errorShape);
           setData(undefined);
-          setIsPending(false);
+          setStatus('error');
           onErrorRef.current?.(errorShape);
         }
 
@@ -151,16 +151,16 @@ export function useServerFn<TInput, TOutput>(
     requestIdRef.current++;
     setData(undefined);
     setError(undefined);
-    setIsPending(false);
+    setStatus('idle');
   }, []);
 
   return {
     execute,
     data,
     error,
-    isPending,
-    isSuccess: data !== undefined && error === undefined,
-    isError: error !== undefined,
+    isPending: status === 'pending',
+    isSuccess: status === 'success',
+    isError: status === 'error',
     reset,
   };
 }

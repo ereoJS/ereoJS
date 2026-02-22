@@ -43,19 +43,19 @@ function createServerFnHook<TInput, TOutput>(
 
   let data: TOutput | undefined = undefined;
   let error: ServerFnErrorShape | undefined = undefined;
-  let isPending = false;
+  let status: 'idle' | 'pending' | 'success' | 'error' = 'idle';
   let requestId = 0;
 
   const state: HookState<TInput, TOutput> = {
     get data() { return data; },
     get error() { return error; },
-    get isPending() { return isPending; },
-    get isSuccess() { return data !== undefined && error === undefined; },
-    get isError() { return error !== undefined; },
+    get isPending() { return status === 'pending'; },
+    get isSuccess() { return status === 'success'; },
+    get isError() { return status === 'error'; },
 
     async execute(input: TInput): Promise<TOutput> {
       const currentId = ++requestId;
-      isPending = true;
+      status = 'pending';
       error = undefined;
 
       try {
@@ -63,7 +63,7 @@ function createServerFnHook<TInput, TOutput>(
 
         if (currentId === requestId) {
           data = result;
-          isPending = false;
+          status = 'success';
           onSuccess?.(result);
         }
 
@@ -74,7 +74,7 @@ function createServerFnHook<TInput, TOutput>(
         if (currentId === requestId) {
           error = errorShape;
           data = undefined;
-          isPending = false;
+          status = 'error';
           onError?.(errorShape);
         }
 
@@ -90,7 +90,7 @@ function createServerFnHook<TInput, TOutput>(
       requestId++;
       data = undefined;
       error = undefined;
-      isPending = false;
+      status = 'idle';
     },
   };
 
@@ -339,6 +339,32 @@ describe('useServerFn (logic simulation)', () => {
         field: 'email',
         issues: ['required'],
       });
+    });
+  });
+
+  describe('void return handling', () => {
+    test('isSuccess is true when function returns undefined', async () => {
+      const fn = createMockFn<void, void>(async () => {
+        // Deliberately return nothing (void)
+      });
+      const hook = createServerFnHook(fn);
+
+      await hook.execute(undefined as void);
+
+      expect(hook.data).toBeUndefined();
+      expect(hook.isSuccess).toBe(true);
+      expect(hook.isPending).toBe(false);
+      expect(hook.isError).toBe(false);
+    });
+
+    test('isSuccess is true when function returns null', async () => {
+      const fn = createMockFn<void, null>(async () => null);
+      const hook = createServerFnHook(fn);
+
+      await hook.execute(undefined as void);
+
+      expect(hook.data).toBeNull();
+      expect(hook.isSuccess).toBe(true);
     });
   });
 });

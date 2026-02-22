@@ -6,15 +6,18 @@ import { describe, test, expect, beforeEach } from 'bun:test';
 import {
   createServerFn,
   clearServerFnRegistry,
+  _clearServerFnMiddleware,
   ServerFnError,
   SERVER_FN_BASE,
   type ServerFnMiddleware,
 } from '../server-fn';
 import { createServerFnHandler } from '../server-fn-handler';
+import { buildCorsMiddleware, buildAuthMiddleware } from '../server-block';
 
 // Clean registry between tests
 beforeEach(() => {
   clearServerFnRegistry();
+  _clearServerFnMiddleware();
 });
 
 function makeRequest(
@@ -896,6 +899,90 @@ describe('createServerFnHandler', () => {
       const body = await response!.json();
       expect(body.error.code).toBe('VALIDATION_ERROR');
       expect(body.error.details.message).toBe('Validation failed');
+    });
+  });
+
+  // ===========================================================================
+  // OPTIONS Preflight
+  // ===========================================================================
+
+  describe('OPTIONS preflight', () => {
+    test('returns 204 for OPTIONS request to known function', async () => {
+      createServerFn('preflight-fn', async () => 'ok');
+      const handler = createServerFnHandler();
+
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/preflight-fn`, {
+        method: 'OPTIONS',
+      });
+      const response = await handler(request);
+      expect(response!.status).toBe(204);
+    });
+
+    test('returns 204 with CORS headers from function middleware', async () => {
+      const corsMiddleware = buildCorsMiddleware({
+        origins: '*',
+      });
+
+      createServerFn({
+        id: 'cors-preflight',
+        handler: async () => 'ok',
+        middleware: [corsMiddleware],
+      });
+
+      const handler = createServerFnHandler();
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/cors-preflight`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'https://example.com' },
+      });
+      const response = await handler(request);
+
+      expect(response!.status).toBe(204);
+      expect(response!.headers.get('Access-Control-Allow-Origin')).toBe('*');
+      expect(response!.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST');
+    });
+
+    test('returns 204 for OPTIONS to unknown function', async () => {
+      const handler = createServerFnHandler();
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/unknown`, {
+        method: 'OPTIONS',
+      });
+      const response = await handler(request);
+      expect(response!.status).toBe(204);
+    });
+
+    test('OPTIONS does not require X-Ereo-RPC header', async () => {
+      createServerFn('no-csrf-preflight', async () => 'ok');
+      const handler = createServerFnHandler();
+
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/no-csrf-preflight`, {
+        method: 'OPTIONS',
+      });
+      const response = await handler(request);
+      // Should succeed without X-Ereo-RPC header
+      expect(response!.status).toBe(204);
+    });
+
+    test('CORS headers survive when auth middleware throws during preflight', async () => {
+      const corsMiddleware = buildCorsMiddleware({ origins: '*' });
+      const authMiddleware = buildAuthMiddleware({
+        getUser: async () => null, // Always deny
+      });
+
+      createServerFn({
+        id: 'cors-auth-preflight',
+        handler: async () => 'ok',
+        middleware: [corsMiddleware, authMiddleware],
+      });
+
+      const handler = createServerFnHandler();
+      const request = new Request(`http://localhost${SERVER_FN_BASE}/cors-auth-preflight`, {
+        method: 'OPTIONS',
+      });
+      const response = await handler(request);
+
+      // Should still have CORS headers despite auth throwing
+      expect(response!.status).toBe(204);
+      expect(response!.headers.get('Access-Control-Allow-Origin')).toBe('*');
     });
   });
 });

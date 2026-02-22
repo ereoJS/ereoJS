@@ -57,11 +57,13 @@ export {
   getAllServerFns,
   unregisterServerFn,
   clearServerFnRegistry,
+  setServerFnMiddleware,
   SERVER_FN_BASE,
 } from './server-fn';
 export type {
   ServerFn,
   ServerFnOptions,
+  ServerFnCallOptions,
   ServerFnContext,
   ServerFnMiddleware,
   ServerFnErrorShape,
