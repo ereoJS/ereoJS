@@ -8,9 +8,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { mkdir, rm, readFile, access } from 'node:fs/promises';
 import { create } from './create';
+
+// Read CLI version to match dynamic fallback in create.ts
+const cliPkgPath = join(dirname(dirname(import.meta.dir)), 'package.json');
+const CLI_VERSION: string = (await Bun.file(cliPkgPath).json()).version;
 
 const TEST_DIR = join(import.meta.dir, '__test_projects__');
 
@@ -51,13 +55,14 @@ describe('create command', () => {
           }
         }
 
-        // Verify specific versions
-        expect(deps['@ereo/core']).toBe('^0.1.0');
-        expect(deps['@ereo/router']).toBe('^0.1.0');
-        expect(deps['@ereo/server']).toBe('^0.1.0');
-        expect(deps['@ereo/client']).toBe('^0.1.0');
-        expect(deps['@ereo/data']).toBe('^0.1.0');
-        expect(deps['@ereo/cli']).toBe('^0.1.0');
+        // Verify specific versions match CLI's own version
+        const expected = `^${CLI_VERSION}`;
+        expect(deps['@ereo/core']).toBe(expected);
+        expect(deps['@ereo/router']).toBe(expected);
+        expect(deps['@ereo/server']).toBe(expected);
+        expect(deps['@ereo/client']).toBe(expected);
+        expect(deps['@ereo/data']).toBe(expected);
+        expect(deps['@ereo/cli']).toBe(expected);
         expect(deps['react']).toBe('^18.2.0');
         expect(deps['react-dom']).toBe('^18.2.0');
       } finally {

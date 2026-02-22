@@ -7,6 +7,10 @@
 import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 
+// Read CLI's own version as fallback for @ereo/* dependency versions
+const _cliPkgPath = join(import.meta.dir, '..', '..', 'package.json');
+const _cliVersion: string = (await Bun.file(_cliPkgPath).json()).version;
+
 /**
  * Create command options.
  */
@@ -73,7 +77,7 @@ function generateTemplateFiles(
   const files: Record<string, string> = {};
 
   // package.json - includes all necessary dependencies
-  const ereoVersion = version ? `^${version}` : '^0.1.0';
+  const ereoVersion = version ? `^${version}` : `^${_cliVersion}`;
   const dependencies: Record<string, string> = {
     '@ereo/core': ereoVersion,
     '@ereo/router': ereoVersion,
