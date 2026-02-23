@@ -4,12 +4,25 @@
  * Create a new EreoJS project with all essential features demonstrated.
  */
 
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 
-// Read CLI's own version as fallback for @ereo/* dependency versions
-const _cliPkgPath = join(import.meta.dir, '..', '..', 'package.json');
-const _cliVersion: string = (await Bun.file(_cliPkgPath).json()).version;
+// Lazy-loaded CLI version fallback. Must NOT be top-level await because after
+// bundling to dist/index.js the relative path breaks (import.meta.dir changes)
+// and it would error even for non-create commands like `ereo dev`.
+// After bundling (dist/index.js): package.json is 1 level up.
+// In source (src/commands/create.ts): package.json is 2 levels up.
+let _cliVersion: string | undefined;
+async function getCliVersion(): Promise<string> {
+  if (!_cliVersion) {
+    const bundledPath = join(dirname(import.meta.dir), 'package.json');
+    const sourcePath = join(import.meta.dir, '..', '..', 'package.json');
+    const bundledFile = Bun.file(bundledPath);
+    const file = (await bundledFile.exists()) ? bundledFile : Bun.file(sourcePath);
+    _cliVersion = (await file.json()).version;
+  }
+  return _cliVersion!;
+}
 
 /**
  * Create command options.
@@ -43,8 +56,11 @@ export async function create(
   await mkdir(join(projectDir, 'app/middleware'), { recursive: true });
   await mkdir(join(projectDir, 'public'), { recursive: true });
 
+  // Resolve version: prefer explicit option, fall back to CLI package.json
+  const version = options.version || await getCliVersion();
+
   // Generate files based on template
-  const files = generateTemplateFiles(template, typescript, projectName, options.version);
+  const files = generateTemplateFiles(template, typescript, projectName, version);
 
   // Sort files for consistent output
   const sortedPaths = Object.keys(files).sort();
@@ -71,13 +87,13 @@ function generateTemplateFiles(
   template: string,
   typescript: boolean,
   projectName: string,
-  version?: string
+  version: string
 ): Record<string, string> {
   const ext = typescript ? 'tsx' : 'jsx';
   const files: Record<string, string> = {};
 
   // package.json - includes all necessary dependencies
-  const ereoVersion = version ? `^${version}` : `^${_cliVersion}`;
+  const ereoVersion = `^${version}`;
   const dependencies: Record<string, string> = {
     '@ereo/core': ereoVersion,
     '@ereo/router': ereoVersion,
